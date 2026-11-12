@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { api } from '../api';
+import { api, completeOnboarding, verifyEmailCode } from '../api';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
+import { HeartDots } from '../components/HeartDots';
 import { parseLang, pick, t } from '../i18n/lang';
 import { interstitial } from '../motion/tokens';
-import { DEFAULT_FLAGS, buildSteps, navigable, progressOf, staleBranchKeys, type FlowFlags } from './flow';
+import { DEFAULT_FLAGS, buildSteps, emailToVerify, isFinalTap, navigable, progressOf, staleBranchKeys, type FlowFlags } from './flow';
 import { AGE_DEFAULT, PageFrame, QuestionPage, SpinnerPage } from './QuestionPage';
 import { useOnboarding } from './store';
 import type { Step } from './types';
@@ -45,6 +46,7 @@ export function OnboardingPage() {
   const [fills, setFills] = useState<[number, number, number]>([0, 0, 0]);
   const [welcome, setWelcome] = useState(false);
   const [ageConfirm, setAgeConfirm] = useState<{ age: number; date: Date } | null>(null);
+  const [finishing, setFinishing] = useState(false);
   const busy = useRef(false);
 
   // Resume at the furthest page reached.
@@ -86,6 +88,7 @@ export function OnboardingPage() {
 
       busy.current = true;
       try {
+        if (q.type === 'code' && !(await verifyEmailCode(emailToVerify(st.answers), String(value ?? '')))) return;
         if (q.type !== 'interstitial') await api.saveAnswer(q.id, value);
         if (q.id === 'hobbies') st.removeAnswers(staleBranchKeys(useOnboarding.getState().answers));
         if (q.id === 'schoolEmail' && !opts?.force) st.setAnswer('noSchoolEmail', false);
@@ -101,8 +104,11 @@ export function OnboardingPage() {
         }
         const next = list[i];
         if (!next) {
-          fresh.complete();
-          navigate(`/${suffix}`);
+          // 09 §6 / 21-flow-4: submit → heart of dots on the bare sky (no header) → home.
+          await completeOnboarding();
+          setFinishing(true);
+          await new Promise((r) => setTimeout(r, 1900));
+          navigate(`/home${suffix}`, { replace: true });
           return;
         }
         const furthest = indexOf(list, fresh.furthestId);
@@ -142,16 +148,30 @@ export function OnboardingPage() {
 
   return (
     <AppShell>
-      <Header fills={fills} onBack={current && current.id !== firstNavigable?.id && !spinnerFor ? back : undefined} />
+      {!finishing && <Header fills={fills} onBack={current && current.id !== firstNavigable?.id && !spinnerFor ? back : undefined} />}
 
       <AnimatePresence mode="wait">
-        <PageFrame key={pageKey} onMount={() => setFills(progressOf(shownStep))}>
-          {spinnerFor ? (
-            <SpinnerPage />
-          ) : current ? (
-            <QuestionPage step={current} lang={lang} answers={answers} onNext={() => void advance()} onEscape={escape} />
-          ) : null}
-        </PageFrame>
+        {finishing ? (
+          <motion.div key="finish" className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+            <HeartDots />
+          </motion.div>
+        ) : (
+          <PageFrame key={pageKey} onMount={() => setFills(progressOf(shownStep))}>
+            {spinnerFor ? (
+              <SpinnerPage />
+            ) : current ? (
+              <QuestionPage
+                step={current}
+                lang={lang}
+                answers={answers}
+                onNext={() => void advance()}
+                onEscape={escape}
+                finalTap={isFinalTap(current, steps)}
+                verifyEmail={current.question.type === 'code' ? emailToVerify(answers) : undefined}
+              />
+            ) : null}
+          </PageFrame>
+        )}
       </AnimatePresence>
 
       <AnimatePresence>

@@ -1,25 +1,37 @@
+import { useEffect, useRef, useState } from 'react';
 import { motion, type Variants } from 'motion/react';
 import { pick, type Lang } from '../i18n/lang';
 import { page as pageTokens, bubble as bubbleTokens, pageEnterEase } from '../motion/tokens';
 import { ChatBubbles } from '../components/ChatBubble';
 import { OptionList } from '../components/OptionList';
 import { OptionPill } from '../components/OptionPill';
-import { FloatingNext, Helper, PrivateNote, SendHint, TextAreaBox, TextBar } from '../components/Inputs';
+import { DoneButton, FloatingNext, Helper, PrivateNote, RoundButton, SendHint, TextAreaBox, TextBar } from '../components/Inputs';
 import { BirthdayInput } from '../components/BirthdayInput';
 import { RangeSlider } from '../components/RangeSlider';
 import { HeightRuler, cmToIn, formatFtIn, inToCm } from '../components/HeightRuler';
 import { PhotoGrid } from '../components/PhotoGrid';
 import { IntroIllustration, Spinner } from '../components/Illustration';
+import { Confetti } from '../components/Confetti';
+import { HelpCircle } from '../components/icons';
+import { LocationInput, SearchSheet, WhySheet, DEFAULT_LOCATION } from '../components/LocationPicker';
 import { t } from '../i18n/lang';
+import { sendEmailCode, setPhotos, uploadPhotos, useDb } from '../api';
 import { PRIVATE_NOTE, optionsOf } from './questions';
 import { isAnswered } from './validate';
-import type { Answers, HeightRangeValue, HeightValue, Step } from './types';
+import type { Answers, HeightRangeValue, HeightValue, LocationValue, Step } from './types';
 import { useOnboarding } from './store';
 
 export const AGE_DEFAULT: [number, number] = [18, 24];
 export const HEIGHT_RANGE_DEFAULT: HeightRangeValue = { any: false, min: 168, max: 188 };
 const DONT_CARE = t("I don't care about height", '身高无所谓');
 const BOT_LABEL = t('Ditto', '见一面');
+const DONE = t('Done', '完成');
+const CODE_COPY = {
+  sending: t('sending code…', '正在发送验证码…'),
+  sentTo: t('sent to', '已发送至'),
+  resend: t('resend code', '重新发送'),
+  demo: t('Demo: any 6 digits work', '演示环境：输入任意 6 位数字即可'),
+};
 
 /** Old page flies up; new column slides up from ~420px below and settles exponentially (12 §4.1). */
 const slide: Variants = {
@@ -69,39 +81,86 @@ interface Props {
   lang: Lang;
   answers: Answers;
   onNext: () => void;
-  onEscape: () => void;
+  onEscape?: () => void;
+  /**
+   * `edit`: /onboarding/edit/:field (13 §3) — no progress header, 20px higher column, `Done` pill instead of
+   * the round Next (text bars and birthday keep the round Send).
+   */
+  mode?: 'onboarding' | 'edit';
+  /** Edit mode, hobbies with branch hobbies picked: the button turns back into the round Next (09 §10.2). */
+  editNext?: boolean;
+  /** Last page: confetti + first option tap submits (09 §6). */
+  finalTap?: boolean;
+  /** Write answers somewhere other than the onboarding store (edit-mode draft). */
+  onSet?: (id: string, value: unknown) => void;
+  /** Code page: the address shown under the bubbles. */
+  verifyEmail?: string;
 }
 
-export function QuestionPage({ step, lang, answers, onNext, onEscape }: Props) {
+export function QuestionPage({ step, lang, answers, onNext, onEscape, mode = 'onboarding', editNext, finalTap, onSet, verifyEmail }: Props) {
   const q = step.question;
   const value = answers[q.id];
   const setAnswer = useOnboarding((s) => s.setAnswer);
-  const photoUrls = useOnboarding((s) => s.photoUrls);
-  const setPhotoUrls = useOnboarding((s) => s.setPhotoUrls);
+  const photos = useDb((s) => s.photos);
   const ctx = { answers, lang };
-  const set = (v: unknown) => setAnswer(q.id, v);
+  const set = (v: unknown) => (onSet ? onSet(q.id, v) : setAnswer(q.id, v));
   const valid = isAnswered(q, value, ctx);
   const str = typeof value === 'string' ? value : '';
+  const edit = mode === 'edit';
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const submitted = useRef(false);
 
   const isList = q.type === 'single' || q.type === 'multi';
-  const floatingNext = isList || ['ageRange', 'height', 'heightRange', 'interstitial', 'photos'].includes(q.type);
+  const floatingNext = isList || ['ageRange', 'height', 'heightRange', 'interstitial', 'photos', 'location'].includes(q.type);
   const heightUnit: 'cm' | 'ft' = lang === 'zh' ? 'cm' : ((answers.height as HeightValue | undefined)?.unit ?? 'ft');
 
   const startDelayMs = pageTokens.gap * 1000 + bubbleTokens.firstWordDelayMs;
 
+  // Photos: the onboarding answer is the count; urls live in the api's mock DB.
+  useEffect(() => {
+    if (q.type === 'photos' && !edit && photos.length !== value) set(photos.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos.length, q.type]);
+
+  const onListChange = (v: string | string[]) => {
+    set(v);
+    // 09 §30: the first option tap on the last page submits; the pill turns pink first.
+    if (finalTap && !submitted.current && (Array.isArray(v) ? v.length > 0 : !!v)) {
+      submitted.current = true;
+      window.setTimeout(onNext, 320);
+    }
+  };
+
+  const bottomButton = edit ? (
+    editNext ? <RoundButton enabled={valid} onClick={onNext} /> : <DoneButton label={pick(DONE, lang)} enabled={valid} onClick={onNext} />
+  ) : null;
+
   return (
     <>
       <motion.div className="absolute inset-0" variants={slide} data-step={step.id}>
-        <div className={`ob-scroll absolute inset-x-0 bottom-0 top-[72px] ${isList ? 'ob-fade-bottom' : ''}`}>
+        {finalTap && <Confetti />}
+        <div className={`ob-scroll absolute inset-x-0 bottom-0 ${edit ? 'top-[52px]' : 'top-[72px]'} ${isList ? 'ob-fade-bottom' : ''}`}>
           <div className="px-4 pb-[150px] pt-3">
             <div className="mb-[10px] pl-4 text-[12px] leading-4 text-white/90">{pick(BOT_LABEL, lang)}</div>
-            <ChatBubbles copies={q.bubbles.map((b) => pick(b, lang))} lang={lang} startDelayMs={startDelayMs} />
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <ChatBubbles copies={q.bubbles.map((b) => pick(b, lang))} lang={lang} startDelayMs={startDelayMs} />
+              </div>
+              {q.type === 'location' && (
+                <button type="button" aria-label="Why we ask where you'd date" onClick={() => setWhyOpen(true)} className="mr-[42px] mt-3 grid size-6 place-items-center text-white">
+                  <HelpCircle size={22} />
+                </button>
+              )}
+            </div>
 
-            {q.escape && (
+            {q.escape && !edit && (
               <button type="button" onClick={onEscape} className="mt-5 text-left text-[14px] leading-5 text-white underline underline-offset-2">
                 {pick(q.escape, lang)}
               </button>
             )}
+
+            {q.type === 'code' && <CodeStatus lang={lang} email={verifyEmail ?? ''} />}
 
             {q.private && (
               <div className="mt-[18px]">
@@ -116,11 +175,22 @@ export function QuestionPage({ step, lang, answers, onNext, onEscape }: Props) {
                   options={optionsOf(q, ctx)}
                   multi={q.type === 'multi'}
                   value={value as string | string[] | undefined}
-                  onChange={set}
+                  onChange={onListChange}
                   exclusive={q.exclusive}
                   maxSelect={q.maxSelect}
                   maxHint={q.maxHint}
                   allowCustom={q.allowCustom}
+                />
+              </div>
+            )}
+
+            {q.type === 'location' && (
+              <div className="mt-[17px]">
+                <LocationInput
+                  value={value as Partial<LocationValue> | undefined}
+                  lang={lang}
+                  onChange={(v) => set(v)}
+                  onSearchOpenChange={setSearchOpen}
                 />
               </div>
             )}
@@ -130,18 +200,14 @@ export function QuestionPage({ step, lang, answers, onNext, onEscape }: Props) {
                 <IntroIllustration />
               </div>
             )}
-            {q.id === 'emailVerify' && (
-              <div className="mt-10 grid place-items-center">
-                <Spinner />
-              </div>
-            )}
           </div>
         </div>
 
         {/* Bottom-anchored inputs travel with the column (12 §4.1 item 4). */}
-        {(q.type === 'text' || q.type === 'email' || q.type === 'date') && (
+        {(q.type === 'text' || q.type === 'email' || q.type === 'date' || q.type === 'code') && (
           <div className="absolute inset-x-4 bottom-8">
             {q.helper && <Helper className="mb-[14px]">{pick(q.helper, lang)}</Helper>}
+            {q.type === 'code' && <Helper className="mb-[14px]">{pick(CODE_COPY.demo, lang)}</Helper>}
             {q.type === 'date' ? (
               <BirthdayInput lang={lang} value={value} placeholder={pick(q.placeholder!, lang)} onChange={set} onSubmit={onNext} />
             ) : (
@@ -149,10 +215,10 @@ export function QuestionPage({ step, lang, answers, onNext, onEscape }: Props) {
                 value={str}
                 placeholder={pick(q.placeholder ?? t('', ''), lang)}
                 type={q.type === 'email' ? 'email' : 'text'}
-                inputMode={q.type === 'email' ? 'email' : 'text'}
-                autoComplete={q.type === 'email' ? 'email' : q.id === 'name' ? 'given-name' : 'off'}
-                maxLength={q.maxLength ?? 120}
-                onChange={set}
+                inputMode={q.type === 'email' ? 'email' : q.type === 'code' ? 'numeric' : 'text'}
+                autoComplete={q.type === 'email' ? 'email' : q.type === 'code' ? 'one-time-code' : q.id === 'name' ? 'given-name' : 'off'}
+                maxLength={q.type === 'code' ? 6 : (q.maxLength ?? 120)}
+                onChange={(v) => set(q.type === 'code' ? v.replace(/\D/g, '').slice(0, 6) : v)}
                 onSubmit={onNext}
                 canSubmit={valid}
               />
@@ -174,6 +240,7 @@ export function QuestionPage({ step, lang, answers, onNext, onEscape }: Props) {
               onChange={set}
               onSubmit={onNext}
               canSubmit={valid}
+              {...(edit ? { doneLabel: pick(DONE, lang) } : {})}
             />
           </div>
         )}
@@ -212,19 +279,56 @@ export function QuestionPage({ step, lang, answers, onNext, onEscape }: Props) {
         {q.type === 'photos' && (
           <div className="absolute inset-x-4 bottom-[102px]">
             {q.helper && <Helper className="mx-auto mb-4 max-w-[330px] !leading-[18px]">{pick(q.helper, lang)}</Helper>}
-            <PhotoGrid
-              urls={photoUrls}
-              onChange={(urls) => {
-                setPhotoUrls(urls);
-                set(urls.length);
-              }}
-            />
+            <PhotoGrid urls={photos} onChange={(urls) => void setPhotos(urls)} onAddFiles={(files) => void uploadPhotos(files)} />
           </div>
         )}
       </motion.div>
 
-      {floatingNext && <FloatingNext enabled={valid} onClick={onNext} />}
+      {edit && floatingNext && <div className="absolute bottom-8 right-4 z-10">{bottomButton}</div>}
+      {!edit && floatingNext && <FloatingNext enabled={finalTap ? false : valid} onClick={onNext} />}
+
+      {q.type === 'location' && (
+        <>
+          <SearchSheet
+            open={searchOpen}
+            lang={lang}
+            onClose={() => setSearchOpen(false)}
+            onPick={(placeId) => {
+              const cur = value as Partial<LocationValue> | undefined;
+              set({ placeId, mode: cur?.mode ?? DEFAULT_LOCATION.mode, minutes: cur?.minutes ?? DEFAULT_LOCATION.minutes });
+              setSearchOpen(false);
+            }}
+          />
+          <WhySheet open={whyOpen} lang={lang} onClose={() => setWhyOpen(false)} />
+        </>
+      )}
     </>
+  );
+}
+
+/** `sending code…` while the request is in flight (12 §0.1), then where it went + resend. */
+function CodeStatus({ lang, email }: { lang: Lang; email: string }) {
+  const [sent, setSent] = useState(false);
+  const send = () => {
+    setSent(false);
+    void sendEmailCode(email).then(() => setSent(true));
+  };
+  useEffect(send, [email]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="mt-5 pl-1 text-[14px] leading-5 text-white/90">
+      {sent ? (
+        <>
+          <span>
+            {pick(CODE_COPY.sentTo, lang)} <b className="font-bold">{email}</b>
+          </span>
+          <button type="button" onClick={send} className="ml-2 underline underline-offset-2">
+            {pick(CODE_COPY.resend, lang)}
+          </button>
+        </>
+      ) : (
+        <span className="text-white/75">{pick(CODE_COPY.sending, lang)}</span>
+      )}
+    </div>
   );
 }
 

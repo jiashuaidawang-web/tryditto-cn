@@ -95,6 +95,43 @@ function datingHelpOptions(ctx: FlowContext): Option[] {
   ];
 }
 
+/** Student list per 09 §23; professional list per 13 §06 (variant switches Poster/Tabling for Facebook/LinkedIn). */
+function hearAboutOptions(ctx: FlowContext): Option[] {
+  const student = ctx.answers.isStudent === 'yes';
+  if (ctx.lang === 'zh') {
+    return [
+      o('friend', undefined, 'Friend', '朋友推荐'),
+      ...(student ? [o('poster', undefined, 'Poster', '校园海报'), o('tabling', undefined, 'Tabling', '校园摆摊')] : []),
+      o('rednote', undefined, 'RedNote (Xiaohongshu)', '小红书'),
+      o('douyin', undefined, 'TikTok', '抖音'),
+      o('wechat', undefined, 'WeChat', '微信 / 朋友圈'),
+      o('bilibili', undefined, 'Bilibili', 'B 站'),
+      o('weibo', undefined, 'Weibo', '微博'),
+    ];
+  }
+  return student
+    ? [
+        o('friend', undefined, 'Friend', '朋友推荐'),
+        o('poster', undefined, 'Poster', '校园海报'),
+        o('tabling', undefined, 'Tabling', '校园摆摊'),
+        o('instagram', undefined, 'Instagram', 'Instagram'),
+        o('douyin', undefined, 'TikTok', '抖音'),
+        o('x', undefined, 'X (Twitter)', 'X'),
+        o('rednote', undefined, 'RedNote (Xiaohongshu)', '小红书'),
+        o('google', undefined, 'Google', 'Google'),
+      ]
+    : [
+        o('friend', undefined, 'Friend', '朋友推荐'),
+        o('instagram', undefined, 'Instagram', 'Instagram'),
+        o('facebook', undefined, 'Facebook', 'Facebook'),
+        o('douyin', undefined, 'TikTok', '抖音'),
+        o('x', undefined, 'X (Twitter)', 'X'),
+        o('linkedin', undefined, 'LinkedIn', '领英'),
+        o('google', undefined, 'Google', 'Google'),
+        o('rednote', undefined, 'RedNote (Xiaohongshu)', '小红书'),
+      ];
+}
+
 const q = (question: Question) => question;
 
 export const QUESTIONS = {
@@ -432,10 +469,17 @@ export const QUESTIONS = {
     helper: t("don't lose access to your account, verify your email", '验证一下邮箱，别把账号弄丢啦'),
     placeholder: t('you@email.com', 'you@email.com'),
   }),
+  /** 12 §0.1: the page title is `let's verify that email 📬`, loading text `sending code…`. Code length per 07 JSON. */
   emailVerify: q({
     id: 'emailVerify',
-    type: 'interstitial',
-    bubbles: [t("let's verify that email 📬", '验证一下邮箱 📬')],
+    type: 'code',
+    bubbles: [t("let's verify that **email** 📬", '验证一下你的**邮箱** 📬'), t('we sent u a 6-digit code', '我们给你发了一个 6 位验证码')],
+    placeholder: t('6-digit code', '6 位验证码'),
+  }),
+  location: q({
+    id: 'location',
+    type: 'location',
+    bubbles: [t('**Where do you want to date**? 📍', '**你想在哪一带约会**？📍')],
   }),
 
   // ── Photos + preferences tail ──
@@ -477,6 +521,27 @@ export const QUESTIONS = {
       o('fewer', '🎯', 'Fewer, better matches', '少而精'),
       o('theOne', '💎', 'Wait for the one', '等那个对的人'),
     ],
+  }),
+  schoolYear: q({
+    id: 'schoolYear',
+    type: 'single',
+    bubbles: [t('what **year** are u going into this fall?', '这学期你读**几年级**？')],
+    options: [
+      o('freshman', undefined, 'Freshman', '大一'),
+      o('sophomore', undefined, 'Sophomore', '大二'),
+      o('junior', undefined, 'Junior', '大三'),
+      o('senior', undefined, 'Senior', '大四'),
+      o('master', undefined, 'Master', '硕士'),
+      o('phd', undefined, 'PhD', '博士'),
+      o('other', undefined, 'Other', '其他'),
+    ],
+  }),
+  hearAbout: q({
+    id: 'hearAbout',
+    type: 'single',
+    bubbles: [t('how did u **hear about us**?', '你是从哪儿**知道我们**的？')],
+    allowCustom: OTHER,
+    optionsFor: hearAboutOptions,
   }),
   occupation: q({
     id: 'occupation',

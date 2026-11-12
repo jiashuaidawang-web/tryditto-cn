@@ -9,11 +9,13 @@ export interface FlowFlags {
   /**
    * Which segment-3 tail to use. 12 §2.6 could not pin the rule; `auto` reproduces all six recordings by
    * using the long tail whenever the ideal-match / describe-yourself pages are in play (hypothesis H1).
+   * A fresh account needs photos, location and the preference tail, so the product default is `long`;
+   * `?tail=auto|short` replays the recordings.
    */
   tail: 'auto' | 'short' | 'long';
 }
 
-export const DEFAULT_FLAGS: FlowFlags = { skipAnswered: false, tail: 'auto' };
+export const DEFAULT_FLAGS: FlowFlags = { skipAnswered: false, tail: 'long' };
 
 /** Max hobby branches asked per pass (questionnaire.json branchLimit: 3). */
 export const BRANCH_LIMIT = 3;
@@ -63,6 +65,9 @@ export function buildSteps(answers: Answers, lang: Lang, flags: FlowFlags): Step
 
   const seg0: Draft[] = [{ id: 'isStudent' }, { id: 'name' }, { id: 'gender' }, { id: 'expectedGender' }, { id: 'birthday' }];
 
+  // 09 §2 (pages 18–19): photos, then the dating-area map. 07 JSON puts emailVerify between the email and photos.
+  const photosAndArea: Draft[] = [{ id: 'photos' }, { id: 'location' }];
+
   const seg1: Draft[] = student
     ? [
         { id: 'hobbies' },
@@ -74,8 +79,9 @@ export function buildSteps(answers: Answers, lang: Lang, flags: FlowFlags): Step
         { id: 'height' },
         { id: 'heightRange' },
         { id: 'schoolEmail' },
-        // Pages beyond the school email are out of scope; the slot still counts toward the denominator.
-        ...(escaped ? [] : [{ id: 'photos' as const, ghost: true }]),
+        // Escape hatch skips the school-email code (10 §7); verified students get the code page (12 §0.1 loaded there).
+        ...(escaped ? [] : [{ id: 'emailVerify' as const }]),
+        ...photosAndArea,
       ]
     : [
         { id: 'expectedAgeRange' },
@@ -88,32 +94,51 @@ export function buildSteps(answers: Answers, lang: Lang, flags: FlowFlags): Step
         ...branches,
         // N1/N2: this slot is counted, then skipped behind a ~0.9s spinner. N3 shows it.
         { id: 'photos', skip: !long },
+        // Not observed on N runs (recorded accounts already had an area); a fresh account needs one. 推断.
+        ...(long ? [{ id: 'location' as const }] : []),
       ];
 
-  const seg2: Draft[] =
-    student && !escaped
-      ? []
-      : [
-          { id: 'preferencesIntro' },
-          ...(long ? [{ id: 'relationshipLooking' as const }, { id: 'matchingStyle' as const }] : []),
-          { id: 'occupation' },
-          { id: 'firstDateBudget' },
-          ...(long || escaped ? [{ id: 'dealbreakers' as const }] : []),
-          { id: 'educationLevel' },
-          { id: 'educationImportance' },
-          ...(long
-            ? ([
-                { id: 'politics' },
-                { id: 'politicsImportance' },
-                { id: 'religion' },
-                { id: 'religionImportance' },
-                { id: 'firstMessage' },
-                { id: 'datingHelp' },
-              ] as Draft[])
-            : []),
-          { id: 'personalEmail' },
-          { id: 'emailVerify', ghost: true },
-        ];
+  // 09 §1: on the student path the third segment starts after location and ends full on datingHelp, which
+  // submits on the first tap. The preferences intro occupies a cell but never showed (09 §20).
+  const studentTail: Draft[] = [
+    { id: 'preferencesIntro', ghost: true },
+    { id: 'relationshipLooking' },
+    { id: 'matchingStyle' },
+    { id: 'schoolYear' },
+    { id: 'hearAbout' },
+    { id: 'dealbreakers' },
+    { id: 'politics' },
+    { id: 'politicsImportance' },
+    { id: 'religion' },
+    { id: 'religionImportance' },
+    { id: 'firstMessage' },
+    { id: 'datingHelp' },
+  ];
+
+  // 12 §1 N3 (long) / N1 (short), and 10 §7 for the "not a student?" escape. Ends with personal email → code.
+  const professionalTail: Draft[] = [
+    { id: 'preferencesIntro' },
+    ...(long ? [{ id: 'relationshipLooking' as const }, { id: 'matchingStyle' as const }] : []),
+    { id: 'occupation' },
+    { id: 'firstDateBudget' },
+    ...(long || escaped ? [{ id: 'dealbreakers' as const }] : []),
+    { id: 'educationLevel' },
+    { id: 'educationImportance' },
+    ...(long
+      ? ([
+          { id: 'politics' },
+          { id: 'politicsImportance' },
+          { id: 'religion' },
+          { id: 'religionImportance' },
+          { id: 'firstMessage' },
+          { id: 'datingHelp' },
+        ] as Draft[])
+      : []),
+    { id: 'personalEmail' },
+    { id: 'emailVerify' },
+  ];
+
+  const seg2: Draft[] = student && !escaped ? studentTail : professionalTail;
 
   const steps: Step[] = [];
   [seg0, seg1, seg2].forEach((seg, segment) => {
@@ -150,6 +175,19 @@ export function progressOf(step: Step | undefined): [number, number, number] {
 }
 
 export const navigable = (s: Step) => !s.skip && !s.ghost && !s.answered;
+
+/** 09 §30 / §6: the last page (datingHelp, all three bars full) shows confetti and submits on the first option tap. */
+export function isFinalTap(step: Step, steps: Step[]): boolean {
+  const last = [...steps].reverse().find((s) => !s.ghost && !s.skip);
+  return last?.id === step.id && (step.question.type === 'multi' || step.question.type === 'single');
+}
+
+/** The address the code page verifies: school email unless the user escaped or is not a student. */
+export function emailToVerify(answers: Answers): string {
+  const school = answers.isStudent === 'yes' && answers.noSchoolEmail !== true;
+  const v = school ? answers.schoolEmail : answers.personalEmail;
+  return typeof v === 'string' ? v : '';
+}
 
 /** Answers that must be cleared when a hobby is dropped (12 §2.4: removing a hobby wipes its branch drafts). */
 export function staleBranchKeys(answers: Answers): QuestionId[] {

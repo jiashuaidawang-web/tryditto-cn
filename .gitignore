@@ -1,0 +1,16 @@
+.DS_Store
+node_modules/
+dist/
+*.tsbuildinfo
+
+# login token for research scripts
+docs/research/tools/.ditto-state.json
+
+# large media
+*.webm
+*.mp4
+docs/research/assets/ditto-hero/_video_raw/
+
+# generated comparison output
+web/compare/ours/
+web/compare/side-by-side/

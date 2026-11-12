@@ -11,7 +11,19 @@ export type QuestionType =
   | 'heightRange'
   | 'interstitial'
   | 'email'
-  | 'photos';
+  | 'photos'
+  /** 6-digit email code (emailVerify). */
+  | 'code'
+  /** Dating area: place + travel mode + max minutes (09 §19). */
+  | 'location';
+
+export type TravelMode = 'walk' | 'transit' | 'drive';
+
+export interface LocationValue {
+  placeId: string;
+  mode: TravelMode;
+  minutes: number;
+}
 
 export interface Option {
   id: string;

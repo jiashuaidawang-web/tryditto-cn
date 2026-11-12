@@ -57,5 +57,9 @@ export function isAnswered(question: Question, value: unknown, ctx: FlowContext)
       return typeof value === 'number' && value >= 2;
     case 'interstitial':
       return true;
+    case 'code':
+      return typeof value === 'string' && /^\d{6}$/.test(value);
+    case 'location':
+      return typeof (value as { placeId?: unknown } | undefined)?.placeId === 'string';
   }
 }

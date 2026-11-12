@@ -84,6 +84,37 @@ export const TextBar = forwardRef<
   );
 });
 
+/** Edit-mode submit (13 §3): 96×48 white pill, ink 16/700, blur 10. Always tappable unless `enabled` is false. */
+export function DoneButton({
+  onClick,
+  enabled = true,
+  label = 'Done',
+  className = '',
+}: {
+  onClick: () => void;
+  enabled?: boolean;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-disabled={!enabled}
+      onClick={() => enabled && onClick()}
+      className={`grid h-12 min-w-24 place-items-center rounded-full px-5 text-[16px] font-bold ${className}`}
+      style={{
+        backgroundColor: enabled ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.3)',
+        color: enabled ? 'rgb(2,43,78)' : 'rgba(14,28,38,0.45)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        transition: nextButton.colorTransition,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function TextAreaBox({
   value,
   placeholder,
@@ -91,6 +122,7 @@ export function TextAreaBox({
   onSubmit,
   canSubmit,
   maxLength,
+  doneLabel,
 }: {
   value: string;
   placeholder: string;
@@ -98,7 +130,23 @@ export function TextAreaBox({
   onSubmit: () => void;
   canSubmit: boolean;
   maxLength?: number;
+  /** Edit mode renders a `Done` pill inside the box instead of the round Send (13 §01). */
+  doneLabel?: string;
 }) {
+  if (doneLabel) {
+    return (
+      <div className="ob-dock relative h-[156px] rounded-[24px]">
+        <textarea
+          value={value}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="ob-input absolute inset-0 resize-none bg-transparent px-5 pb-[72px] pt-[16px] text-[16px] leading-5 text-white outline-none"
+        />
+        <DoneButton label={doneLabel} enabled={canSubmit} onClick={onSubmit} className="absolute bottom-4 right-4" />
+      </div>
+    );
+  }
   return (
     <div className="ob-dock relative h-[156px] rounded-[24px]">
       <textarea
