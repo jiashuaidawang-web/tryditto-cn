@@ -1,0 +1,1423 @@
+{
+  "vw": 390,
+  "vh": 844,
+  "dpr": 1,
+  "body": {
+    "text": "Ditto ghosting? Fix it Log In Join Now iMessage Today 6:45 PM your match this week 🕊️ Ditto get a date next wednesday get a date next wedne",
+    "raw": "\"Ditto ghosting?Fix itDitto not replying? Get a new numberLog InJoin Nowhtml{over\"",
+    "cls": "m-0 bg-bg antialiased",
+    "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "fontStyle": "normal",
+    "lineHeight": "24px",
+    "letterSpacing": "normal",
+    "wordSpacing": "0px",
+    "color": "rgb(38, 37, 35)",
+    "backgroundColor": "rgb(117, 157, 167)",
+    "backgroundImage": "none",
+    "borderRadius": "0px",
+    "boxShadow": "none",
+    "padding": "0px",
+    "textTransform": "none",
+    "transition": "all",
+    "animation": "none",
+    "animationDuration": "0s",
+    "animationTiming": "ease",
+    "border": "rgb(56, 56, 56) 0px solid"
+  },
+  "header": {
+    "text": "Ditto ghosting? Fix it Log In Join Now",
+    "raw": "\"Ditto ghosting?Fix itDitto not replying? Get a new numberLog InJoin Now\"",
+    "cls": "fixed top-0 left-0 right-0 z-20 flex h-[72px] w-full items-center justify-between gap-4 px-6 select-none min-[481px]:h-[96px] min-[481px]:px",
+    "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "fontStyle": "normal",
+    "lineHeight": "24px",
+    "letterSpacing": "normal",
+    "wordSpacing": "0px",
+    "color": "rgb(38, 37, 35)",
+    "backgroundColor": "oklab(0 0 0 / 0.1)",
+    "backgroundImage": "none",
+    "borderRadius": "0px",
+    "boxShadow": "none",
+    "padding": "0px 24px",
+    "textTransform": "none",
+    "transition": "0.3s cubic-bezier(0, 0, 0.2, 1)",
+    "animation": "none",
+    "animationDuration": "0s",
+    "animationTiming": "ease",
+    "border": "rgb(56, 56, 56) 0px solid"
+  },
+  "h1": {
+    "text": "get a date next wednesday",
+    "raw": "\"get a date nextwednesday\"",
+    "cls": "",
+    "fontFamily": "spencer, \"spencer Fallback\", Georgia, serif",
+    "fontSize": "68.25px",
+    "fontWeight": "400",
+    "fontStyle": "normal",
+    "lineHeight": "64.155px",
+    "letterSpacing": "normal",
+    "wordSpacing": "0px",
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "backgroundImage": "none",
+    "borderRadius": "0px",
+    "boxShadow": "none",
+    "padding": "0px 16px",
+    "textTransform": "none",
+    "transition": "all",
+    "animation": "none",
+    "animationDuration": "0s",
+    "animationTiming": "ease",
+    "border": "rgb(56, 56, 56) 0px solid"
+  },
+  "h1ChildCount": 25,
+  "h1HTML": "<span class=\"ch\" aria-hidden=\"true\" style=\"animation-delay:0ms, 600ms\">g</span><span class=\"ch\" aria-hidden=\"true\" style=\"animation-delay:-60ms, 628ms\">e</span><span class=\"ch\" aria-hidden=\"true\" style=\"animation-delay:-120ms, 656ms\">t</span><span class=\"ch\" aria-hidden=\"true\" style=\"animation-delay:-180ms, 684ms\">&nbsp;</span><span class=\"ch\" aria-hidden=\"true\" style=\"animation-delay:-240ms, 712ms\">a</span><span class=\"ch\" aria-hidden=\"true\" style=\"animation-delay:-300ms, 740ms\">&nbsp;</span><s",
+  "headings": [
+    {
+      "text": "get a date next wednesday",
+      "raw": "\"get a date nextwednesday\"",
+      "cls": "",
+      "fontFamily": "spencer, \"spencer Fallback\", Georgia, serif",
+      "fontSize": "68.25px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "64.155px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px 16px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Tell Ditto Your Type",
+      "raw": "\"Tell Ditto Your Type\"",
+      "cls": "EqgHtG_stepTitle",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "28px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "32.76px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(247, 247, 242)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "The Wednesday Drop",
+      "raw": "\"The Wednesday Drop\"",
+      "cls": "EqgHtG_stepTitle",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "28px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "32.76px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(247, 247, 242)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Schedule the Date",
+      "raw": "\"Schedule the Date\"",
+      "cls": "EqgHtG_stepTitle",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "28px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "32.76px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(247, 247, 242)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Have fun!",
+      "raw": "\"Have fun!\"",
+      "cls": "EqgHtG_stepTitle",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "28px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "32.76px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(247, 247, 242)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Backed by best research",
+      "raw": "\"Backed by best research\"",
+      "cls": "font-spencer text-[28px] leading-[117%] text-white text-center min-[1025px]:hidden",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "28px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "32.76px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Backed by bestresearch",
+      "raw": "\"Backed by bestresearch\"",
+      "cls": "hidden font-spencer text-[40px] leading-[117%] text-white text-center min-[1025px]:block min-[1025px]:min-h-[100px]",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "40px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "46.8px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Ditto learns your preferences",
+      "raw": "\"Ditto learns your preferences\"",
+      "cls": "font-spencer text-[28px] leading-[117%] text-white text-center min-[1025px]:hidden",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "28px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "32.76px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Ditto learns yourpreferences",
+      "raw": "\"Ditto learns yourpreferences\"",
+      "cls": "hidden font-spencer text-[40px] leading-[117%] text-white text-center min-[1025px]:block min-[1025px]:min-h-[100px]",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "40px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "46.8px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Scans the entire pool to find the one",
+      "raw": "\"Scans the entire pool tofind the one\"",
+      "cls": "font-spencer text-[28px] leading-[117%] text-white text-center min-[1025px]:hidden",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "28px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "32.76px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Scans the entire poolto find the one",
+      "raw": "\"Scans the entire poolto find the one\"",
+      "cls": "hidden font-spencer text-[40px] leading-[117%] text-white text-center min-[1025px]:block min-[1025px]:min-h-[100px]",
+      "fontFamily": "spencer, \"spencer Fallback\"",
+      "fontSize": "40px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "46.8px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Ditto One Ready-to-go Date Invite",
+      "raw": "\"DittoOne Ready-to-go Date Invite\"",
+      "cls": "m-0 flex flex-col items-center gap-1 text-center text-base font-normal leading-[117%] tracking-normal text-white",
+      "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "18.72px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Other Dating Apps Endless Swiping & Small Talk",
+      "raw": "\"Other Dating AppsEndless Swiping & Small Talk\"",
+      "cls": "m-0 flex flex-col items-center gap-1 text-center text-base font-normal leading-[117%] tracking-normal text-white",
+      "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "18.72px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "text": "Resources",
+      "raw": "\"Resources\"",
+      "cls": "m-0 text-base font-normal text-gray",
+      "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "24px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(161, 161, 170)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "all",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    }
+  ],
+  "ctas": [
+    {
+      "tag": "BUTTON",
+      "href": null,
+      "text": "Fix it",
+      "raw": "\"Fix it\"",
+      "cls": "m-0 inline border-0 bg-transparent p-0 font-[inherit] text-white/80 underline decoration-inherit hover:text-white",
+      "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+      "fontSize": "12px",
+      "fontWeight": "500",
+      "fontStyle": "normal",
+      "lineHeight": "16.5px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "oklab(0.999994 0.0000455677 0.0000200868 / 0.8)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "filter 0.3s",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "tag": "A",
+      "href": "https://app.tryditto.com/login",
+      "text": "Log In",
+      "raw": "\"Log In\"",
+      "cls": "items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visi",
+      "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "fontStyle": "normal",
+      "lineHeight": "20px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.1)",
+      "backgroundImage": "none",
+      "borderRadius": "1.67772e+07px",
+      "boxShadow": "rgba(255, 255, 255, 0.15) 0px 0px 8px 0px inset",
+      "padding": "0px 16px",
+      "textTransform": "none",
+      "transition": "filter 0.3s",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "tag": "BUTTON",
+      "href": null,
+      "text": "Join Now",
+      "raw": "\"Join Now\"",
+      "cls": "items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rin",
+      "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "700",
+      "fontStyle": "normal",
+      "lineHeight": "20px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 44, 171)",
+      "backgroundColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.95)",
+      "backgroundImage": "none",
+      "borderRadius": "1.67772e+07px",
+      "boxShadow": "rgba(255, 255, 255, 0.15) 0px 0px 8px 0px inset",
+      "padding": "0px 16px",
+      "textTransform": "none",
+      "transition": "filter 0.3s",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "tag": "BUTTON",
+      "href": null,
+      "text": "Join Now",
+      "raw": "\"Join Now\"",
+      "cls": "austin-hero-cta inline-flex h-12 w-[min(calc(100vw-64px),352px)] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white/9",
+      "fontFamily": "Helvetica, \"Helvetica Neue\", Arial, sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "700",
+      "fontStyle": "normal",
+      "lineHeight": "24px",
+      "letterSpacing": "-0.32px",
+      "wordSpacing": "0px",
+      "color": "rgb(0, 0, 0)",
+      "backgroundColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.95)",
+      "backgroundImage": "none",
+      "borderRadius": "1.67772e+07px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, ",
+      "padding": "0px 8px",
+      "textTransform": "none",
+      "transition": "transform 0.42s cubic-bezier(0.3, 1.7, 0.5, 1)",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "tag": "A",
+      "href": "https://tryditto.com/manifesto",
+      "text": "Our Manifesto",
+      "raw": "\"Our Manifesto\"",
+      "cls": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-md font-medium transition-colors focus-visible:outline-none focus-visib",
+      "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "500",
+      "fontStyle": "normal",
+      "lineHeight": "24px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.1)",
+      "backgroundImage": "none",
+      "borderRadius": "1.67772e+07px",
+      "boxShadow": "rgba(255, 255, 255, 0.15) 0px 0px 8px 0px inset",
+      "padding": "0px 32px",
+      "textTransform": "none",
+      "transition": "filter 0.3s",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    },
+    {
+      "tag": "A",
+      "href": "https://tryditto.com/manifesto",
+      "text": "Manifesto",
+      "raw": "\"Manifesto \"",
+      "cls": "flex w-full items-center justify-between gap-4 text-base text-nu-1 no-underline transition-colors duration-200 hover:text-white min-[481px]:",
+      "fontFamily": "Arial, \"Helvetica Neue\", Helvetica, \"Liberation Sans\", sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "24px",
+      "letterSpacing": "normal",
+      "wordSpacing": "0px",
+      "color": "rgb(247, 247, 242)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "backgroundImage": "none",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "textTransform": "none",
+      "transition": "filter 0.3s",
+      "animation": "none",
+      "animationDuration": "0s",
+      "animationTiming": "ease",
+      "border": "rgb(56, 56, 56) 0px solid"
+    }
+  ],
+  "faces": [
+    {
+      "family": "argentPixel",
+      "weight": "400",
+      "style": "normal",
+      "src": "url(\"../media/ArgentPixel_Regular-s.2-ofzhj5j79qv.woff2?dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L\") format(\"woff2\")"
+    },
+    {
+      "family": "argentPixel",
+      "weight": "400",
+      "style": "italic",
+      "src": "url(\"../media/ArgentPixel_RegularItalic-s.1rvgbb1_hx-hg.woff2?dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L\") format(\"woff2\")"
+    },
+    {
+      "family": "\"argentPixel Fallback\"",
+      "weight": "",
+      "style": "",
+      "src": "local(\"Arial\")"
+    },
+    {
+      "family": "spencer",
+      "weight": "400",
+      "style": "normal",
+      "src": "url(\"../media/spencer_regular_webfont-s.p.3a5g2h7kjbggl.woff2?dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L\") format(\"woff2\")"
+    },
+    {
+      "family": "\"spencer Fallback\"",
+      "weight": "",
+      "style": "",
+      "src": "local(\"Arial\")"
+    },
+    {
+      "family": "bitterSour",
+      "weight": "400",
+      "style": "normal",
+      "src": "url(\"../media/BitterSour-s.p.2_1e9-4yj5hox.woff2?dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L\") format(\"woff2\")"
+    },
+    {
+      "family": "\"bitterSour Fallback\"",
+      "weight": "",
+      "style": "",
+      "src": "local(\"Arial\")"
+    }
+  ],
+  "fonts": [
+    "argentPixel|400|normal|unloaded",
+    "argentPixel|400|italic|unloaded",
+    "argentPixel Fallback|normal|normal|unloaded",
+    "spencer|400|normal|loaded",
+    "spencer Fallback|normal|normal|loaded",
+    "bitterSour|400|normal|loaded",
+    "bitterSour Fallback|normal|normal|unloaded"
+  ],
+  "vars": {
+    "--background": "57, 40%, 90%",
+    "--foreground": "222, 33%, 6%",
+    "--card": "0 0% 100%",
+    "--card-foreground": "222 33% 6%",
+    "--popover": "0 0% 100%",
+    "--popover-foreground": "222 33% 6%",
+    "--primary": "46, 100%, 58%",
+    "--primary-foreground": "0 0% 0%",
+    "--secondary": "57, 40%, 90%",
+    "--secondary-foreground": "222 33% 6%",
+    "--muted": "57, 20%, 85%",
+    "--muted-foreground": "57, 10%, 40%",
+    "--accent": "57, 40%, 85%",
+    "--accent-foreground": "222 33% 6%",
+    "--destructive": "0, 72%, 51%",
+    "--destructive-foreground": "0, 86%, 97%",
+    "--border": "57, 20%, 80%",
+    "--input": "57, 20%, 80%",
+    "--ring": "46, 100%, 58%",
+    "--chart-1": "220 70% 50%",
+    "--chart-2": "160 60% 45%",
+    "--chart-3": "30 80% 55%",
+    "--chart-4": "280 65% 60%",
+    "--chart-5": "340 75% 55%",
+    "--radius": ".5rem",
+    "--Color-White": "#fff",
+    "--Color-Yellow": "#ffcd2a",
+    "--Color-Red": "#ef4146",
+    "--Color-Green": "#2faf51",
+    "--Color-Blue": "#4285f4",
+    "--Color-Orange": "#f5a735",
+    "--Color-Gray": "#a1a1aa",
+    "--Color-LightBlue": "#00d4ff",
+    "--Color-Error": "#ee4697",
+    "--Color-Border": "#383838",
+    "--Color-Nu-7": "#262523",
+    "--Color-Nu-6": "#1e1d1b",
+    "--Color-Nu-5": "#3b3b31",
+    "--Color-Nu-4": "#646446",
+    "--Color-Nu-3": "#b9b689",
+    "--Color-Nu-2": "#f0efdc",
+    "--Color-Nu-1": "#f7f7f2",
+    "--Color-Yellow-Filter": "brightness(0) saturate(100%) invert(100%) sepia(79%) saturate(7493%) hue-rotate(348deg) brightness(100%) contrast(102%)",
+    "--Color-Orange-Filter": "brightness(0) saturate(100%) invert(75%) sepia(69%) saturate(1038%) hue-rotate(332deg) brightness(99%) contrast(94%)",
+    "--Color-V3-Primary": "#f748b1",
+    "--Color-V3-Secondary": "#ff2cab",
+    "--Color-V3-Accent": "#6366f1",
+    "--Color-V3-Success": "#10b981",
+    "--Color-V3-Error": "#ef4444",
+    "--Color-V3-Bg-Primary": "#081721",
+    "--Color-V3-Bg-Secondary": "#233039",
+    "--Color-V3-Nu-1": "#fff",
+    "--Color-V3-Nu-2": "#bcc9d3",
+    "--Color-V3-Nu-3": "#8e989f",
+    "--Color-V3-Nu-4": "#72828d",
+    "--Color-V3-Nu-5": "#163049",
+    "--Color-V3-Nu-6": "#233039",
+    "--Color-V3-Nu-7": "#081721",
+    "--Color-V3-Nu-8": "#1e2319",
+    "--Color-Primary": "#f748b1",
+    "--Color-Secondary": "#ff2cab"
+  },
+  "keyframes": [
+    "scroll :: @keyframes scroll { 0% { left: -128px; } 100% { left: -4113px; } }",
+    "t_IgiG_matchScheduleDip :: @keyframes t_IgiG_matchScheduleDip { 0% { translate: 0px; rotate: var(--card-rest-rotate); animation-timing-function: cubic-bezier(0.4, 0, 1, 1); } 40% { animation-timing-function: cubic-bezier(0.16, 1.32, 0.3, 1); trans",
+    "t_IgiG_matchScheduleHeart :: @keyframes t_IgiG_matchScheduleHeart { 0% { opacity: 0; translate: 0px; rotate: 0deg; scale: 0.3; } 5% { translate: calc(var(--heart-mx) * .2561 + var(--heart-dx) * .0227) calc(var(--heart-my) * .2561 + var(--heart-dy) *",
+    "t_IgiG_matchScheduleEnter :: @keyframes t_IgiG_matchScheduleEnter { 0% { translate: 0px 160%; rotate: 6deg; } 100% { translate: 0px; rotate: var(--card-rest-rotate); } }",
+    "_4fEoPa_heroSchoolMarquee :: @keyframes _4fEoPa_heroSchoolMarquee { 0% { transform: translate(0px); } 100% { transform: translate(-50%); } }",
+    "vl1Gzq_fadeInUp :: @keyframes vl1Gzq_fadeInUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0px); } }",
+    "vl1Gzq_slideInUp :: @keyframes vl1Gzq_slideInUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0px); } }",
+    "vl1Gzq_slideOutUp :: @keyframes vl1Gzq_slideOutUp { 0% { opacity: 1; transform: translateY(0px); } 100% { opacity: 0; transform: translateY(-30px); } }",
+    "vl1Gzq_scaleOutFromBoat :: @keyframes vl1Gzq_scaleOutFromBoat { 0% { opacity: 0; transform: scale(0.35); } 100% { opacity: 1; transform: scale(1); } }",
+    "vl1Gzq_scaleInToBoat :: @keyframes vl1Gzq_scaleInToBoat { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.35); } }",
+    "vl1Gzq_yachtFloat :: @keyframes vl1Gzq_yachtFloat { 0%, 100% { transform: translateY(0px) translate(0px) rotate(0deg); } 25% { transform: translateY(-6px) translate(3px) rotate(1.2deg); } 50% { transform: translateY(2px) translate(-3px) rota",
+    "vl1Gzq_crewDeckDrift :: @keyframes vl1Gzq_crewDeckDrift { 0%, 100% { transform: translateY(0px) rotate(0deg); } 40% { transform: translateY(-3px) rotate(0.4deg); } 70% { transform: translateY(2px) rotate(-0.35deg); } }",
+    "vl1Gzq_crewSlotFloat0 :: @keyframes vl1Gzq_crewSlotFloat0 { 0%, 100% { transform: translate(0px) rotate(0deg); } 35% { transform: translate(1px, -5px) rotate(1deg); } 65% { transform: translate(-2px, 2px) rotate(-0.65deg); } }",
+    "vl1Gzq_crewSlotFloat1 :: @keyframes vl1Gzq_crewSlotFloat1 { 0%, 100% { transform: translate(0px) rotate(0deg); } 30% { transform: translate(-2px, -4px) rotate(-0.85deg); } 72% { transform: translate(2px, 3px) rotate(0.55deg); } }",
+    "vl1Gzq_crewSlotFloat2 :: @keyframes vl1Gzq_crewSlotFloat2 { 0%, 100% { transform: translate(0px) rotate(0deg); } 42% { transform: translate(2px, 3px) rotate(0.75deg); } 78% { transform: translate(-3px, -3px) rotate(-0.9deg); } }",
+    "vl1Gzq_crewSlotFloat3 :: @keyframes vl1Gzq_crewSlotFloat3 { 0%, 100% { transform: translate(0px) rotate(0deg); } 28% { transform: translate(-1px, -6px) rotate(0.45deg); } 58% { transform: translate(2px, 2px) rotate(-0.55deg); } }",
+    "lywRXW_rise :: @keyframes lywRXW_rise { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: none; } }",
+    "lywRXW_cueIn :: @keyframes lywRXW_cueIn { 0% { opacity: 0; transform: translate(-50%, 8px); } 100% { opacity: 1; transform: translate(-50%); } }",
+    "lywRXW_cueNudge :: @keyframes lywRXW_cueNudge { 0%, 100% { transform: none; } 50% { transform: translateY(5px); } }",
+    "lywRXW_fill :: @keyframes lywRXW_fill { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }",
+    "lywRXW_cupJolt :: @keyframes lywRXW_cupJolt { 0% { translate: 0px; rotate: 0deg; } 35% { translate: calc(var(--cup-push) * -2px) 1px; rotate: calc(var(--cup-push) * -2deg); } 55% { translate: calc(var(--cup-push) * 6px) -3px; rotate: calc",
+    "lywRXW_voucherPulse :: @keyframes lywRXW_voucherPulse { 0% { animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); scale: 1; } 40% { animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1.4); scale: 0.9; } 65% { animation-timing-function: e",
+    "lywRXW_voucherBurst :: @keyframes lywRXW_voucherBurst { 0% { opacity: 0; translate: 0px; rotate: 0deg; scale: 0.3; } 3% { translate: calc(var(--burst-mx) * .2426 + var(--burst-dx) * .02) calc(var(--burst-my) * .2426 + var(--burst-dy) * .02); r",
+    "_8cJQcq_copy-done :: @keyframes _8cJQcq_copy-done { 0% { opacity: 0; transform: scale(0.6); } }",
+    "_8cJQcq_fade-in :: @keyframes _8cJQcq_fade-in { 0% { opacity: 0; } }",
+    "_8cJQcq_fade-out :: @keyframes _8cJQcq_fade-out { 100% { opacity: 0; } }",
+    "_8cJQcq_card-in :: @keyframes _8cJQcq_card-in { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.96); } }",
+    "_8cJQcq_card-out :: @keyframes _8cJQcq_card-out { 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.96); } }",
+    "_8cJQcq_page-in :: @keyframes _8cJQcq_page-in { 0% { opacity: 0; transform: translateY(8px); } }",
+    "ah-pan :: @keyframes ah-pan { 100% { transform: translate(-25%); } }",
+    "ah-glint :: @keyframes ah-glint { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }",
+    "ah-msg-in :: @keyframes ah-msg-in { 0% { opacity: 0; transform: scale(0.88); } }",
+    "ah-msg-pop :: @keyframes ah-msg-pop { 0% { opacity: 0; transform: translateY(calc(34 * var(--u))) scale(.92); } }",
+    "ah-dot :: @keyframes ah-dot { 0%, 60%, 100% { opacity: 0.4; } 30% { opacity: 1; } }",
+    "ah-title-wave :: @keyframes ah-title-wave { 0%, 100% { transform: translateY(0px) rotate(0deg); } 25% { transform: translateY(-0.071em) rotate(-1deg); } 50% { transform: translateY(0.036em) rotate(0.8deg); } 75% { transform: translateY(-",
+    "ah-in-fade :: @keyframes ah-in-fade { 0% { opacity: 0; } }",
+    "ah-in-settle :: @keyframes ah-in-settle { 0% { translate: 0px 3%; } }",
+    "ah-in-rise :: @keyframes ah-in-rise { 0% { opacity: 0; translate: 0px 38%; } }",
+    "ah-in-rise-near :: @keyframes ah-in-rise-near { 0% { opacity: 0; translate: 0px 55%; } }",
+    "ah-ch-in :: @keyframes ah-ch-in { 0% { opacity: 0; translate: 0px 0.35em; } }",
+    "ah-in-up :: @keyframes ah-in-up { 0% { opacity: 0; translate: 0px 18px; } }",
+    "marquee :: @keyframes marquee { 0% { transform: translate(0px); } 100% { transform: translate(-50%); } }"
+  ],
+  "motions": [
+    "T button, a => filter 0.3s",
+    "A .t_IgiG_enter => 0.372s cubic-bezier(0.16, 1.32, 0.3, 1) 0s 1 normal both running t_IgiG_matchScheduleEnter",
+    "A .t_IgiG_dip => 0.62s ease 0s 1 normal both running t_IgiG_matchScheduleDip",
+    "A ._4fEoPa_marquee => 80s linear 0s infinite normal none running _4fEoPa_heroSchoolMarquee",
+    "T .EqgHtG_step => opacity 0.8s ease-out, transform 0.8s ease-out",
+    "T .EqgHtG_stepImage => transform 0.3s",
+    "T .iF7zlW_animatedImage => opacity 0.8s ease-out, transform 0.8s ease-out",
+    "T .fXJqOa_item => opacity 0.8s ease-out, transform 0.8s ease-out",
+    "A .vl1Gzq_cityImageScaleIn => 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0s 1 normal forwards running vl1Gzq_scaleOutFromBoat",
+    "A .vl1Gzq_cityImageScaleOut => 0.4s cubic-bezier(0.4, 0, 0.6, 1) 0s 1 normal forwards running vl1Gzq_scaleInToBoat",
+    "A .vl1Gzq_yachtFloat => 4s ease-in-out 0s infinite normal none running vl1Gzq_yachtFloat",
+    "A .vl1Gzq_crewDeckDrift => 5.4s ease-in-out 0.35s infinite normal none running vl1Gzq_crewDeckDrift",
+    "A .vl1Gzq_crewSlotFloat0 => 3.85s ease-in-out 0s infinite normal none running vl1Gzq_crewSlotFloat0",
+    "A .vl1Gzq_crewSlotFloat1 => 3.35s ease-in-out 0.22s infinite normal none running vl1Gzq_crewSlotFloat1",
+    "A .vl1Gzq_crewSlotFloat2 => 4.05s ease-in-out 0.48s infinite normal none running vl1Gzq_crewSlotFloat2",
+    "A .vl1Gzq_crewSlotFloat3 => 3.55s ease-in-out 0.7s infinite normal none running vl1Gzq_crewSlotFloat3",
+    "A .vl1Gzq_cityLabel => 0.6s ease-out 0s 1 normal forwards running vl1Gzq_fadeInUp",
+    "A .vl1Gzq_cityImageEnter => 0.8s ease-out 0s 1 normal forwards running vl1Gzq_slideInUp",
+    "A .vl1Gzq_cityImageExit => 0.8s ease-out 0s 1 normal forwards running vl1Gzq_slideOutUp",
+    "T .uCrdSG_item => opacity 0.8s ease-out, transform 0.8s ease-out",
+    "T .neJCpG_item => opacity 0.8s ease-out, transform 0.8s ease-out",
+    "A .lywRXW_heroTitle => 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0s 1 normal both running lywRXW_rise",
+    "A .lywRXW_stockFill => 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.9s 1 normal both running lywRXW_fill",
+    "A .lywRXW_cobrand => 0.5s ease-out 0.5s 1 normal both running lywRXW_rise",
+    "A .lywRXW_scrollCue => 0.5s ease-out 0.9s 1 normal both running lywRXW_cueIn",
+    "A .lywRXW_scrollCueIcon => 1.4s ease-in-out 1.6s 3 normal none running lywRXW_cueNudge",
+    "A .lywRXW_hero .lywRXW_formWrap => 0.5s ease-out 0.7s 1 normal backwards running lywRXW_rise",
+    "T .lywRXW_faqChevron => rotate 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6)",
+    "T .lywRXW_faqAnswerWrap => grid-template-rows 0.3s ease-out",
+    "A .lywRXW_voucherWrap[data-pulse] .lywRXW_voucherImage => 0.52s linear 0s 1 normal both running lywRXW_voucherPulse",
+    "A .lywRXW_voucherWrap[data-pulse] .lywRXW_stock => 0.52s linear 0s 1 normal both running lywRXW_voucherPulse",
+    "A .lywRXW_voucherWrap[data-pulse] .lywRXW_cupImage => lywRXW_cupJolt .6s ease-out var(--jolt-delay) both",
+    "A ._8cJQcq_overlay[data-state=\"open\"] => 0.25s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal none running _8cJQcq_fade-in",
+    "A ._8cJQcq_overlay[data-state=\"closed\"] => 0.15s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal none running _8cJQcq_fade-out",
+    "A ._8cJQcq_card[data-state=\"open\"] => 0.25s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal none running _8cJQcq_card-in",
+    "A ._8cJQcq_card[data-state=\"closed\"] => 0.15s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal none running _8cJQcq_card-out",
+    "A ._8cJQcq_pageEnter => 0.25s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal none running _8cJQcq_page-in",
+    "A ._8cJQcq_more => 0.2s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal none running _8cJQcq_fade-in",
+    "A ._8cJQcq_copyRowIconDone => 0.2s ease-out 0s 1 normal none running _8cJQcq_copy-done",
+    "A .austin-hero .strip => auto linear 0s infinite normal none running ah-pan",
+    "A .austin-hero .glint => 2.6s ease-in-out 0s infinite normal none running ah-glint",
+    "T .austin-hero .phone => transform 1.8s cubic-bezier(0.2, 0.9, 0.25, 1.04)",
+    "T .austin-hero .thread => opacity 0.5s",
+    "A .austin-hero .msg => 0.34s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal both running ah-msg-in",
+    "A .austin-hero .msg.out => 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 normal both running ah-msg-pop",
+    "A .austin-hero .msg.typing i => 1.2s ease-in-out 0s infinite normal none running ah-dot",
+    "A .austin-hero .receipt => 0.3s ease-out 0s 1 normal both running ah-msg-in",
+    "A .austin-hero h1 .ch => 1.8s ease-in-out 0s infinite normal none running ah-title-wave",
+    "T .austin-hero-cta => transform 0.42s cubic-bezier(0.3, 1.7, 0.5, 1)",
+    "T .austin-hero-cta:active => transform 90ms ease-out",
+    "A .animate-marquee.jsx-1ec6aaf0a2291acc => 30s linear 0s infinite normal none running marquee"
+  ],
+  "motionCount": 51,
+  "imgs": [
+    {
+      "alt": "Ditto",
+      "w": 64,
+      "h": 21,
+      "src": "https://tryditto.com/_next/image?url=%2Fimages%2Flogos%2Fditto-logo-white.png&w=64&q=75&dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L"
+    },
+    {
+      "alt": "",
+      "w": 1536,
+      "h": 1637,
+      "src": "https://tryditto.com/images/austin/sky.webp"
+    },
+    {
+      "alt": "",
+      "w": 1536,
+      "h": 1637,
+      "src": "https://tryditto.com/images/austin/sky.webp"
+    },
+    {
+      "alt": "",
+      "w": 1536,
+      "h": 1637,
+      "src": "https://tryditto.com/images/austin/sky.webp"
+    },
+    {
+      "alt": "",
+      "w": 1536,
+      "h": 1637,
+      "src": "https://tryditto.com/images/austin/sky.webp"
+    },
+    {
+      "alt": "",
+      "w": 1920,
+      "h": 501,
+      "src": "https://tryditto.com/images/home/painted-campus-2.webp"
+    },
+    {
+      "alt": "",
+      "w": 1920,
+      "h": 501,
+      "src": "https://tryditto.com/images/home/painted-campus-2.webp"
+    },
+    {
+      "alt": "",
+      "w": 1920,
+      "h": 501,
+      "src": "https://tryditto.com/images/home/painted-campus-2.webp"
+    },
+    {
+      "alt": "",
+      "w": 1920,
+      "h": 501,
+      "src": "https://tryditto.com/images/home/painted-campus-2.webp"
+    },
+    {
+      "alt": "",
+      "w": 1920,
+      "h": 347,
+      "src": "https://tryditto.com/images/home/painted-river-soft.webp"
+    },
+    {
+      "alt": "",
+      "w": 1920,
+      "h": 347,
+      "src": "https://tryditto.com/images/home/painted-river-soft.webp"
+    },
+    {
+      "alt": "",
+      "w": 1920,
+      "h": 347,
+      "src": "https://tryditto.com/images/home/painted-river-soft.webp"
+    },
+    {
+      "alt": "",
+      "w": 1920,
+      "h": 347,
+      "src": "https://tryditto.com/images/home/painted-river-soft.webp"
+    },
+    {
+      "alt": "How it works",
+      "w": 792,
+      "h": 104,
+      "src": "https://tryditto.com/images/title-text/subtitle_how-it-works.png"
+    },
+    {
+      "alt": "Step 1",
+      "w": 45,
+      "h": 63,
+      "src": "https://tryditto.com/images/howitworks/number_1.webp"
+    },
+    {
+      "alt": "Tell Ditto Your Type",
+      "w": 1170,
+      "h": 336,
+      "src": "https://tryditto.com/images/howitworks/how_it_works_1.webp"
+    },
+    {
+      "alt": "Step 2",
+      "w": 45,
+      "h": 63,
+      "src": "https://tryditto.com/images/howitworks/number_2.webp"
+    },
+    {
+      "alt": "The Wednesday Drop",
+      "w": 1170,
+      "h": 444,
+      "src": "https://tryditto.com/images/howitworks/how_it_works_2.webp"
+    },
+    {
+      "alt": "Step 3",
+      "w": 45,
+      "h": 63,
+      "src": "https://tryditto.com/images/howitworks/number_3.webp"
+    },
+    {
+      "alt": "Schedule the Date",
+      "w": 1170,
+      "h": 360,
+      "src": "https://tryditto.com/images/howitworks/how_it_works_3.webp"
+    },
+    {
+      "alt": "Step 4",
+      "w": 45,
+      "h": 63,
+      "src": "https://tryditto.com/images/howitworks/number_4.webp"
+    },
+    {
+      "alt": "Have fun!",
+      "w": 1170,
+      "h": 423,
+      "src": "https://tryditto.com/images/howitworks/how_it_works_4.webp"
+    },
+    {
+      "alt": "Real Dates Delivered",
+      "w": 792,
+      "h": 104,
+      "src": "https://tryditto.com/images/title-text/subtitle_real-dates-delivered.png"
+    },
+    {
+      "alt": "",
+      "w": 646,
+      "h": 332,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_pic_02.webp"
+    },
+    {
+      "alt": "",
+      "w": 0,
+      "h": 0,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_pic_02_tablet_and_above.webp"
+    },
+    {
+      "alt": "",
+      "w": 616,
+      "h": 510,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_pic_01.webp"
+    },
+    {
+      "alt": "",
+      "w": 561,
+      "h": 452,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_pic_03.webp"
+    },
+    {
+      "alt": "80,000+ dates arranged",
+      "w": 346,
+      "h": 184,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_data_01.webp"
+    },
+    {
+      "alt": "65%",
+      "w": 309,
+      "h": 183,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_data_02.webp"
+    },
+    {
+      "alt": "92%",
+      "w": 339,
+      "h": 188,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_data_03.webp"
+    },
+    {
+      "alt": "",
+      "w": 616,
+      "h": 510,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_pic_01.webp"
+    },
+    {
+      "alt": "",
+      "w": 0,
+      "h": 0,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_pic_02_tablet_and_above.webp"
+    },
+    {
+      "alt": "",
+      "w": 561,
+      "h": 452,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_pic_03.webp"
+    },
+    {
+      "alt": "80,000+ dates arranged",
+      "w": 346,
+      "h": 184,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_data_01.webp"
+    },
+    {
+      "alt": "65%",
+      "w": 309,
+      "h": 183,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_data_02.webp"
+    },
+    {
+      "alt": "92%",
+      "w": 339,
+      "h": 188,
+      "src": "https://tryditto.com/images/real-dates/Real%20Dates%20Delivered_data_03.webp"
+    },
+    {
+      "alt": "Your Personalized Matchmaker",
+      "w": 792,
+      "h": 168,
+      "src": "https://tryditto.com/images/title-text/subtitle_your-personalized.png"
+    },
+    {
+      "alt": "Professional matchmakers and cognitive researchers",
+      "w": 780,
+      "h": 316,
+      "src": "https://tryditto.com/images/your-personalized/Your%20Personalized_01_mobile.webp"
+    },
+    {
+      "alt": "Professional matchmakers and cognitive researchers",
+      "w": 0,
+      "h": 0,
+      "src": "https://tryditto.com/images/your-personalized/Your%20Personalized_01.webp"
+    },
+    {
+      "alt": "Ditto learns your preferences",
+      "w": 780,
+      "h": 362,
+      "src": "https://tryditto.com/images/your-personalized/Your%20Personalized_02_mobile.webp"
+    },
+    {
+      "alt": "Ditto learns your preferences",
+      "w": 0,
+      "h": 0,
+      "src": "https://tryditto.com/images/your-personalized/Your%20Personalized_02.webp"
+    },
+    {
+      "alt": "Scans the entire pool to find the one",
+      "w": 780,
+      "h": 386,
+      "src": "https://tryditto.com/images/your-personalized/Your%20Personalized_03_mobile.webp"
+    },
+    {
+      "alt": "Scans the entire pool to find the one",
+      "w": 0,
+      "h": 0,
+      "src": "https://tryditto.com/images/your-personalized/Your%20Personalized_03.webp"
+    },
+    {
+      "alt": "Unforgettable Great Times",
+      "w": 792,
+      "h": 104,
+      "src": "https://tryditto.com/images/title-text/subtitle_Unforgettable.png"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_01.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_02.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_03.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_04.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_05.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_06.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_01.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_02.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_03.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_04.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_05.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_06.webp"
+    },
+    {
+      "alt": "Unforgettable Great Times",
+      "w": 792,
+      "h": 104,
+      "src": "https://tryditto.com/images/title-text/subtitle_Unforgettable.png"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_01.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_02.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_03.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_04.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_05.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_06.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_01.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_02.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_03.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_04.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_05.webp"
+    },
+    {
+      "alt": "",
+      "w": 574,
+      "h": 844,
+      "src": "https://tryditto.com/images/unforgettable/Unforgettable%20Great%20Times_06.webp"
+    },
+    {
+      "alt": "Tired of swiping? Ditto is for you",
+      "w": 792,
+      "h": 192,
+      "src": "https://tryditto.com/images/title-text/subtitle_tired-of-swiping.webp"
+    },
+    {
+      "alt": "Received a single message from Ditto, that your date is set for Friday.",
+      "w": 780,
+      "h": 326,
+      "src": "https://tryditto.com/images/funpart/tired-of-tinder-1.webp"
+    },
+    {
+      "alt": "Received thousands of messages from other dating apps, that are tiresome and ineffective.",
+      "w": 780,
+      "h": 326,
+      "src": "https://tryditto.com/images/funpart/tired-of-tinder-2.webp"
+    },
+    {
+      "alt": "Verified. Private. Safe.",
+      "w": 792,
+      "h": 104,
+      "src": "https://tryditto.com/images/title-text/subtitle_verified-private-safe.png"
+    },
+    {
+      "alt": "",
+      "w": 264,
+      "h": 260,
+      "src": "https://tryditto.com/images/verified/Verified_Private_Safe_01.webp"
+    },
+    {
+      "alt": "",
+      "w": 264,
+      "h": 260,
+      "src": "https://tryditto.com/images/verified/Verified_Private_Safe_02.webp"
+    },
+    {
+      "alt": "",
+      "w": 264,
+      "h": 260,
+      "src": "https://tryditto.com/images/verified/Verified_Private_Safe_03.webp"
+    },
+    {
+      "alt": "",
+      "w": 264,
+      "h": 260,
+      "src": "https://tryditto.com/images/verified/Verified_Private_Safe_01.webp"
+    },
+    {
+      "alt": "",
+      "w": 264,
+      "h": 260,
+      "src": "https://tryditto.com/images/verified/Verified_Private_Safe_02.webp"
+    },
+    {
+      "alt": "",
+      "w": 264,
+      "h": 260,
+      "src": "https://tryditto.com/images/verified/Verified_Private_Safe_03.webp"
+    },
+    {
+      "alt": "FAQ",
+      "w": 792,
+      "h": 106,
+      "src": "https://tryditto.com/images/title-text/subtitle_faq.png"
+    },
+    {
+      "alt": "A friend that texts you ready-to-go dates",
+      "w": 504,
+      "h": 256,
+      "src": "https://tryditto.com/_next/image?url=%2Fimages%2Ffooter%2Ffooter_message.webp&w=640&q=75&dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L"
+    },
+    {
+      "alt": "Instagram",
+      "w": 28,
+      "h": 29,
+      "src": "https://tryditto.com/images/footer/ig_logo.svg?dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L"
+    },
+    {
+      "alt": "TikTok",
+      "w": 28,
+      "h": 29,
+      "src": "https://tryditto.com/images/footer/tictok_logo.svg?dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L"
+    },
+    {
+      "alt": "X",
+      "w": 24,
+      "h": 24,
+      "src": "https://tryditto.com/images/footer/x_logo.svg?dpl=dpl_J96HcS4qMXow3Y6E9X3bVRkK1F6L"
+    }
+  ],
+  "bg": [
+    {
+      "tag": "BODY",
+      "cls": "m-0 bg-bg antialiased",
+      "bg": "rgb(117, 157, 167)",
+      "img": "none",
+      "text": "Ditto ghosting? Fix it Log In Join Now i"
+    },
+    {
+      "tag": "HEADER",
+      "cls": "fixed top-0 left-0 right-0 z-20 flex h-[72px] w-full items-center just",
+      "bg": "oklab(0 0 0 / 0.1)",
+      "img": "none",
+      "text": "Ditto ghosting? Fix it Log In Join Now"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "relative flex h-svh min-h-[560px] w-full flex-col items-center justify",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Join Now"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "relative w-full min-h-[100dvh] overflow-visible",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "How it works Tell Ditto Your Type Submit"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "relative z-[2] flex h-fit w-full flex-col items-center justify-center ",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "How it works Tell Ditto Your Type Submit"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "relative w-full min-h-[100dvh] overflow-visible",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Real Dates Delivered Your Personalized M"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "box-border flex flex-col items-center py-14 min-[481px]:px-6 min-[481p",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Real Dates Delivered"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "box-border flex flex-col items-center py-14 min-[481px]:px-6 min-[481p",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Your Personalized Matchmaker Backed by b"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "relative w-full min-h-[100dvh] overflow-visible",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Unforgettable Great Times Tired of swipi"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "box-border relative min-[1025px]:hidden flex flex-col items-center py-",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Unforgettable Great Times"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "jsx-1ec6aaf0a2291acc box-border hidden flex-col items-center py-20 ove",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Unforgettable Great Times"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "box-border flex flex-col items-center py-14 min-[481px]:px-6 min-[481p",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Tired of swiping? Ditto is for you Ditto"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "relative w-full min-h-[100dvh] overflow-visible",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Verified. Private. Safe. Safe #1 Verifie"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "box-border flex flex-col items-center px-10 py-14 min-[481px]:px-6 min",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Verified. Private. Safe. Safe #1 Verifie"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "box-border flex flex-col items-center px-3 py-14 min-[481px]:px-6 min-",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "FAQ How does Ditto pair people? Fill out"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "relative w-full min-h-[100dvh] overflow-visible",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Date Without Swiping Date without Swipin"
+    },
+    {
+      "tag": "SECTION",
+      "cls": "box-border flex min-h-screen flex-col items-center justify-center px-3",
+      "bg": "rgba(0, 0, 0, 0)",
+      "img": "none",
+      "text": "Date Without Swiping Date without Swipin"
+    },
+    {
+      "tag": "FOOTER",
+      "cls": "relative box-border bg-bg px-6 py-12 min-[481px]:px-[60px] min-[1025px",
+      "bg": "rgb(8, 23, 33)",
+      "img": "none",
+      "text": "Resources Careers Manifesto Dating by Ci"
+    }
+  ]
+}

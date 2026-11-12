@@ -1,0 +1,179 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: Arial, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-rounded: 'Arial Rounded MT Bold', 'SF Pro Rounded', 'Nunito', 'PingFang SC', Arial, sans-serif;
+  --color-ink: rgb(2 43 78);
+  --color-ditto-pink: #e40089;
+  --color-page: #233039;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #0d1720;
+  color: #fff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+@layer base {
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  input,
+  textarea {
+    font: inherit;
+  }
+}
+
+/* ── Mobile frame: full-bleed on phones, centered 390×844 card on desktop ── */
+.app-frame {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+}
+@media (min-width: 431px) {
+  .app-root {
+    display: grid;
+    place-items: center;
+    min-height: 100%;
+    background: radial-gradient(1200px 700px at 50% 30%, #1f3448 0%, #0d1720 70%);
+  }
+  .app-frame {
+    width: 390px;
+    height: min(844px, 100dvh);
+    border-radius: 36px;
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+}
+@media (min-width: 431px) and (max-height: 844px) {
+  .app-frame {
+    border-radius: 0;
+  }
+}
+
+/* ── Sky / sea background sampled from pass3 screenshots (12 §0, S1/05-a column averages) ── */
+.ditto-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    180deg,
+    #235ec0 0%,
+    #3166c1 11.8%,
+    #436fbf 23.7%,
+    #587ec0 35.5%,
+    #6787bf 42.6%,
+    #6e8dbf 47.4%,
+    #708dbd 50.2%,
+    #6083b8 51.2%,
+    #4f76b0 52.1%,
+    #3d6aa8 54.5%,
+    #3361a3 57.5%,
+    #2a5b9d 60.4%,
+    #1f5698 64%,
+    #124d91 69.2%,
+    #094585 74.6%,
+    #013d7b 78.2%,
+    #003571 83%,
+    #002d67 87.7%,
+    #00255d 93.6%,
+    #012259 100%
+  );
+}
+.ditto-bg::before {
+  /* Lower-left lift + lower-right deepening (the sea is lighter towards the left). */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 42%, rgba(0, 54, 120, 0) 55%, rgba(0, 54, 120, 0.42) 100%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.3) 48%, #000 66%, #000 84%, rgba(0, 0, 0, 0.15) 100%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.3) 48%, #000 66%, #000 84%, rgba(0, 0, 0, 0.15) 100%);
+}
+.ditto-bg::after {
+  /* Fine halftone grain + horizon haze. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 2.6% at 28% 50.4%, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 0.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0 1px, rgba(255, 255, 255, 0) 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(0, 20, 60, 0.05) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+  background-size:
+    100% 100%,
+    160px 160px,
+    auto,
+    auto;
+  opacity: 0.55;
+  mix-blend-mode: soft-light;
+}
+
+/* ── Glass pill (09 §7 computed styles) ── */
+.ob-glass {
+  background-color: rgba(0, 8, 28, 0.38);
+  -webkit-backdrop-filter: blur(20px) brightness(0.75) saturate(1.4);
+  backdrop-filter: blur(20px) brightness(0.75) saturate(1.4);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.12);
+}
+.ob-selected {
+  background-color: #e40089;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 0 8px rgba(255, 255, 255, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+/* Dark input dock (text bar / textarea / ruler / slider / photo grid). */
+.ob-dock {
+  background: linear-gradient(180deg, rgba(1, 26, 62, 0.56) 0%, rgba(1, 30, 70, 0.66) 100%);
+  -webkit-backdrop-filter: blur(20px) brightness(0.8);
+  backdrop-filter: blur(20px) brightness(0.8);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.ob-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.ob-scroll::-webkit-scrollbar {
+  display: none;
+}
+/* Persistent bottom fade on long lists (12 §4.1 item 4). */
+.ob-fade-bottom {
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 230px), rgba(0, 0, 0, 0.35) calc(100% - 100px), transparent calc(100% - 40px));
+  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 230px), rgba(0, 0, 0, 0.35) calc(100% - 100px), transparent calc(100% - 40px));
+}
+
+.ob-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+@keyframes ob-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

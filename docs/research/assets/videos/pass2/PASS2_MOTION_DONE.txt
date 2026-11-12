@@ -1,0 +1,19 @@
+done: 2026-11-12
+video: /Users/null/IdeaProjects/AI/tryditto-cn/docs/research/assets/videos/pass2/onboarding-student-full.webm
+duration_sec: 220.32
+codec: vp8 390x844 25fps bitrate_kbps: 56
+frames_dir: /Users/null/IdeaProjects/AI/tryditto-cn/docs/research/assets/videos/pass2/frames
+frames: t-0000.00s.jpg .. t-0220.20s.jpg (1102, 5fps UI crop) plus full-0082.32s.jpg full-0088.24s.jpg full-0111.48s.jpg
+doc: /Users/null/IdeaProjects/AI/tryditto-cn/docs/research/11-ditto-入驻动效参数-pass2.md
+homepage_cold_start: missing
+app_heart: missing
+isStudent_typing: not in video (complete at t=0)
+name_typing_ms: 640
+hobbies_typing_ms: 480
+school_email_typing_ms: 520
+typing_chunk_ms: 80 (mid-sentence also 120)
+page_swap_ms: 160-240
+progress_detectable_ms: 120-200
+magenta_steep_ms: 80-160
+submitted: no
+playwright_used: no

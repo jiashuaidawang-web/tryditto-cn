@@ -1,0 +1,267 @@
+{
+ "id": "N2",
+ "cfg": {
+  "student": false,
+  "gender": "Woman",
+  "expected": [
+   "Men"
+  ],
+  "hobbies": [
+   "Reading",
+   "Gym",
+   "Gaming"
+  ]
+ },
+ "marks": [
+  {
+   "t": 11.37,
+   "label": "loaded",
+   "text": "Ditto | what's your school email | ? 📧 | not a student? continue without a school email | we need a school email (.edu) to verify you're a student | 👋 | Welcome back | Your progress is saved. Pick up where you left off."
+  },
+  {
+   "t": 33.06,
+   "label": "START",
+   "text": "Ditto | are you currently a student? | Private. Only used to match you | 🎓 | yes, i'm a student | 💼 | nope, not a student"
+  },
+  {
+   "t": 35.67,
+   "label": "page 01",
+   "text": "Ditto | are you currently a student? | Private. Only used to match you | 🎓 | yes, i'm a student | 💼 | nope, not a student"
+  },
+  {
+   "t": 38.39,
+   "label": "next 01",
+   "act": "isStudent"
+  },
+  {
+   "t": 40.99,
+   "label": "page 02",
+   "text": "Ditto | Hi, I'm Ditto | what's your name | ?"
+  },
+  {
+   "t": 42.94,
+   "label": "next 02",
+   "act": "prefilled"
+  },
+  {
+   "t": 45.54,
+   "label": "page 03",
+   "text": "Ditto | what's your gender? | Man | Woman | Nonbinary | Other"
+  },
+  {
+   "t": 48.22,
+   "label": "next 03",
+   "act": "gender=Woman"
+  },
+  {
+   "t": 50.82,
+   "label": "page 04",
+   "text": "Ditto | Who are you looking to date? | Private. Only used to match you | Men | Women | Nonbinary | Everyone"
+  },
+  {
+   "t": 54.27,
+   "label": "next 04",
+   "act": "expected=Men"
+  },
+  {
+   "t": 56.88,
+   "label": "page 05",
+   "text": "Ditto | when's your birthday? | Only your age is shown to others."
+  },
+  {
+   "t": 58.82,
+   "label": "next 05",
+   "act": "prefilled"
+  },
+  {
+   "t": 61.42,
+   "label": "page 06",
+   "text": "Ditto | What's your preferred age range? | Private. Only used to match you | 18 | 32"
+  },
+  {
+   "t": 63.39,
+   "label": "next 06",
+   "act": "prefilled"
+  },
+  {
+   "t": 65.99,
+   "label": "page 07",
+   "text": "Ditto | What's your ethnicity? | Private. Only used to match you | American Indian | Black/African Descent | East Asian | Hispanic/Latino | Middle Eastern | Pacific Islander | South Asian | South East Asian | White"
+  },
+  {
+   "t": 67.81,
+   "label": "next 07",
+   "act": "prefilled"
+  },
+  {
+   "t": 70.41,
+   "label": "page 08",
+   "text": "Ditto | Any ethnicity |  preferences? | Private. Only used to match you | No Preference | American Indian | Black/African Descent | East Asian | Hispanic/Latino | Middle Eastern | Pacific Islander | South Asian | South East Asian | White"
+  },
+  {
+   "t": 72.25,
+   "label": "next 08",
+   "act": "prefilled"
+  },
+  {
+   "t": 74.86,
+   "label": "page 09",
+   "text": "Ditto | How tall |  are you? | 183 cm | 130 | 140 | 150 | 160 | 170 | 180 | 190 | 200 | 210 | 220 | 230 | 240 | ft / in | cm"
+  },
+  {
+   "t": 76.74,
+   "label": "next 09",
+   "act": "prefilled"
+  },
+  {
+   "t": 79.34,
+   "label": "page 10",
+   "text": "Ditto | how tall |  should your match be? | Private. Only used to match you | 🤷 I don't care about height"
+  },
+  {
+   "t": 81.3,
+   "label": "next 10",
+   "act": "prefilled"
+  },
+  {
+   "t": 83.91,
+   "label": "page 11",
+   "text": "Ditto | what are your hobbies |  & interests? | 👨‍🍳 | Cooking | 🎵 | Music | ✈️ | Travel | 📚 | Reading | 🏋️ | Gym | 🎮 | Gaming | 🎬 | Movies/TV | 🎨 | Art | Type your hobby"
+  },
+  {
+   "t": 90.17,
+   "label": "next 11",
+   "act": "hobbies=Reading,Gym,Gaming"
+  },
+  {
+   "t": 92.78,
+   "label": "page 12",
+   "text": "Ditto | what genres |  u reading rn? | 📖 | Lit fic | 🐉 | Fantasy | 🚀 | Sci-fi | 🔍 | Mystery | 💕 | Romance | 🪞 | Memoir | 🧠 | Self-help | 🌹 | Poetry | 📚 | Classics | 😏 | Smut idk | Other"
+  },
+  {
+   "t": 94.67,
+   "label": "next 12",
+   "act": "opt1"
+  },
+  {
+   "t": 97.28,
+   "label": "page 13",
+   "text": "Ditto | last book |  u finished?"
+  },
+  {
+   "t": 99.29,
+   "label": "next 13",
+   "act": "fill "
+  },
+  {
+   "t": 101.89,
+   "label": "page 14",
+   "text": "Ditto | what's your training style? | 🏋️ | Lifting | 🏃 | Running | 🧘 | Yoga | 🩰 | Pilates | 💪 | Crossfit | 🥊 | Boxing | 💃 | Dance | 🚴 | Cycling | 🧗 | Climbing | Other"
+  },
+  {
+   "t": 103.79,
+   "label": "next 14",
+   "act": "opt1"
+  },
+  {
+   "t": 106.39,
+   "label": "page 15",
+   "text": "Ditto | what u training for | ?"
+  },
+  {
+   "t": 108.39,
+   "label": "next 15",
+   "act": "fill "
+  },
+  {
+   "t": 110.99,
+   "label": "page 16",
+   "text": "Ditto | what games |  u into? | 🔫 | FPS | ⚔️ | RPG⚽ | Sports games | 🎮 | MOBA | 🧠 | Strategy | 🎨 | Indie | 🌱 | Sims/cozy | 👊 | Fighting | 🌐 | MMO | Other"
+  },
+  {
+   "t": 112.87,
+   "label": "next 16",
+   "act": "opt1"
+  },
+  {
+   "t": 115.47,
+   "label": "page 17",
+   "text": "Ditto | what u playing |  rn?"
+  },
+  {
+   "t": 117.47,
+   "label": "next 17",
+   "act": "fill "
+  },
+  {
+   "t": 120.07,
+   "label": "page 18",
+   "text": "Ditto | now let's talk about your"
+  },
+  {
+   "t": 122.07,
+   "label": "auto-advanced",
+   "act": "prefilled"
+  },
+  {
+   "t": 124.67,
+   "label": "page 18",
+   "text": "Ditto | now let's talk about your preferences"
+  },
+  {
+   "t": 126.76,
+   "label": "next 18",
+   "act": "prefilled"
+  },
+  {
+   "t": 129.37,
+   "label": "page 19",
+   "text": "Ditto | what do you do for work | ?"
+  },
+  {
+   "t": 131.24,
+   "label": "next 19",
+   "act": "prefilled"
+  },
+  {
+   "t": 133.84,
+   "label": "page 20",
+   "text": "Ditto | what’s ur budget |  for a first date? | per person, roughly | Private. Only used to match you☕ | under $20 | 🥂 | $20–50 | 🍝 | $50–100✨ | $100+ | 🤷 | no preference"
+  },
+  {
+   "t": 135.73,
+   "label": "next 20",
+   "act": "prefilled"
+  },
+  {
+   "t": 138.33,
+   "label": "page 21",
+   "text": "Ditto | what's the highest level of education |  you've completed? | Private. Only used to match you | high school | college degree | graduate degree | prefer not to say"
+  },
+  {
+   "t": 140.26,
+   "label": "next 21",
+   "act": "prefilled"
+  },
+  {
+   "t": 142.86,
+   "label": "page 22",
+   "text": "Ditto | does your match's education |  have to be at least yours? | Private. Only used to match you | doesn't matter | kinda matters | super important"
+  },
+  {
+   "t": 144.81,
+   "label": "next 22",
+   "act": "prefilled"
+  },
+  {
+   "t": 147.41,
+   "label": "page 23",
+   "text": "Ditto | what's your email | ? 📧 | don't lose access to your account, verify your email"
+  },
+  {
+   "t": 147.88,
+   "label": "STOP",
+   "text": "Ditto | what's your email | ? 📧 | don't lose access to your account, verify your email"
+  }
+ ]
+}

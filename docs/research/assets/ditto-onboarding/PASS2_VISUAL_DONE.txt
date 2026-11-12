@@ -1,0 +1,14 @@
+video: /Users/null/IdeaProjects/AI/tryditto-cn/docs/research/assets/videos/pass2/onboarding-student-full.webm
+duration_sec: 220.32
+size_bytes: 1555509
+viewport: 390x844
+video_ends_on: what's your school email? (placeholder you@school.edu, Send disabled, escape button NOT clicked, email NOT filled)
+browser_now: What's your preferred age range? (after stop_video, Back x3: school email -> height range -> height -> age range)
+submitted: no
+datingHelp_reached: no
+personal_email_this_take: no
+shots_dir: /Users/null/IdeaProjects/AI/tryditto-cn/docs/research/assets/ditto-onboarding/shots/pass2-student/
+rec_shots: 36 (prefix rec-)
+doc: /Users/null/IdeaProjects/AI/tryditto-cn/docs/research/10-ditto-入驻学生路径-pass2实录.md
+path_this_take: isStudent(yes) -> name -> gender(Man) -> expectedGender(Women) -> birthday -> hobbies(Reading,Gym,Gaming) -> reading genres/book -> gym style/for -> games/now -> ethnicity -> expectedEthnicity -> age -> height -> heightRange -> school email STOP
+not_in_this_video: photos, location, preferences, school year, datingHelp. Prior interrupted round (no rec- prefix) clicked the school-email escape and later stopped on personal email after education importance; that is section 7 of the doc, not this webm.

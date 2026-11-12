@@ -1,0 +1,377 @@
+{
+ "id": "N3",
+ "cfg": {
+  "student": false,
+  "gender": "Nonbinary",
+  "expected": [
+   "Everyone"
+  ],
+  "hobbies": [
+   "Movies/TV",
+   "Art",
+   "Cooking"
+  ]
+ },
+ "marks": [
+  {
+   "t": 12.79,
+   "label": "loaded",
+   "text": "Ditto | let's verify |  that email 📬 | we sent u a 6-digit code, pop it in below | sending code… | 👋 | Welcome back | Your progress is saved. Pick up where you left off."
+  },
+  {
+   "t": 53.68,
+   "label": "START",
+   "text": "Ditto | are you currently a student? | Private. Only used to match you | 🎓 | yes, i'm a student | 💼 | nope, not a student"
+  },
+  {
+   "t": 56.29,
+   "label": "page 01",
+   "text": "Ditto | are you currently a student? | Private. Only used to match you | 🎓 | yes, i'm a student | 💼 | nope, not a student"
+  },
+  {
+   "t": 59.11,
+   "label": "next 01",
+   "act": "isStudent"
+  },
+  {
+   "t": 61.72,
+   "label": "page 02",
+   "text": "Ditto | Hi, I'm Ditto | what's your name | ?"
+  },
+  {
+   "t": 63.66,
+   "label": "next 02",
+   "act": "prefilled"
+  },
+  {
+   "t": 66.26,
+   "label": "page 03",
+   "text": "Ditto | what's your gender? | Man | Woman | Nonbinary | Other"
+  },
+  {
+   "t": 68.91,
+   "label": "next 03",
+   "act": "gender=Nonbinary"
+  },
+  {
+   "t": 71.51,
+   "label": "page 04",
+   "text": "Ditto | Who are you looking to date? | Private. Only used to match you | Men | Women | Nonbinary | Everyone"
+  },
+  {
+   "t": 74.89,
+   "label": "next 04",
+   "act": "expected=Everyone"
+  },
+  {
+   "t": 77.5,
+   "label": "page 05",
+   "text": "Ditto | when's your birthday? | Only your age is shown to others."
+  },
+  {
+   "t": 79.46,
+   "label": "next 05",
+   "act": "prefilled"
+  },
+  {
+   "t": 82.06,
+   "label": "page 06",
+   "text": "Ditto | What's your preferred age range? | Private. Only used to match you | 18 | 32"
+  },
+  {
+   "t": 84.04,
+   "label": "next 06",
+   "act": "prefilled"
+  },
+  {
+   "t": 86.64,
+   "label": "page 07",
+   "text": "Ditto | What's your ethnicity? | Private. Only used to match you | American Indian | Black/African Descent | East Asian | Hispanic/Latino | Middle Eastern | Pacific Islander | South Asian | South East Asian | White"
+  },
+  {
+   "t": 88.46,
+   "label": "next 07",
+   "act": "prefilled"
+  },
+  {
+   "t": 91.06,
+   "label": "page 08",
+   "text": "Ditto | Any ethnicity |  preferences? | Private. Only used to match you | No Preference | American Indian | Black/African Descent | East Asian | Hispanic/Latino | Middle Eastern | Pacific Islander | South Asian | South East Asian | White"
+  },
+  {
+   "t": 92.91,
+   "label": "next 08",
+   "act": "prefilled"
+  },
+  {
+   "t": 95.51,
+   "label": "page 09",
+   "text": "Ditto | your ideal match? | Private. Only used to match you | 🔝 | They're more of a top | 🔽 | They're more of a bottom | 💪 | They're more masc | 🌸 | They're more femme | 🔄 | They're flexible | 🤐 | Prefer not to say"
+  },
+  {
+   "t": 97.42,
+   "label": "next 09",
+   "act": "prefilled"
+  },
+  {
+   "t": 100.03,
+   "label": "page 10",
+   "text": "Ditto | how would u describe yourself? | Private. Only used to match you | 🔝 | I'm more of a top | 🔽 | I'm more of a bottom | 💪 | I'm more masc | 🌸 | I'm more femme | 🔄 | I'm flexible | 🤐 | Prefer not to say"
+  },
+  {
+   "t": 101.92,
+   "label": "next 10",
+   "act": "prefilled"
+  },
+  {
+   "t": 104.53,
+   "label": "page 11",
+   "text": "Ditto | How tall |  are you? | 183 cm | 130 | 140 | 150 | 160 | 170 | 180 | 190 | 200 | 210 | 220 | 230 | 240 | ft / in | cm"
+  },
+  {
+   "t": 106.44,
+   "label": "next 11",
+   "act": "prefilled"
+  },
+  {
+   "t": 109.04,
+   "label": "page 12",
+   "text": "Ditto | how tall |  should your match be? | Private. Only used to match you | 🤷 I don't care about height"
+  },
+  {
+   "t": 111.02,
+   "label": "next 12",
+   "act": "prefilled"
+  },
+  {
+   "t": 113.62,
+   "label": "page 13",
+   "text": "Ditto | what are your hobbies |  & interests? | 👨‍🍳 | Cooking | 🎵 | Music | ✈️ | Travel | 📚 | Reading | 🏋️ | Gym | 🎮 | Gaming | 🎬 | Movies/TV | 🎨 | Art | Type your hobby"
+  },
+  {
+   "t": 119.94,
+   "label": "next 13",
+   "act": "hobbies=Movies/TV,Art,Cooking"
+  },
+  {
+   "t": 122.54,
+   "label": "page 14",
+   "text": "Ditto | what's your cooking style? | 🍝 | Italian | 🍜 | Asian | 🌮 | Mexican | 🍲 | Comfort food | 🧁 | Baking | 🔥 | Grilling | 🥗 | Healthy bowls | 🥐 | Brunch | Other"
+  },
+  {
+   "t": 124.41,
+   "label": "next 14",
+   "act": "opt1"
+  },
+  {
+   "t": 127.01,
+   "label": "page 15",
+   "text": "Ditto | what's your signature dish | ?"
+  },
+  {
+   "t": 128.99,
+   "label": "next 15",
+   "act": "fill "
+  },
+  {
+   "t": 131.59,
+   "label": "page 16",
+   "text": "Ditto | what kinda content |  u like? | 🎞️ | Indie | 👻 | Horror | 💞 | Rom-com | 💥 | Action | 🛸 | Sci-fi | 📹 | Documentary | 🎬 | A24 stuff | 🌍 | Foreign | 🎌 | Anime | 📺 | Reality TV | Other"
+  },
+  {
+   "t": 133.5,
+   "label": "next 16",
+   "act": "opt1"
+  },
+  {
+   "t": 136.11,
+   "label": "page 17",
+   "text": "Ditto | last great watch | ?"
+  },
+  {
+   "t": 138.09,
+   "label": "next 17",
+   "act": "fill "
+  },
+  {
+   "t": 140.69,
+   "label": "page 18",
+   "text": "Ditto | what mediums |  u work in? | ✏️ | Drawing | 🎨 | Painting | 💻 | Digital | 🏺 | Pottery | 🗿 | Sculpture | ✂️ | Collage | 🧵 | Crafts | 🌈 | Mixed media | Other"
+  },
+  {
+   "t": 142.71,
+   "label": "next 18",
+   "act": "opt1"
+  },
+  {
+   "t": 145.31,
+   "label": "page 19",
+   "text": "Ditto | what do u make | ?"
+  },
+  {
+   "t": 147.41,
+   "label": "next 19",
+   "act": "fill "
+  },
+  {
+   "t": 150.01,
+   "label": "page 20",
+   "text": "Ditto | Let's add at least 2 photos 📷 | Choose photos that show your vibe | Photos from different moments help us find better matches. You can swap them anytime. | Hold and drag a photo to reorder."
+  },
+  {
+   "t": 151.85,
+   "label": "next 20",
+   "act": "prefilled"
+  },
+  {
+   "t": 154.45,
+   "label": "page 21",
+   "text": "Ditto | now let's talk about your preferences"
+  },
+  {
+   "t": 156.55,
+   "label": "next 21",
+   "act": "prefilled"
+  },
+  {
+   "t": 159.15,
+   "label": "page 22",
+   "text": "Ditto | What are you looking for? | Private. Only used to match you | Life partner | Serious relationship | Casual dates | New friends | Not sure yet"
+  },
+  {
+   "t": 161.88,
+   "label": "next 22",
+   "act": "prefilled"
+  },
+  {
+   "t": 164.48,
+   "label": "page 23",
+   "text": "Ditto | how do u want ditto to match u |  rn? | Private. Only used to match you | ⚡️ | More dates, faster | ⚖️ | A steady mix | 🎯 | Fewer, better matches | 💎 | Wait for the one"
+  },
+  {
+   "t": 166.44,
+   "label": "next 23",
+   "act": "prefilled"
+  },
+  {
+   "t": 169.04,
+   "label": "page 24",
+   "text": "Ditto | what do you do for work | ?"
+  },
+  {
+   "t": 170.97,
+   "label": "next 24",
+   "act": "prefilled"
+  },
+  {
+   "t": 173.57,
+   "label": "page 25",
+   "text": "Ditto | what’s ur budget |  for a first date? | per person, roughly | Private. Only used to match you☕ | under $20 | 🥂 | $20–50 | 🍝 | $50–100✨ | $100+ | 🤷 | no preference"
+  },
+  {
+   "t": 175.57,
+   "label": "next 25",
+   "act": "prefilled"
+  },
+  {
+   "t": 178.18,
+   "label": "page 26",
+   "text": "Ditto | dealbreakers | : what should Ditto avoid? | include anything you care about: physical traits, behavior, personality, etc. | Private. Only used to match you"
+  },
+  {
+   "t": 180.1,
+   "label": "next 26",
+   "act": "prefilled"
+  },
+  {
+   "t": 182.71,
+   "label": "page 27",
+   "text": "Ditto | what's the highest level of education |  you've completed? | Private. Only used to match you | high school | college degree | graduate degree | prefer not to say"
+  },
+  {
+   "t": 184.67,
+   "label": "next 27",
+   "act": "prefilled"
+  },
+  {
+   "t": 187.27,
+   "label": "page 28",
+   "text": "Ditto | does your match's education |  have to be at least yours? | Private. Only used to match you | doesn't matter | kinda matters | super important"
+  },
+  {
+   "t": 189.27,
+   "label": "next 28",
+   "act": "prefilled"
+  },
+  {
+   "t": 191.88,
+   "label": "page 29",
+   "text": "Ditto | what's your political vibe? | Private. Only used to match you | Very left | Left-leaning | Center | Right-leaning | Very right | Apolitical | Other"
+  },
+  {
+   "t": 193.75,
+   "label": "next 29",
+   "act": "prefilled"
+  },
+  {
+   "t": 196.36,
+   "label": "page 30",
+   "text": "Ditto | does your match have to share your politics? | Private. Only used to match you | doesn't matter | kinda matters | super important"
+  },
+  {
+   "t": 198.32,
+   "label": "next 30",
+   "act": "prefilled"
+  },
+  {
+   "t": 200.92,
+   "label": "page 31",
+   "text": "Ditto | what's your religion? | Private. Only used to match you | Atheist | Agnostic | Christian | Catholic | Jewish | Muslim | Hindu | Buddhist | Spiritual | Other"
+  },
+  {
+   "t": 202.82,
+   "label": "next 31",
+   "act": "prefilled"
+  },
+  {
+   "t": 205.42,
+   "label": "page 32",
+   "text": "Ditto | does your match have to share your religion? | Private. Only used to match you | doesn't matter | kinda matters | super important"
+  },
+  {
+   "t": 207.35,
+   "label": "next 32",
+   "act": "prefilled"
+  },
+  {
+   "t": 209.96,
+   "label": "page 33",
+   "text": "Ditto | first thing |  your match should know? | this helps your match get to know you better | your match will see this"
+  },
+  {
+   "t": 211.84,
+   "label": "next 33",
+   "act": "prefilled"
+  },
+  {
+   "t": 214.44,
+   "label": "page 34",
+   "text": "Ditto | if you had a dating coach | , what would | you want help with? | 👋 | approaching people | 💬 | keeping a convo going | 👀 | telling if they’re into me | 💪 | being more confident | 🧭 | figuring out what i want☕ | the date itself | 💘 | just get me a date"
+  },
+  {
+   "t": 216.32,
+   "label": "next 34",
+   "act": "prefilled"
+  },
+  {
+   "t": 218.92,
+   "label": "page 35",
+   "text": "Ditto | what's your email | ? 📧 | don't lose access to your account, verify your email"
+  },
+  {
+   "t": 219.39,
+   "label": "STOP",
+   "text": "Ditto | what's your email | ? 📧 | don't lose access to your account, verify your email"
+  }
+ ]
+}

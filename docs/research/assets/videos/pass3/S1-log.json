@@ -1,0 +1,207 @@
+{
+ "id": "S1",
+ "cfg": {
+  "student": true,
+  "gender": "Man",
+  "expected": [
+   "Women"
+  ],
+  "hobbies": [
+   "Cooking",
+   "Music",
+   "Travel"
+  ]
+ },
+ "marks": [
+  {
+   "t": 11.23,
+   "label": "loaded",
+   "text": "Ditto | let's verify |  that email 📬 | we sent u a 6-digit code, pop it in below | sending code… | 👋 | Welcome back | Your progress is saved. Pick up where you left off."
+  },
+  {
+   "t": 48.79,
+   "label": "START",
+   "text": "Ditto | are you currently a student? | Private. Only used to match you | 🎓 | yes, i'm a student | 💼 | nope, not a student"
+  },
+  {
+   "t": 51.39,
+   "label": "page 01",
+   "text": "Ditto | are you currently a student? | Private. Only used to match you | 🎓 | yes, i'm a student | 💼 | nope, not a student"
+  },
+  {
+   "t": 54.13,
+   "label": "next 01",
+   "act": "isStudent"
+  },
+  {
+   "t": 56.73,
+   "label": "page 02",
+   "text": "Ditto | Hi, I'm Ditto | what's your name | ?"
+  },
+  {
+   "t": 58.67,
+   "label": "next 02",
+   "act": "prefilled"
+  },
+  {
+   "t": 61.28,
+   "label": "page 03",
+   "text": "Ditto | what's your gender? | Man | Woman | Nonbinary | Other"
+  },
+  {
+   "t": 63.92,
+   "label": "next 03",
+   "act": "gender=Man"
+  },
+  {
+   "t": 66.53,
+   "label": "page 04",
+   "text": "Ditto | Who are you looking to date? | Private. Only used to match you | Men | Women | Nonbinary | Everyone"
+  },
+  {
+   "t": 68.57,
+   "label": "next 04",
+   "act": "expected=Women"
+  },
+  {
+   "t": 71.17,
+   "label": "page 05",
+   "text": "Ditto | when's your birthday? | Only your age is shown to others."
+  },
+  {
+   "t": 73.14,
+   "label": "next 05",
+   "act": "prefilled"
+  },
+  {
+   "t": 75.74,
+   "label": "page 06",
+   "text": "Ditto | what are your hobbies |  & interests? | 👨‍🍳 | Cooking | 🎵 | Music | ✈️ | Travel | 📚 | Reading | 🏋️ | Gym | 🎮 | Gaming | 🎬 | Movies/TV | 🎨 | Art | Type your hobby"
+  },
+  {
+   "t": 77.66,
+   "label": "next 06",
+   "act": "hobbies=Cooking,Music,Travel"
+  },
+  {
+   "t": 80.26,
+   "label": "page 07",
+   "text": "Ditto | what's your cooking style? | 🍝 | Italian | 🍜 | Asian | 🌮 | Mexican | 🍲 | Comfort food | 🧁 | Baking | 🔥 | Grilling | 🥗 | Healthy bowls | 🥐 | Brunch | Other"
+  },
+  {
+   "t": 82.11,
+   "label": "next 07",
+   "act": "prefilled"
+  },
+  {
+   "t": 84.71,
+   "label": "page 08",
+   "text": "Ditto | what's your signature dish | ?"
+  },
+  {
+   "t": 86.69,
+   "label": "next 08",
+   "act": "prefilled"
+  },
+  {
+   "t": 89.29,
+   "label": "page 09",
+   "text": "Ditto | what's your music sound? | 🎤 | Pop | 🎧 | Hip-hop | 🎸 | Indie | 🎹 | Electronic | 💞 | R&B | 🤘 | Rock | 🤠 | Country | 🎷 | Jazz | 🎻 | Classical | 🩷 | K-pop | 🪇 | Latin | Other"
+  },
+  {
+   "t": 91.16,
+   "label": "next 09",
+   "act": "prefilled"
+  },
+  {
+   "t": 93.76,
+   "label": "page 10",
+   "text": "Ditto | who u streaming |  rn?"
+  },
+  {
+   "t": 95.82,
+   "label": "next 10",
+   "act": "prefilled"
+  },
+  {
+   "t": 98.42,
+   "label": "page 11",
+   "text": "Ditto | what's your travel style? | 🎒 | Backpacking | 🍾 | Luxury | 🥘 | Foodie tours | ⛰️ | Adventure | 🏖️ | Beach + sun | 🏙️ | City-hopping | ✈️ | Solo travel | 🚗 | Road trips | Other"
+  },
+  {
+   "t": 100.29,
+   "label": "next 11",
+   "act": "prefilled"
+  },
+  {
+   "t": 102.89,
+   "label": "page 12",
+   "text": "Ditto | what's your next travel destination | ?"
+  },
+  {
+   "t": 104.85,
+   "label": "next 12",
+   "act": "prefilled"
+  },
+  {
+   "t": 107.46,
+   "label": "page 13",
+   "text": "Ditto | What's your ethnicity? | Private. Only used to match you | American Indian | Black/African Descent | East Asian | Hispanic/Latino | Middle Eastern | Pacific Islander | South Asian | South East Asian | White"
+  },
+  {
+   "t": 109.31,
+   "label": "next 13",
+   "act": "prefilled"
+  },
+  {
+   "t": 111.91,
+   "label": "page 14",
+   "text": "Ditto | Any ethnicity |  preferences? | Private. Only used to match you | No Preference | American Indian | Black/African Descent | East Asian | Hispanic/Latino | Middle Eastern | Pacific Islander | South Asian | South East Asian | White"
+  },
+  {
+   "t": 113.79,
+   "label": "next 14",
+   "act": "prefilled"
+  },
+  {
+   "t": 116.39,
+   "label": "page 15",
+   "text": "Ditto | What's your preferred age range? | Private. Only used to match you | 18 | 32"
+  },
+  {
+   "t": 118.34,
+   "label": "next 15",
+   "act": "prefilled"
+  },
+  {
+   "t": 120.95,
+   "label": "page 16",
+   "text": "Ditto | How tall |  are you? | 183 cm | 130 | 140 | 150 | 160 | 170 | 180 | 190 | 200 | 210 | 220 | 230 | 240 | ft / in | cm"
+  },
+  {
+   "t": 122.85,
+   "label": "next 16",
+   "act": "prefilled"
+  },
+  {
+   "t": 125.46,
+   "label": "page 17",
+   "text": "Ditto | how tall |  should your match be? | Private. Only used to match you | 🤷 I don't care about height"
+  },
+  {
+   "t": 127.44,
+   "label": "next 17",
+   "act": "prefilled"
+  },
+  {
+   "t": 130.05,
+   "label": "page 18",
+   "text": "Ditto | what's your school email | ? 📧 | not a student? continue without a school email | we need a school email (.edu) to verify you're a student"
+  },
+  {
+   "t": 130.52,
+   "label": "STOP",
+   "text": "Ditto | what's your school email | ? 📧 | not a student? continue without a school email | we need a school email (.edu) to verify you're a student"
+  }
+ ]
+}

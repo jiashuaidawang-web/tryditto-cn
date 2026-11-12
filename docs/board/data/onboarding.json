@@ -1,0 +1,1047 @@
+{
+ "passes": [
+  {
+   "name": "第一阶段 · 你的类型（进度条第 1 段）",
+   "note": "学生路径，性别 Man、只约 Women、兴趣选了做饭/音乐/旅行 + 自定义 Climbing。所有页面路由都是 /onboarding，不按题分 URL。完整原文见文档 09。",
+   "pages": [
+    {
+     "t": "1 是否学生 isStudent",
+     "r": "单选 · 进度 23/0/0",
+     "src": "../research/assets/ditto-onboarding/shots/01-isStudent-yes.png",
+     "copy": "气泡：are you currently a student?（student 加粗）\n选项：🎓 yes, i'm a student ／ 💼 nope, not a student\n提示：🔒 Private. Only used to match you\n按钮：Next",
+     "n": "单选，选中变品红胶囊；选中后 Next 才可点。从下一题返回时答案保留。",
+     "diff": "选项、提示、问句与题库一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/01-isStudent-empty.png",
+       "lbl": "返回时已预选 nope"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/01-isStudent-yes.png",
+       "lbl": "选中 yes"
+      }
+     ]
+    },
+    {
+     "t": "2 姓名 name",
+     "r": "文本 · 进度 47/0/0",
+     "src": "../research/assets/ditto-onboarding/shots/02-name-filled.png",
+     "copy": "气泡：先打出 Hi, I'm Ditto，再换成 what's your name?（name 加粗）\n占位：your name\n按钮：Send（圆形）",
+     "n": "气泡按词块逐段出现，间隔约 80–100ms。空值时 Send 半透明（aria-disabled=true），有字后变白可点。",
+     "diff": "开场白与占位一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/02-name-focus-empty.png",
+       "lbl": "空值聚焦"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/02-name-filled.png",
+       "lbl": "已填写"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/02-name-after-next.png",
+       "lbl": "发送后"
+      }
+     ]
+    },
+    {
+     "t": "3 性别 gender",
+     "r": "单选",
+     "src": "../research/assets/ditto-onboarding/shots/03-gender-man.png",
+     "copy": "气泡：what's your gender?（gender 加粗）\n选项：Man ／ Woman ／ Nonbinary ／ Other",
+     "n": "单选。",
+     "diff": "题库写 Male / Female，实机是 Man / Woman。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/03-gender-empty.png",
+       "lbl": "未选"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/03-gender-man.png",
+       "lbl": "选中 Man"
+      }
+     ]
+    },
+    {
+     "t": "4 想约谁 expectedGender",
+     "r": "多选 · Everyone 互斥",
+     "src": "../research/assets/ditto-onboarding/shots/04-expectedGender-women.png",
+     "copy": "气泡：Who are you looking to date?\n提示：🔒 Private. Only used to match you\n选项：Men ／ Women ／ Nonbinary ／ Everyone\n按钮：圆形箭头 Next",
+     "n": "多选。点 Everyone 会清掉其他项，再点具体项会清掉 Everyone。",
+     "diff": "与题库一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/04-expectedGender-empty.png",
+       "lbl": "未选"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/04-expectedGender-multi.png",
+       "lbl": "多选 Men+Women"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/04-expectedGender-everyone.png",
+       "lbl": "点 Everyone 后只剩它"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/04-expectedGender-women.png",
+       "lbl": "只选 Women"
+      }
+     ]
+    },
+    {
+     "t": "5 生日 birthday",
+     "r": "日期",
+     "src": "../research/assets/ditto-onboarding/shots/05-birthday-valid.png",
+     "copy": "气泡：when's your birthday?\n副文案：Only your age is shown to others.\n占位：MM / DD / YYYY\n按钮：Send\n未成年确认层：You're 11 years old. Your birthday is January 1, 2015. You can't change it later, so make sure it's right.［Yes, that's right］［Edit birthday］",
+     "n": "填未成年日期不报字段错误，而是弹确认层（未点确认）。成年日期直接通过。",
+     "diff": "题库没有这个年龄确认层。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/05-birthday.png",
+       "lbl": "初始"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/05-birthday-error.png",
+       "lbl": "未成年确认层"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/05-birthday-valid.png",
+       "lbl": "成年日期"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/05-birthday-revisit.png",
+       "lbl": "返回后保留"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "第二阶段 · 关于你：兴趣",
+   "note": "",
+   "pages": [
+    {
+     "t": "6 兴趣 hobbies",
+     "r": "多选 + 自定义 · 进度 117/8/0",
+     "src": "../research/assets/ditto-onboarding/shots/06-hobbies-three.png",
+     "copy": "气泡：what are your hobbies & interests?（hobbies、interests 加粗）\n选项：👨‍🍳 Cooking ／ 🎵 Music ／ ✈️ Travel ／ 📚 Reading ／ 🏋️ Gym ／ 🎮 Gaming ／ 🎬 Movies/TV ／ 🎨 Art\n自定义：Type your hobby",
+     "n": "可以同时选中第 4 个预设，界面没有上限提示；提交后只按勾选顺序展开 3 条追问。自定义兴趣变成一枚胶囊，不另开追问。",
+     "diff": "题库的 branchLimit 3 指的是只展开 3 条追问，不是第 4 个选不中。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/06-hobbies-empty.png",
+       "lbl": "未选"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/06-hobbies-three.png",
+       "lbl": "选 3 个"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/06-hobbies-fourth.png",
+       "lbl": "第 4 个也能选中"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/06-hobbies-custom-open.png",
+       "lbl": "打开自定义"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/06-hobbies-custom-filled.png",
+       "lbl": "输入 Climbing"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/06-hobbies-custom-added.png",
+       "lbl": "自定义胶囊加入"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "第二阶段 · 兴趣分支（每个兴趣 = 多选风格 + 一道短文本）",
+   "note": "按勾选顺序展开，最多 3 条。",
+   "pages": [
+    {
+     "t": "7 做饭风格 cookingStyle",
+     "r": "多选 · 进度 117/17/0",
+     "src": "../research/assets/ditto-onboarding/shots/07-branch-1.png",
+     "copy": "气泡：what's your cooking style?\n选项：🍝 Italian ／ 🍜 Asian ／ 🌮 Mexican ／ 🍲 Comfort food ／ 🧁 Baking ／ 🔥 Grilling ／ 🥗 Healthy bowls ／ 🥐 Brunch ／ ✏️ Other",
+     "n": "多选。",
+     "diff": "题库的 allowCustom 在实机是一枚 Other 按钮。",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "8 拿手菜 cookingSignatureDish",
+     "r": "文本 · 进度 117/25/0",
+     "src": "../research/assets/ditto-onboarding/shots/07-branch-2.png",
+     "copy": "气泡：what's your signature dish?\n占位：the one u brag about",
+     "n": "文本，圆形箭头提交。",
+     "diff": "与题库一致。",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "9 音乐风格 musicSound",
+     "r": "多选 · 进度 117/33/0",
+     "src": "../research/assets/ditto-onboarding/shots/07-branch-3.png",
+     "copy": "气泡：what's your music sound?\n选项：🎤 Pop ／ 🎧 Hip-hop ／ 🎸 Indie ／ 🎹 Electronic ／ 💞 R&B ／ 🤘 Rock ／ 🤠 Country ／ 🎷 Jazz ／ 🎻 Classical ／ 🩷 K-pop ／ 🪇 Latin ／ Other",
+     "n": "多选。",
+     "diff": "多一枚 Other。",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "10 在听谁 musicNowPlaying",
+     "r": "文本 · 进度 117/42/0",
+     "src": "../research/assets/ditto-onboarding/shots/07-branch-4.png",
+     "copy": "气泡：who u streaming rn?\n占位：artist on repeat rn",
+     "n": "文本。",
+     "diff": "与题库一致。",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "11 旅行风格 travelStyle",
+     "r": "多选 · 进度 117/50/0",
+     "src": "../research/assets/ditto-onboarding/shots/07-branch-5.png",
+     "copy": "气泡：what's your travel style?\n选项：🎒 Backpacking ／ 🍾 Luxury ／ 🥘 Foodie tours ／ ⛰️ Adventure ／ 🏖️ Beach + sun ／ 🏙️ City-hopping ／ ✈️ Solo travel ／ 🚗 Road trips ／ Other",
+     "n": "多选。",
+     "diff": "多一枚 Other。",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "12 下一站 travelNext",
+     "r": "文本 · 进度 117/58/0",
+     "src": "../research/assets/ditto-onboarding/shots/07-branch-6.png",
+     "copy": "气泡：what's your next travel destination?\n占位：where u manifesting",
+     "n": "文本。",
+     "diff": "与题库一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/07-branch-6.png",
+       "lbl": "打字中"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/07-branch-7.png",
+       "lbl": "完成"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "第二阶段 · 关于你：其余",
+   "note": "体位两页没出现（Man + 只约 Women 时隐藏）；身高要求之后直接是照片，没有学校邮箱页。",
+   "pages": [
+    {
+     "t": "13 族裔 ethnicity",
+     "r": "多选 · 进度 117/67/0",
+     "src": "../research/assets/ditto-onboarding/shots/fwd-stop-8.png",
+     "copy": "气泡：What's your ethnicity?\n提示：🔒 Private. Only used to match you\n选项：American Indian ／ Black/African Descent ／ East Asian ／ Hispanic/Latino ／ Middle Eastern ／ Pacific Islander ／ South Asian ／ South East Asian ／ White",
+     "n": "多选。",
+     "diff": "与题库一致。",
+     "warn": "中国版已决定删除此题",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/back-1.png",
+       "lbl": "回退时"
+      }
+     ]
+    },
+    {
+     "t": "14 族裔偏好 expectedEthnicity",
+     "r": "多选 · No Preference 互斥 · 进度 117/75/0",
+     "src": "../research/assets/ditto-onboarding/shots/11-expectedEth-nopref.png",
+     "copy": "气泡：Any ethnicity preferences?\n提示：🔒 Private. Only used to match you\n选项：No Preference ＋ 上一题全部选项",
+     "n": "No Preference 与其他项互斥，双向清除。",
+     "diff": "与题库一致。",
+     "warn": "中国版已决定删除此题",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/10-expectedEthnicity-empty.png",
+       "lbl": "未选"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/11-expectedEth-one.png",
+       "lbl": "单选"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/11-expectedEth-multi.png",
+       "lbl": "多选"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/11-expectedEth-nopref.png",
+       "lbl": "点 No Preference"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/11-expectedEth-after-exclusive.png",
+       "lbl": "再点具体项清掉 No Preference"
+      }
+     ]
+    },
+    {
+     "t": "15 年龄范围 expectedAgeRange",
+     "r": "双滑杆 · 进度 117/83/0",
+     "src": "../research/assets/ditto-onboarding/shots/12-age-dragged.png",
+     "copy": "气泡：What's your preferred age range?\n提示：🔒 Private. Only used to match you\n滑杆：Minimum age ／ Maximum age，默认 18–24",
+     "n": "两个滑杆，可拖动；拖到 18–30 后数字实时更新。",
+     "diff": "题库写范围 18–35；实机滑杆边界 17–36。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/12-after-ethnicity.png",
+       "lbl": "进入时"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/12-age-nudged.png",
+       "lbl": "键盘微调（未变）"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/12-age-dragged.png",
+       "lbl": "拖到 18–30"
+      }
+     ]
+    },
+    {
+     "t": "16 身高 height",
+     "r": "尺规 · 进度 117/92/0",
+     "src": "../research/assets/ditto-onboarding/shots/13-height-dragged.png",
+     "copy": "气泡：How tall are you?（tall 加粗）\n默认读数：5'8\"，刻度 4'–8'\n单位：ft / in ／ cm（cm 时 173 cm，刻度 130–240）",
+     "n": "默认有读数但 Next 禁用，必须拖动一下才可点。",
+     "diff": "题库只写了 height 类型；实机是尺规 + 单位切换。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/13-height.png",
+       "lbl": "初始 5'8\""
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/13-height-cm.png",
+       "lbl": "切换 cm"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/13-height-dragged.png",
+       "lbl": "拖到 6'0\""
+      }
+     ]
+    },
+    {
+     "t": "17 身高要求 heightRange",
+     "r": "双尺规 + 跳过胶囊 · 进度 117/100/0",
+     "src": "../research/assets/ditto-onboarding/shots/14-height-range-any.png",
+     "copy": "气泡：how tall should your match be?（tall 加粗）\n提示：🔒 Private. Only used to match you\n默认：5'6\" – 6'2\"\n胶囊：🤷 I don't care about height",
+     "n": "点「I don't care about height」后胶囊变品红、尺规收起。",
+     "diff": "题库没有这枚「不在乎身高」胶囊。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/14-step-1.png",
+       "lbl": "初始"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/14-height-range-any.png",
+       "lbl": "选不在乎"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/14-height-range-next-enabled.png",
+       "lbl": "Next 可点"
+      }
+     ]
+    },
+    {
+     "t": "18 照片 photos",
+     "r": "照片格 · 进度 117/108/0",
+     "src": "../research/assets/ditto-onboarding/shots/16-photos-ready.png",
+     "copy": "气泡 1：Let's add at least 2 photos 📷\n气泡 2：Choose photos that show your vibe\n说明：Photos from different moments help us find better matches. You can swap them anytime.\n上传中：Hold and drag a photo to reorder.\n错误条：Some photos didn't upload ／ Please try again.",
+     "n": "6 格，至少 2 张；只传 1 张点 Next 会出错误条。后台有人脸检测（要求 2 张有脸），占位图未通过但流程没被拦。",
+     "diff": "多了拖拽排序文案、上传失败条、人脸检测。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/16-after-choosers.png",
+       "lbl": "空格"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/16-photos-two.png",
+       "lbl": "上传 2 张"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/16-photos-two-distinct.png",
+       "lbl": "两张不同图"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/17-flow-1.png",
+       "lbl": "只传 1 张的错误条"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/16-photos-ready.png",
+       "lbl": "可前进"
+      }
+     ]
+    },
+    {
+     "t": "19 约会范围 location",
+     "r": "地图 · 进度 117/117/0",
+     "src": "../research/assets/ditto-onboarding/shots/18-location-ready.png",
+     "copy": "气泡：Where do you want to date? 📍\n说明层：Your dating area ／ Set your area so we match you with people and spots near you.［Got it］\n搜索：Search a location ／ Use my current location\n出行：Walk ／ Transit ／ Drive，「1h max driving」",
+     "n": "Google 地图 + 等时圈；默认定位请求返回 400「Ditto is only in the US and Canada for now.」，搜 Boston 后可前进。",
+     "diff": "题库只写了 where(map area)。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/18-after-photos.png",
+       "lbl": "进入时"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/18-location-why.png",
+       "lbl": "「为什么问」说明层"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/18-location-search-open.png",
+       "lbl": "搜索框"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/18-location-boston.png",
+       "lbl": "搜 Boston"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/18-location-boston-picked.png",
+       "lbl": "选中 Boston, MA"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/18-location-ready.png",
+       "lbl": "等时圈画好"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "第三阶段 · 偏好（进度条第 3 段）",
+   "note": "",
+   "pages": [
+    {
+     "t": "20 想找什么 relationshipLooking",
+     "r": "多选 · 第三段起步",
+     "src": "../research/assets/ditto-onboarding/shots/19-flow-4.png",
+     "copy": "气泡：What are you looking for?\n提示：🔒 Private. Only used to match you\n选项：Life partner ／ Serious relationship ／ Casual dates ／ New friends ／ Not sure yet",
+     "n": "选中项品红底 + 加粗 + 白色对勾。",
+     "diff": "题库里的过场页「now let's talk about your preferences」实机没出现。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/19-flow-3.png",
+       "lbl": "未选"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/19-flow-4.png",
+       "lbl": "选中带对勾"
+      }
+     ]
+    },
+    {
+     "t": "21 匹配节奏 matchingStyle",
+     "r": "单选 · 进度 117/117/29",
+     "src": "../research/assets/ditto-onboarding/shots/19-flow-5.png",
+     "copy": "气泡：how do u want ditto to match u rn?\n提示：🔒 Private. Only used to match you\n选项：⚡️ More dates, faster ／ ⚖️ A steady mix ／ 🎯 Fewer, better matches ／ 💎 Wait for the one",
+     "n": "单选，未选时 Next 禁用。",
+     "diff": "与题库一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/20-flow-0.png",
+       "lbl": "选中"
+      }
+     ]
+    },
+    {
+     "t": "22 年级 schoolYear",
+     "r": "单选 · 进度 117/117/39",
+     "src": "../research/assets/ditto-onboarding/shots/20-flow-3.png",
+     "copy": "气泡：what year are u going into this fall?\n选项：Freshman ／ Sophomore ／ Junior ／ Senior ／ Master ／ PhD ／ Other",
+     "n": "单选。",
+     "diff": "与题库一致。中国版换成大一到博士。",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "23 怎么知道我们 hearAbout",
+     "r": "单选 · 进度 117/117/49",
+     "src": "../research/assets/ditto-onboarding/shots/20-flow-5.png",
+     "copy": "气泡：how did u hear about us?\n选项：Friend ／ Poster ／ Tabling ／ Instagram ／ TikTok ／ X (Twitter) ／ RedNote (Xiaohongshu) ／ Google ／ Other",
+     "n": "单选。",
+     "diff": "与题库一致。中国版换成国内渠道。",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "24 雷区 dealbreakers",
+     "r": "长文本 · 可空 · 进度 117/117/58",
+     "src": "../research/assets/ditto-onboarding/shots/20-flow-7.png",
+     "copy": "气泡：dealbreakers: what should Ditto avoid?\n副文案：include anything you care about: physical traits, behavior, personality, etc.\n提示：🔒 Private. Only used to match you\n占位：anything that's a hard no…",
+     "n": "空着 Next 也可点，等于跳过；没有 Skip 按钮。",
+     "diff": "实机多了 Private 提示。",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "25 政治立场 politics",
+     "r": "单选 · 进度 117/117/68",
+     "src": "../research/assets/ditto-onboarding/shots/20-flow-9.png",
+     "copy": "气泡：what's your political vibe?\n提示：🔒 Private. Only used to match you\n选项：Very left ／ Left-leaning ／ Center ／ Right-leaning ／ Very right ／ Apolitical ／ Other",
+     "n": "单选。",
+     "diff": "与题库一致。",
+     "warn": "中国版已决定删除此题",
+     "states": []
+    },
+    {
+     "t": "26 政治重要度 politicsImportance",
+     "r": "单选 · 进度 117/117/78",
+     "src": "../research/assets/ditto-onboarding/shots/20-flow-10.png",
+     "copy": "气泡：does your match have to share your politics?\n提示：🔒 Private. Only used to match you\n选项：doesn't matter ／ kinda matters ／ super important",
+     "n": "单选。",
+     "diff": "与题库一致。",
+     "warn": "中国版已决定删除此题",
+     "states": []
+    },
+    {
+     "t": "27 宗教 religion",
+     "r": "多选 · 进度 117/117/87",
+     "src": "../research/assets/ditto-onboarding/shots/21-flow-0.png",
+     "copy": "气泡：what's your religion?\n提示：🔒 Private. Only used to match you\n选项：Atheist ／ Agnostic ／ Christian ／ Catholic ／ Jewish ／ Muslim ／ Hindu ／ Buddhist ／ Spiritual ／ Other",
+     "n": "多选。",
+     "diff": "与题库一致。",
+     "warn": "中国版已决定删除此题",
+     "states": []
+    },
+    {
+     "t": "28 宗教重要度 religionImportance",
+     "r": "单选 · 进度 117/117/97",
+     "src": "../research/assets/ditto-onboarding/shots/21-flow-1.png",
+     "copy": "气泡：does your match have to …（后半句未截全，推断为 share your religion?）\n提示：🔒 Private. Only used to match you\n选项：doesn't matter ／ kinda matters ／ super important",
+     "n": "单选。",
+     "diff": "三档文案一致。",
+     "warn": "中国版已决定删除此题",
+     "states": []
+    },
+    {
+     "t": "29 第一句话 firstMessage",
+     "r": "长文本 · 进度 117/117/107",
+     "src": "../research/assets/ditto-onboarding/shots/21-flow-2.png",
+     "copy": "气泡：first thing your match should know?\n副文案：your match will see this\n占位：could be a fun fact, a vibe check…",
+     "n": "空着时 Next 禁用，填了才可点。",
+     "diff": "题库另一句说明 this helps your match get to know you better 这次没截到。",
+     "warn": "",
+     "states": []
+    }
+   ]
+  },
+  {
+   "name": "最后一页",
+   "note": "",
+   "pages": [
+    {
+     "t": "30 约会教练 datingHelp（最后一页）",
+     "r": "多选 · 进度 117/117/117 已满",
+     "src": "../research/assets/ditto-onboarding/shots/21-flow-3.png",
+     "copy": "气泡：if you had a dating coach（后半句 what would you want help with? 未打完）\n选项：👋 approaching girls ／ 💬 keeping a convo going ／ 👀 telling if they’re into me ／ 💪 being more confident ／ 🧭 figuring out what i want ／ ☕ the date itself ／ 💘 just get me a date",
+     "n": "进入这一页时就开始撒彩带。第一个选项随「想约谁」变化：只约女生时是 approaching girls。",
+     "diff": "实机 emoji 在左、全小写；Confidence 实机是 being more confident。",
+     "warn": "点任何一个选项就直接提交入驻，没有 Next 和确认。本次走查就是在这里误提交的。",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/21-flow-3.png",
+       "lbl": "进入时撒彩带"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/21-flow-4.png",
+       "lbl": "提交后的爱心点阵加载"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "过渡帧与回退（30 张）",
+   "note": "翻页途中、回退过程截到的帧，供动效参考。",
+   "pages": [
+    {
+     "t": "过渡帧与回退",
+     "r": "",
+     "src": "",
+     "copy": "",
+     "n": "文件名里的 after/flow/back 表示翻页后、连续前进、回退途中截到的帧。",
+     "diff": "",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/00-after-back.png",
+       "lbl": "00-after-back"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/01-name-empty.png",
+       "lbl": "01-name-empty"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/03-after-name.png",
+       "lbl": "03-after-name"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/04-after-gender.png",
+       "lbl": "04-after-gender"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/06-after-birthday.png",
+       "lbl": "06-after-birthday"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/07-branch-8.png",
+       "lbl": "07-branch-8"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/13-after-age.png",
+       "lbl": "13-after-age"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/14-step-0.png",
+       "lbl": "14-step-0"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/15-after-height-next.png",
+       "lbl": "15-after-height-next"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/15-after-height.png",
+       "lbl": "15-after-height"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/15-back-from-photos.png",
+       "lbl": "15-back-from-photos"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/17-flow-0.png",
+       "lbl": "17-flow-0"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/18-location-after-click.png",
+       "lbl": "18-location-after-click"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/18-location-search-now.png",
+       "lbl": "18-location-search-now"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/19-flow-0.png",
+       "lbl": "19-flow-0"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/19-flow-1.png",
+       "lbl": "19-flow-1"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/19-flow-2.png",
+       "lbl": "19-flow-2"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/20-flow-1.png",
+       "lbl": "20-flow-1"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/20-flow-11.png",
+       "lbl": "20-flow-11"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/20-flow-2.png",
+       "lbl": "20-flow-2"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/20-flow-4.png",
+       "lbl": "20-flow-4"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/20-flow-6.png",
+       "lbl": "20-flow-6"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/20-flow-8.png",
+       "lbl": "20-flow-8"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/back-2.png",
+       "lbl": "back-2"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/back-3.png",
+       "lbl": "back-3"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/back-4.png",
+       "lbl": "back-4"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/back-5.png",
+       "lbl": "back-5"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/back-6.png",
+       "lbl": "back-6"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/back-7.png",
+       "lbl": "back-7"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/back-8.png",
+       "lbl": "back-8"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "补充 · 资料编辑页走的 5 个兴趣分支",
+   "note": "用户自己的非学生测试账号，在 /edit-profile 改爱好触发分支，走完已还原（资料文本与改前逐字一致）。详见 09 号文档第 10 节。",
+   "pages": [
+    {
+     "t": "入口 · 首页弹窗",
+     "r": "弹窗",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/00-home-imessage-dialog.png",
+     "copy": "标题：Be first to know when you match 💌\n正文：Just send a pre-filled text to verify your number. We'll let you know when your next match is ready.\n按钮：Verify with iMessage ／ Close",
+     "n": "已入驻账号回首页就弹，属于 /join 流程的一部分。没点验证。",
+     "diff": "",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/01-home.png",
+       "lbl": "关掉后的首页"
+      }
+     ]
+    },
+    {
+     "t": "入口 · You 页",
+     "r": "页面 /you",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/02-you.png",
+     "copy": "标题：What Ditto knows about you\n卡片：Profile ／ Deep Info（Ideal look, religion, politics, and what matters to you.）／ Blocklist（People you never want Ditto to match you with.）\n底部导航：Ditto ／ Where ／ You",
+     "n": "",
+     "diff": "",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/03-profile.png",
+       "lbl": "Profile 编辑页首屏"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/03-profile-full.png",
+       "lbl": "Profile 编辑页整页（含职场字段）"
+      }
+     ]
+    },
+    {
+     "t": "爱好编辑 · 最多 5 枚",
+     "r": "多选 · /onboarding/edit/hobbyRanking",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/10-hobbies-edit.png",
+     "copy": "气泡：what are your hobbies & interests?\n选项：8 枚预设 ＋ Type your hobby\n提示（选满时）：max 5. deselect one to swap\n按钮：Done（无分支）→ Next（勾了带分支的预设）",
+     "n": "复用入驻同一题。选满 5 枚后其余 disabled。一次最多追问 3 个爱好，挑哪 3 个不是勾选顺序也不是题库顺序。",
+     "diff": "题库没写上限 5 和追问上限 3。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/11-hobbies-reading-gym-gaming.png",
+       "lbl": "勾 3 枚"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/13-hobbies-five-max.png",
+       "lbl": "选满 5 枚"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/26-profile-after-5.png",
+       "lbl": "资料页回显"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/40-restore-sport.png",
+       "lbl": "还原为 sport"
+      }
+     ]
+    },
+    {
+     "t": "阅读 Reading · 多选",
+     "r": "多选 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/32-empty.png",
+     "copy": "气泡：what genres u reading rn?\n选项：📖 Lit fic／🐉 Fantasy／🚀 Sci-fi／🔍 Mystery／💕 Romance／🪞 Memoir／🧠 Self-help／🌹 Poetry／📚 Classics／😏 Smut idk ／ Other",
+     "n": "多选，选中变品红胶囊带勾；至少选 1 个圆形 Next 才可点。Other 点开是占位 Other 的输入框。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/32-selected.png",
+       "lbl": "选中两项"
+      }
+     ]
+    },
+    {
+     "t": "阅读 Reading · 短文本",
+     "r": "文本 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/33-empty.png",
+     "copy": "气泡：last book u finished?\n占位：name + author",
+     "n": "短文本，有字后 Next 可点。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/33-filled.png",
+       "lbl": "已填写"
+      }
+     ]
+    },
+    {
+     "t": "健身 Gym · 多选",
+     "r": "多选 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/20-branch-1.png",
+     "copy": "气泡：what's your training style?\n选项：🏋️ Lifting／🏃 Running／🧘 Yoga／🩰 Pilates／💪 Crossfit／🥊 Boxing／💃 Dance／🚴 Cycling／🧗 Climbing ／ Other",
+     "n": "多选，选中变品红胶囊带勾；至少选 1 个圆形 Next 才可点。Other 点开是占位 Other 的输入框。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/20-branch-1-two.png",
+       "lbl": "选中两项"
+      },
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/20-branch-1-other-open.png",
+       "lbl": "Other 展开"
+      }
+     ]
+    },
+    {
+     "t": "健身 Gym · 短文本",
+     "r": "文本 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/21-empty.png",
+     "copy": "气泡：what u training for?\n占位：aesthetic, marathon, principle...",
+     "n": "短文本，有字后 Next 可点。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/21-filled.png",
+       "lbl": "已填写"
+      }
+     ]
+    },
+    {
+     "t": "游戏 Gaming · 多选",
+     "r": "多选 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/22-empty.png",
+     "copy": "气泡：what games u into?\n选项：🔫 FPS／⚔️ RPG／⚽ Sports games／🎮 MOBA／🧠 Strategy／🎨 Indie／🌱 Sims/cozy／👊 Fighting／🌐 MMO ／ Other",
+     "n": "多选，选中变品红胶囊带勾；至少选 1 个圆形 Next 才可点。Other 点开是占位 Other 的输入框。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/22-selected.png",
+       "lbl": "选中两项"
+      }
+     ]
+    },
+    {
+     "t": "游戏 Gaming · 短文本",
+     "r": "文本 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/23-empty.png",
+     "copy": "气泡：what u playing rn?\n占位：game on repeat rn",
+     "n": "短文本，有字后 Next 可点。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/23-filled.png",
+       "lbl": "已填写"
+      }
+     ]
+    },
+    {
+     "t": "影视 Movies/TV · 多选",
+     "r": "多选 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/34-empty.png",
+     "copy": "气泡：what kinda content u like?\n选项：🎞️ Indie／👻 Horror／💞 Rom-com／💥 Action／🛸 Sci-fi／📹 Documentary／🎬 A24 stuff／🌍 Foreign／🎌 Anime／📺 Reality TV ／ Other",
+     "n": "多选，选中变品红胶囊带勾；至少选 1 个圆形 Next 才可点。Other 点开是占位 Other 的输入框。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/34-selected.png",
+       "lbl": "选中两项"
+      }
+     ]
+    },
+    {
+     "t": "影视 Movies/TV · 短文本",
+     "r": "文本 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/35-empty.png",
+     "copy": "气泡：last great watch?\n占位：name it",
+     "n": "短文本，有字后 Next 可点。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/35-filled.png",
+       "lbl": "已填写"
+      }
+     ]
+    },
+    {
+     "t": "美术 Art · 多选",
+     "r": "多选 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/24-empty.png",
+     "copy": "气泡：what mediums u work in?\n选项：✏️ Drawing／🎨 Painting／💻 Digital／🏺 Pottery／🗿 Sculpture／✂️ Collage／🧵 Crafts／🌈 Mixed media ／ Other",
+     "n": "多选，选中变品红胶囊带勾；至少选 1 个圆形 Next 才可点。Other 点开是占位 Other 的输入框。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/24-selected.png",
+       "lbl": "选中两项"
+      }
+     ]
+    },
+    {
+     "t": "美术 Art · 短文本",
+     "r": "文本 · 资料编辑页",
+     "src": "../research/assets/ditto-onboarding/shots/profile-edit/25-empty.png",
+     "copy": "气泡：what do u make?\n占位：describe your work",
+     "n": "短文本，有字后 Next 可点。",
+     "diff": "与题库逐字一致。",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/ditto-onboarding/shots/profile-edit/25-filled.png",
+       "lbl": "已填写"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "第三轮 · 全分支录屏（学生 3 段 + 非学生 3 段）",
+   "note": "无头浏览器 390×844 录制，每段从 are you currently a student 开始，停在邮箱页，不填邮箱、不交卷。详见 research/12-ditto-入驻全分支-pass3实录.md。翻页：旧页上飞淡出 40–80ms，空 80–160ms，新页从下方约 400px 滑上，约 360ms；打字 93ms/词；关键词逐字放大波浪约 60ms/字；选中变色 160–200ms 并向左变宽 52px（约 300ms）；进度条 0.3s cubic-bezier(0.4,0,0.2,1)。",
+   "pages": [
+    {
+     "t": "S1 · 学生 · Man → Women · 烹饪/音乐/旅行",
+     "r": "录屏 390×844",
+     "video": "../research/assets/videos/pass3/S1-学生-Man-Women-烹饪音乐旅行.mp4",
+     "copy": "",
+     "n": "18 页，停在学校邮箱。爱好在前，种族、年龄、身高在分支之后。 逐页截图：shots/pass3/S1/",
+     "diff": "",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "S2 · 学生 · Woman → Men · 阅读/健身/游戏",
+     "r": "录屏 390×844",
+     "video": "../research/assets/videos/pass3/S2-学生-Woman-Men-阅读健身游戏.mp4",
+     "copy": "",
+     "n": "18 页，停在学校邮箱。 逐页截图：shots/pass3/S2/",
+     "diff": "",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "S3 · 学生 · Nonbinary → Everyone · 影视/艺术/烹饪",
+     "r": "录屏 390×844",
+     "video": "../research/assets/videos/pass3/S3-学生-Nonbinary-Everyone-影视艺术烹饪.mp4",
+     "copy": "",
+     "n": "20 页，停在学校邮箱。多出 your ideal match? 和 how would u describe yourself? 两页。追问先问烹饪：按题库顺序，不按勾选顺序。 逐页截图：shots/pass3/S3/",
+     "diff": "",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "N1 · 非学生 · Man → Women · 烹饪/音乐/旅行",
+     "r": "录屏 390×844",
+     "video": "../research/assets/videos/pass3/N1-非学生-Man-Women-烹饪音乐旅行.mp4",
+     "copy": "",
+     "n": "23 页，停在个人邮箱。种族、年龄、身高在爱好之前；分支后是偏好过场页，然后工作、预算、学历、学历要求。 逐页截图：shots/pass3/N1/",
+     "diff": "",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "N2 · 非学生 · Woman → Men · 阅读/健身/游戏",
+     "r": "录屏 390×844",
+     "video": "../research/assets/videos/pass3/N2-非学生-Woman-Men-阅读健身游戏.mp4",
+     "copy": "",
+     "n": "23 页，停在个人邮箱。 逐页截图：shots/pass3/N2/",
+     "diff": "",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "N3 · 非学生 · Nonbinary → Everyone · 影视/艺术/烹饪",
+     "r": "录屏 390×844",
+     "video": "../research/assets/videos/pass3/N3-非学生-Nonbinary-Everyone-影视艺术烹饪.mp4",
+     "copy": "",
+     "n": "35 页。额外出现照片页、What are you looking for?、how do u want ditto to match u、dealbreakers、政治/宗教及是否要求一致、first thing your match should know、datingHelp。datingHelp 页脚本只点了 Next（草稿预选），没点选项，停在个人邮箱，未交卷。 逐页截图：shots/pass3/N3/",
+     "diff": "",
+     "warn": "",
+     "states": []
+    },
+    {
+     "t": "性别组合多出的两页",
+     "r": "S3 / N3",
+     "src": "../research/assets/videos/pass3/frames/S3/s3-ideal-match-77.60s.png",
+     "copy": "your ideal match?（多选：more of a top / bottom / masc / femme / flexible / prefer not to say）\nhow would u describe yourself?（单选）",
+     "n": "只在 Nonbinary → Everyone 出现，总在身高之前。是 Nonbinary 还是 Everyone 触发尚未拆开。",
+     "diff": "",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/videos/pass3/frames/S3/s3-describe-yourself-82.60s.png",
+       "lbl": "how would u describe yourself?"
+      }
+     ]
+    },
+    {
+     "t": "偏好过场页",
+     "r": "N1 / N2 / N3",
+     "src": "../research/assets/videos/pass3/frames/N1/n1-interstitial-illustration-83.52s.png",
+     "copy": "now let's talk about your preferences",
+     "n": "不会自动前进，有可点的 Next。N1/N2 进入前有约 0.9s 居中转圈。插图加载完直接出现，无淡入。",
+     "diff": "",
+     "warn": "",
+     "states": [
+      {
+       "src": "../research/assets/videos/pass3/frames/N1/n1-spinner-25fps-79.48s.png",
+       "lbl": "进入前的转圈"
+      }
+     ]
+    },
+    {
+     "t": "N3 长尾页 · 照片与 datingHelp",
+     "r": "N3",
+     "src": "../research/assets/videos/pass3/frames/N3/n3-photos-91.20s.png",
+     "copy": "Let's add at least 2 photos 📷\nif you had a dating coach, what would you want help with?",
+     "n": "照片页没有上传（草稿里已有照片）。datingHelp 只截图；点任意选项会自动提交。",
+     "diff": "",
+     "warn": "datingHelp 页禁止点选项",
+     "states": [
+      {
+       "src": "../research/assets/videos/pass3/frames/N3/n3-datingHelp-155.60s.png",
+       "lbl": "datingHelp"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "没覆盖的部分",
+   "note": "还没覆盖：编辑页点 Done 之后的保存行为；是否学生改为 yes 的连带变化；身高要求编辑页的双尺规；Other 胶囊展开态；屏蔽名单有条目时的列表；账号设置二级页；学校邮箱之后的 1–2 页、验证码之后；/join 手机号流程；步骤表变长的原因（恢复页 vs 性别组合）；4–5 个爱好时选哪 3 条追问；入场动画曲线精确值（需 60fps）。已补齐：职场类编辑页 20 行、Deep Info、屏蔽名单与添加抽屉（见 research/13，截图 shots/profile-edit-2/）；性别组合多出的两页、8 个兴趣分支、全路径录屏（第三轮）。",
+   "pages": []
+  }
+ ]
+}
