@@ -17,6 +17,8 @@ export interface AppDb {
   partnerWantsAgain: boolean;
   phone: string;
   deactivated: boolean;
+  /** SMS alert when the weekly match drops (Ditto: Verify with iMessage, 09 §10.1). */
+  alertsOn: boolean;
   set: (patch: Partial<Omit<AppDb, 'set' | 'reset'>>) => void;
   reset: () => void;
 }
@@ -30,6 +32,7 @@ const initial = {
   partnerWantsAgain: true,
   phone: '',
   deactivated: false,
+  alertsOn: false,
 };
 
 export const useDb = create<AppDb>()(

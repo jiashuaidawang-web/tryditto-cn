@@ -6,7 +6,7 @@ characters used in src/landing/**, so the page ships ~100 KB instead of ~10 MB.
 
 usage:
   python3 -m venv /tmp/ld/venv && /tmp/ld/venv/bin/pip install fonttools brotli
-  (cd /tmp/ld/fonts && npm pack @fontsource/smythe @fontsource/caveat-brush \
+  (cd /tmp/ld/fonts && npm pack @fontsource/smythe @fontsource/caveat \
       @fontsource/zcool-xiaowei @fontsource/ma-shan-zheng && for t in *.tgz; do mkdir -p ${t%.tgz}; tar xzf $t -C ${t%.tgz}; done)
   /tmp/ld/venv/bin/python scripts/landing/build-fonts.py /tmp/ld/fonts
 """
@@ -68,7 +68,7 @@ def build_cjk(name, family_file, wanted):
 
 
 shutil.copy(os.path.join(pkg('smythe'), 'smythe-latin-400-normal.woff2'), os.path.join(OUT, 'smythe-latin.woff2'))
-shutil.copy(os.path.join(pkg('caveat-brush'), 'caveat-brush-latin-400-normal.woff2'), os.path.join(OUT, 'caveat-brush-latin.woff2'))
+shutil.copy(os.path.join(pkg('caveat'), 'caveat-latin-500-normal.woff2'), os.path.join(OUT, 'caveat-latin.woff2'))
 build_cjk('zcool-xiaowei', 'zcool-xiaowei-subset.woff2', chars)
 script_chars = sorted(set('约会，不必滑动'))
 build_cjk('ma-shan-zheng', 'ma-shan-zheng-subset.woff2', script_chars)

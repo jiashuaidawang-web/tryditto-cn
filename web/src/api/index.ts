@@ -1,3 +1,4 @@
+import { useAuth } from '../landing/auth';
 import { SAVE_LATENCY_MS } from '../motion/tokens';
 import { useOnboarding } from '../onboarding/store';
 import type { Answers, LocationValue } from '../onboarding/types';
@@ -17,6 +18,8 @@ export type { BlockEntry, Feedback, Match, MatchStage, Me, Partner, Reason, Slot
 export { useDb } from './db';
 export { PARTNERS, DECLINE_REASONS, REPORT_CATEGORIES, partnerById } from './mock';
 export { placeById, nearbyCount, CURRENT_PLACE_ID, type Place } from './places';
+export { nextDrop, formatCountdown, formatSlot, formatDropLabel } from './time';
+export { avatarUri, sceneUri } from './art';
 
 export interface OnboardingProgress {
   answers: Answers;
@@ -53,11 +56,7 @@ export const api: OnboardingApi = {
 
 // ───────────────────────── Account ─────────────────────────
 
-/** Auth lives in the landing module (src/landing/auth.ts); read its key loosely so we don't depend on it at compile time. */
-export const AUTH_STORAGE_KEY = 'jym-auth';
-
-export function getMe(): Me {
-  // TODO(spring-boot): GET /api/me
+function meSnapshot(): Me {
   const a = answers();
   const email = (a.noSchoolEmail !== true && typeof a.schoolEmail === 'string' ? a.schoolEmail : a.personalEmail) as string | undefined;
   return {
@@ -66,9 +65,26 @@ export function getMe(): Me {
     onboarded: useOnboarding.getState().completed,
     isStudent: a.isStudent === 'yes',
     email: email ?? '',
-    phone: db().phone,
+    phone: useAuth.getState().phone ?? db().phone,
     inviteUrl: `jianyimian.cn/j/home-referral/u_${(typeof a.name === 'string' && a.name ? a.name : 'demo').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) || 'demo'}82`,
   };
+}
+
+export async function getMe(): Promise<Me> {
+  // TODO(spring-boot): GET /api/me
+  return meSnapshot();
+}
+
+export interface Profile {
+  answers: Answers;
+  photos: string[];
+  idealPhotos: string[];
+}
+
+/** Everything /you, /edit-profile, /deep-info and /where render. */
+export async function getProfile(): Promise<Profile> {
+  // TODO(spring-boot): GET /api/me  (profile answers + photo urls; Ditto: /user/profile, 13 §2.3)
+  return { answers: answers(), photos: db().photos, idealPhotos: db().idealPhotos };
 }
 
 export async function completeOnboarding(): Promise<void> {
@@ -78,7 +94,7 @@ export async function completeOnboarding(): Promise<void> {
 
 export async function logout(): Promise<void> {
   // TODO(spring-boot): POST /api/auth/logout
-  localStorage.removeItem(AUTH_STORAGE_KEY);
+  useAuth.getState().logout();
 }
 
 export async function deactivateAccount(): Promise<void> {
@@ -231,20 +247,33 @@ function buildMatch(stage: MatchStage): Match {
   return m;
 }
 
-/** Current week's match; `waiting` before Wednesday's drop. */
-export function getCurrentMatch(): Match {
-  // TODO(spring-boot): GET /api/matches/current
+function currentMatch(): Match {
   return db().match ?? buildMatch('waiting');
 }
 
+/** Current week's match (+ partner card, AI reasons, interest chips); stage `waiting` before Wednesday's drop. */
+export async function getCurrentMatch(): Promise<MatchView> {
+  // TODO(spring-boot): GET /api/matches/current
+  return matchView(currentMatch(), answers());
+}
+
 function patchMatch(patch: Partial<Match>) {
-  const m = getCurrentMatch();
+  const m = currentMatch();
   db().set({ match: { ...m, ...patch } });
 }
 
+/** "I'm in" on the poster; the slot picks follow in confirmSlots (01 §4.3: two gates — the person, then the time). */
 export async function acceptMatch(matchId: string): Promise<void> {
   // TODO(spring-boot): POST /api/matches/{id}/accept
   void matchId;
+}
+
+/** Contact is only released once both said "see them again" (01 §4.3, privacy policy). */
+export async function getContact(matchId: string): Promise<{ wechat: string } | null> {
+  // TODO(spring-boot): GET /api/matches/{id}/contact  (403 unless mutual)
+  void matchId;
+  const m = currentMatch();
+  return m.stage === 'mutual' ? { wechat: partnerById(m.partnerId).wechat } : null;
 }
 
 /** The slots I can make from the proposed 2–3 (01 §5.3: availability, not a fixed time). */
@@ -264,7 +293,7 @@ export async function declineMatch(matchId: string, reasons: string[], note: str
 export async function flagReason(matchId: string, index: number): Promise<void> {
   // TODO(spring-boot): POST /api/matches/{id}/reasons/{index}/flag
   void matchId;
-  const m = getCurrentMatch();
+  const m = currentMatch();
   const cur = m.flaggedReasons ?? [];
   patchMatch({ flaggedReasons: cur.includes(index) ? cur.filter((i) => i !== index) : [...cur, index] });
 }
@@ -290,7 +319,7 @@ export async function reportMatch(matchId: string, category: string, note: strin
 
 /** Resolves an `awaitingFeedback` match once the other side has answered (server push in production). */
 function resolveFeedback() {
-  const m = getCurrentMatch();
+  const m = currentMatch();
   const mutual = m.feedback?.met === 'met' && m.feedback.again === 'yes' && db().partnerWantsAgain;
   patchMatch({ stage: mutual ? 'mutual' : 'closed' });
 }
@@ -307,9 +336,14 @@ export function matchView(match: Match, a: Answers): MatchView {
   return { match, partner, reasons: reasonsFor(partner, a), interests: sharedInterests(partner, a) };
 }
 
+export async function enableMatchAlerts(): Promise<void> {
+  // TODO(spring-boot): PUT /api/me/notifications  body: { sms: true }
+  db().set({ alertsOn: true });
+}
+
 export async function getInvite(): Promise<{ url: string }> {
   // TODO(spring-boot): GET /api/referrals/me
-  return { url: getMe().inviteUrl };
+  return { url: meSnapshot().inviteUrl };
 }
 
 // ───────────────────────── Demo controls ─────────────────────────
@@ -333,7 +367,7 @@ export const demo = {
   },
   /** Partner picks one of my slots → both confirmed. */
   partnerConfirms() {
-    const m = getCurrentMatch();
+    const m = currentMatch();
     patchMatch({ stage: 'confirmed', confirmedSlotId: m.mySlotIds[0] ?? 'slot_0' });
   },
   openDateDay() {

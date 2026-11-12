@@ -145,7 +145,7 @@ export function QuestionPage({ step, lang, answers, onNext, onEscape, mode = 'on
             <div className="mb-[10px] pl-4 text-[12px] leading-4 text-white/90">{pick(BOT_LABEL, lang)}</div>
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <ChatBubbles copies={q.bubbles.map((b) => pick(b, lang))} lang={lang} startDelayMs={startDelayMs} />
+                <ChatBubbles copies={(edit ? q.bubbles.slice(-1) : q.bubbles).map((b) => pick(b, lang))} lang={lang} startDelayMs={startDelayMs} />
               </div>
               {q.type === 'location' && (
                 <button type="button" aria-label="Why we ask where you'd date" onClick={() => setWhyOpen(true)} className="mr-[42px] mt-3 grid size-6 place-items-center text-white">

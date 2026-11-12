@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useState, type CSSProperties, type ReactNode } from 'react';
 import { pick, useLang, type Lang, type T } from '../i18n/lang';
 import { CHIPS, COMPARISON, FAQ, MANIFESTO, MATCHMAKER, SAFETY, STAMP, STATS, STEPS, TESTIMONIALS } from './copy';
 import { useReveal } from './useReveal';
@@ -12,11 +12,16 @@ function Reveal({ children, className = '', style }: { children: ReactNode; clas
   );
 }
 
-/** Black tape heading; `hot` words are pink. */
-function Chip({ parts, lang, hot = [] }: { parts: readonly T[]; lang: Lang; hot?: number[] }) {
+/** Black tape heading; `hot` words are pink, `br` breaks the line before that part. */
+function Chip({ parts, lang, hot = [], br, size }: { parts: readonly T[]; lang: Lang; hot?: number[]; br?: number; size?: 'sm' | 'md' }) {
   return (
-    <h2 className="lp-chip">
-      {parts.map((p, i) => (hot.includes(i) ? <em key={i}>{pick(p, lang)}</em> : <span key={i}>{pick(p, lang)}</span>))}
+    <h2 className={`lp-chip${size ? ` is-${size}` : ''}`}>
+      {parts.map((p, i) => (
+        <Fragment key={i}>
+          {i === br && <br />}
+          {hot.includes(i) ? <em>{pick(p, lang)}</em> : <span>{pick(p, lang)}</span>}
+        </Fragment>
+      ))}
     </h2>
   );
 }
@@ -78,7 +83,7 @@ export function Matchmaker() {
   const lang = useLang();
   return (
     <section className="lp-section">
-      <Chip parts={CHIPS.matchmaker} lang={lang} hot={[1]} />
+      <Chip parts={CHIPS.matchmaker} lang={lang} hot={[1]} br={lang === 'en' ? 2 : undefined} />
       <div className="lp-match-grid">
         {MATCHMAKER.map((m) => (
           <Reveal key={m.img} className="lp-match-item" style={{ '--w': `${m.w}px`, '--mw': `${m.mw}px` } as CSSProperties}>
@@ -127,8 +132,8 @@ export function Comparison() {
   return (
     <section className="lp-section">
       <div className="lp-tired">
-        <h2 className="lp-chip">{pick(CHIPS.tired, lang)}</h2>
-        <h2 className="lp-chip">{pick(CHIPS.forYou, lang)}</h2>
+        <h2 className="lp-chip is-md">{pick(CHIPS.tired, lang)}</h2>
+        <h2 className="lp-chip is-md">{pick(CHIPS.forYou, lang)}</h2>
       </div>
       <div className="lp-compare">
         <Reveal className="lp-compare-col">
@@ -204,7 +209,7 @@ export function Safety() {
   const lang = useLang();
   return (
     <section className="lp-section">
-      <Chip parts={CHIPS.safe} lang={lang} hot={[1]} />
+      <Chip parts={CHIPS.safe} lang={lang} hot={[1]} size="sm" />
       <div className="lp-safe-list">
         {SAFETY.map((s) => (
           <Reveal key={s.kind} className="lp-safe">
@@ -239,7 +244,7 @@ export function Faq() {
   const [open, setOpen] = useState<number | null>(null);
   return (
     <section className="lp-section" id="faq">
-      <h2 className="lp-chip">{pick(CHIPS.faq, lang)}</h2>
+      <h2 className="lp-chip is-sm">{pick(CHIPS.faq, lang)}</h2>
       <div className="lp-faq">
         {FAQ.map((f, i) => (
           <div key={i} className={`lp-faq-item${open === i ? ' is-open' : ''}`}>

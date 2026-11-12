@@ -1,0 +1,122 @@
+/* Logged-in shell (08 §视觉共性, 13 §2.1). Imported by src/app/routes.tsx. */
+
+@font-face {
+  font-family: 'App Display';
+  src: url('/app/fonts/smythe-latin.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F;
+}
+
+/* Handwritten page titles ("Ditto is finding you a date!", "What Ditto knows about you"). zh falls back to a brush/kai face. */
+.app-display {
+  font-family: 'App Display', 'Kaiti SC', 'STKaiti', 'KaiTi', 'PingFang SC', serif;
+  font-weight: 400;
+  letter-spacing: -0.2px;
+  text-shadow: 0 2px 10px rgba(0, 20, 60, 0.18);
+}
+[lang='zh-CN'] .app-display {
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* /edit-profile, /deep-info, /account cards: 13 §2.1 computed styles. */
+.app-card {
+  background: rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 0 8px rgba(255, 255, 255, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+/* /you cards (03-you.png): lighter frosted fill + visible hairline. */
+.app-card-lite {
+  background: rgba(255, 255, 255, 0.13);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 0 10px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32),
+    0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Invite pill, ☰ circle, Message Ditto bar (01-home.png). */
+.app-glass {
+  background: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 1px 6px rgba(255, 255, 255, 0.12);
+}
+
+/* ☰ dropdown (12-menu.png): deep translucent navy. */
+.app-menu {
+  background: rgba(22, 52, 112, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(16px) saturate(1.2);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 12px 30px rgba(0, 10, 40, 0.3);
+}
+
+/* Light bottom sheets (11-invite.png, 31-blocklist-add-sheet.png): white 90% + blur. */
+.app-sheet {
+  background: linear-gradient(180deg, rgba(246, 249, 253, 0.96) 0%, rgba(232, 238, 246, 0.94) 100%);
+  -webkit-backdrop-filter: blur(4px) saturate(1.6);
+  backdrop-filter: blur(4px) saturate(1.6);
+  color: #022b4e;
+}
+.app-field {
+  background: rgba(2, 43, 78, 0.06);
+  border: 1px solid rgba(2, 43, 78, 0.1);
+  border-radius: 6px;
+  color: #022b4e;
+}
+.app-field::placeholder {
+  color: rgba(2, 43, 78, 0.38);
+}
+
+/* Flying dove: 17-frame sprite, 200×150 per frame. */
+.app-dove {
+  background-image: url('/app/dove-sheet.png');
+  background-repeat: no-repeat;
+  animation: app-dove-flap 1.15s steps(17) infinite;
+}
+@keyframes app-dove-flap {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: calc(var(--dove-w) * -17) 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-dove {
+    animation: none;
+  }
+}
+
+@keyframes app-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+.app-pulse-ring {
+  animation: app-pulse-ring 1.8s ease-out infinite;
+}
+
+/* Poster paper (01 §5.1, press-match-poster-*.jpg): pale blue dotted board behind the collage. */
+.app-poster-board {
+  background-color: #d7e6fb;
+  background-image: radial-gradient(rgba(70, 120, 200, 0.22) 1px, transparent 1.2px);
+  background-size: 9px 9px;
+}

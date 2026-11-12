@@ -32,7 +32,7 @@ export function LandingHeader() {
       </p>
       <nav className="lp-nav">
         {continuePath ? (
-          <Link to={continuePath + q} className="lp-pill is-join">
+          <Link to={continuePath + q} className="lp-pill is-join is-continue">
             {pick(HEADER.continue, lang)}
           </Link>
         ) : (

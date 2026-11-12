@@ -7,7 +7,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-process.env.PLAYWRIGHT_BROWSERS_PATH ??= '/Users/null/Library/Caches/ms-playwright';
+process.env.PLAYWRIGHT_BROWSERS_PATH = '/Users/null/Library/Caches/ms-playwright';
 const require = createRequire('/Users/null/.npm/_npx/9833c18b2d85bc59/node_modules/');
 const { chromium } = require('playwright');
 
@@ -18,23 +18,23 @@ const sbsDir = join(web, 'compare/landing/side-by-side');
 mkdirSync(oursDir, { recursive: true });
 mkdirSync(sbsDir, { recursive: true });
 
-const base = process.argv[2] ?? 'http://localhost:5174';
+const base = process.argv[2] ?? 'http://127.0.0.1:5174';
 const only = process.argv[3] ?? 'all';
 
 /** [ditto name, anchor selector, nth match, y the anchor's top has in Ditto's shot, click first FAQ?] */
 const MOBILE = [
   ['hero', null, 0, 0],
-  ['how-it-works', '.lp-chip', 0, 30],
-  ['how-it-works-lower', '.lp-step h3', 3, 160],
-  ['photos', '.lp-chip', 1, 38],
-  ['matchmaker', '.lp-match-item h3', 0, 70],
-  ['great-times', '.lp-chip', 4, 375],
-  ['comparison', '.lp-compare-col', 0, 68],
-  ['safety', '.lp-chip', 6, 67],
-  ['faq', '.lp-chip', 7, 76],
-  ['faq-open', '.lp-chip', 7, 190, true],
-  ['manifesto-cta', '.lp-mani-line', 0, 214],
-  ['footer', '.lp-footer', 0, 192],
+  ['how-it-works', '.lp-chip', 0, 70],
+  ['how-it-works-lower', '.lp-step h3', 3, 285],
+  ['photos', '.lp-chip', 1, 72],
+  ['matchmaker', '.lp-match-item h3', 0, 118],
+  ['great-times', '.lp-chip', 4, 668],
+  ['comparison', '.lp-compare-col', 0, 128],
+  ['safety', '.lp-chip', 6, 122],
+  ['faq', '.lp-chip', 7, 118],
+  ['faq-open', '.lp-chip', 7, 330, true],
+  ['manifesto-cta', '.lp-mani-line', 0, 383],
+  ['footer', '.lp-footer', 0, 340],
   ['footer-bottom', '.lp-footer', 0, 133],
 ];
 const DESKTOP = [
@@ -102,6 +102,23 @@ async function run(kind, viewport, shots) {
   await browser.close();
 }
 
+async function fullZh(kind, viewport) {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
+  await page.goto(`${base}/`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(9500);
+  const h = await page.evaluate(() => document.documentElement.scrollHeight);
+  for (let y = 0; y < h; y += viewport.height / 2) {
+    await page.evaluate((v) => window.scrollTo(0, v), y);
+    await page.waitForTimeout(60);
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: join(oursDir, `${kind}-zh-full.png`), fullPage: true });
+  await browser.close();
+}
+
+if (only !== 'desktop') await fullZh('mobile', { width: 390, height: 844 });
 if (only !== 'desktop') await run('mobile', { width: 390, height: 844 }, MOBILE);
 if (only !== 'mobile') await run('desktop', { width: 1440, height: 900 }, DESKTOP);
 console.log('ok', oursDir, sbsDir);

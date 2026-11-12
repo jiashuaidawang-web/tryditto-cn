@@ -70,13 +70,13 @@ export function OnboardingPage() {
   const indexOf = (list: Step[], id: string | null) => list.findIndex((s) => s.id === id);
 
   const advance = useCallback(
-    async (opts?: { force?: boolean; ageConfirmed?: boolean }) => {
+    async (opts?: { force?: boolean }) => {
       if (!current || busy.current) return;
       const q = current.question;
       const st = useOnboarding.getState();
       let value = st.answers[q.id];
 
-      if (q.type === 'date' && !opts?.ageConfirmed) {
+      if (q.type === 'date') {
         const d = parseIsoDate(value);
         if (d && ageOn(d) < 18) {
           setAgeConfirm({ age: ageOn(d), date: d });
@@ -199,10 +199,6 @@ export function OnboardingPage() {
             age={ageConfirm.age}
             date={ageConfirm.date}
             onEdit={() => setAgeConfirm(null)}
-            onConfirm={() => {
-              setAgeConfirm(null);
-              void advance({ ageConfirmed: true });
-            }}
           />
         )}
       </AnimatePresence>
@@ -215,20 +211,18 @@ function AgeConfirm({
   age,
   date,
   onEdit,
-  onConfirm,
 }: {
   lang: 'en' | 'zh';
   age: number;
   date: Date;
   onEdit: () => void;
-  onConfirm: () => void;
 }) {
   const enDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const zhDate = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日`;
   const body =
     lang === 'en'
-      ? `You're ${age} years old. Your birthday is ${enDate}. You can't change it later, so make sure it's right.`
-      : `你今年 ${age} 岁，生日是 ${zhDate}。之后不能再改，确认一下哦。`;
+      ? `You're ${age} years old (birthday ${enDate}). You need to be 18 or older to join.`
+      : `你今年 ${age} 岁（生日 ${zhDate}）。年满 18 周岁才能加入哦。`;
   return (
     <motion.div className="absolute inset-0 z-50 flex items-end bg-black/40 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div
@@ -239,10 +233,7 @@ function AgeConfirm({
         exit={{ y: 40 }}
       >
         <p className="text-[16px] font-medium leading-[22px]">{body}</p>
-        <button type="button" className="mt-5 h-12 w-full rounded-full bg-ink text-[16px] font-bold text-white" onClick={onConfirm}>
-          {lang === 'en' ? "Yes, that's right" : '没错'}
-        </button>
-        <button type="button" className="mt-2 h-12 w-full rounded-full text-[16px] font-bold" onClick={onEdit}>
+        <button type="button" className="mt-5 h-12 w-full rounded-full bg-ink text-[16px] font-bold text-white" onClick={onEdit}>
           {lang === 'en' ? 'Edit birthday' : '修改生日'}
         </button>
       </motion.div>

@@ -269,6 +269,11 @@ export function Hero() {
           </span>
         ))}
       </h1>
+      <div className="lp-strip is-campus is-back" aria-hidden>
+        {[0, 1, 2, 3].map((n) => (
+          <img key={n} src="/landing/hero-campus.jpg" alt="" draggable={false} />
+        ))}
+      </div>
       <div className="lp-phone-slot" aria-hidden>
         <div className={`lp-phone${clock.up ? ' is-up' : ''}`}>
           <div className="lp-island" />
@@ -292,7 +297,7 @@ export function Hero() {
       </div>
       <div className="lp-strip is-campus" aria-hidden>
         {[0, 1, 2, 3].map((n) => (
-          <img key={n} src="/landing/hero-campus.jpg" alt="" draggable={false} />
+          <img key={n} src="/landing/hero-campus-front.png" alt="" draggable={false} />
         ))}
       </div>
       <Dove t0={t0} reduced={reduced} />

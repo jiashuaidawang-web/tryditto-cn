@@ -14,7 +14,7 @@
 }
 @font-face {
   font-family: 'LP Script';
-  src: url('/landing/fonts/caveat-brush-latin.woff2') format('woff2');
+  src: url('/landing/fonts/caveat-latin.woff2') format('woff2');
   font-display: swap;
   unicode-range: U+0000-00FF, U+2000-206F;
 }
@@ -163,7 +163,7 @@
   color: var(--lp-pink);
 }
 @media (max-width: 480px) {
-  .lp-header:not(.is-scrolled) .lp-pill.is-join {
+  .lp-header:not(.is-scrolled) .lp-pill.is-join:not(.is-continue) {
     display: none;
   }
 }
@@ -223,6 +223,10 @@
   z-index: 3;
   bottom: calc(124 * var(--u));
   animation-duration: 91.2s;
+}
+/* Opaque copy (with the hills) sits behind the phone; the keyed buildings-only copy in front. */
+.lp-strip.is-campus.is-back {
+  z-index: 1;
 }
 .lp-strip.is-campus img {
   width: calc(1934 * var(--u));
@@ -770,7 +774,7 @@
   background: #050505;
   color: #fff;
   font-family: var(--lp-display);
-  font-size: 26px;
+  font-size: 31px;
   line-height: 1.12;
   text-align: center;
   box-shadow:
@@ -778,13 +782,21 @@
     0 0 6px rgba(255, 255, 255, 0.35);
   filter: url('#lp-rough');
 }
+.lp-chip.is-sm {
+  font-size: 24px;
+}
+.lp-chip.is-md {
+  font-size: 27px;
+}
 .lp-chip em {
   font-style: normal;
   color: var(--lp-pink);
 }
 @media (min-width: 1025px) {
-  .lp-chip {
-    font-size: 32px;
+  .lp-chip,
+  .lp-chip.is-sm,
+  .lp-chip.is-md {
+    font-size: 40px;
   }
 }
 .lp-h3 {
@@ -884,6 +896,9 @@
     width: 50%;
     max-width: 440px;
   }
+  .lp-step + .lp-step {
+    margin-top: -10px;
+  }
   .lp-step:nth-child(odd) {
     align-self: flex-start;
     margin-left: 4%;
@@ -891,10 +906,15 @@
   .lp-step:nth-child(even) {
     align-self: flex-end;
     margin-right: 4%;
-    margin-top: -110px;
   }
-  .lp-step:nth-child(3) {
-    margin-top: -30px;
+  .lp-step-title {
+    font-size: 40px;
+  }
+  .lp-badge {
+    width: 24px;
+    height: 30px;
+    border-radius: 12px;
+    font-size: 15px;
   }
   .lp-step img {
     transform: scale(1.16);
@@ -967,8 +987,21 @@
   container-type: inline-size;
 }
 .lp-sticker {
-  --big: 9.6cqw;
-  --small: 3.6cqw;
+  --big: 12cqw;
+  --small: 6.2cqw;
+}
+.lp-sticker.is-blue {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25em;
+}
+.lp-sticker.is-blue span {
+  align-self: center;
+  text-align: right;
+}
+.lp-sticker:lang(zh-CN) span {
+  font-size: calc(var(--small) * 0.72);
+  white-space: nowrap;
 }
 .lp-sticker.is-pink {
   left: 48.8%;
@@ -993,8 +1026,8 @@
 }
 @media (min-width: 1025px) {
   .lp-sticker {
-    --big: 4.3cqw;
-    --small: 1.6cqw;
+    --big: 4.6cqw;
+    --small: 2.5cqw;
   }
   .lp-sticker.is-pink {
     left: 31.2%;
@@ -1031,14 +1064,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 44px;
+  gap: 60px;
   margin-top: 44px;
 }
 .lp-match-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 26px;
 }
 .lp-match-item h3 {
   max-width: 300px;
@@ -1364,7 +1397,7 @@
 .lp-safe-list {
   display: flex;
   flex-direction: column;
-  gap: 44px;
+  gap: 26px;
   margin-top: 48px;
   width: 100%;
   max-width: 340px;
@@ -1407,14 +1440,18 @@
   .lp-safe:nth-child(2) {
     flex-direction: column;
     gap: 14px;
-    width: 280px;
+    width: 230px;
+  }
+  .lp-safe-media {
+    width: 170px;
   }
   .lp-safe-text {
     text-align: center;
   }
   .lp-safe-text .lp-h3 {
     text-align: center;
-    font-size: 32px;
+    font-size: 40px;
+    line-height: 1.12;
   }
 }
 .lp-faq {
