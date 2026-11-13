@@ -220,13 +220,9 @@
   mask-image: linear-gradient(180deg, transparent 0, #000 22%);
 }
 .lp-strip.is-campus {
-  z-index: 3;
+  z-index: 1;
   bottom: calc(124 * var(--u));
   animation-duration: 91.2s;
-}
-/* Opaque copy (with the hills) sits behind the phone; the keyed buildings-only copy in front. */
-.lp-strip.is-campus.is-back {
-  z-index: 1;
 }
 .lp-strip.is-campus img {
   width: calc(1934 * var(--u));
@@ -322,7 +318,7 @@
 
 .lp-dove-orbit {
   position: absolute;
-  z-index: 4;
+  z-index: 7;
   left: 50%;
   top: var(--title-cy);
   width: calc(379 * var(--u));
@@ -330,9 +326,6 @@
   transform: translate(-50%, -50%) translate(var(--x, 0px), var(--y, calc(-270 * var(--u)))) rotate(var(--r, 0deg)) scale(var(--s, 1));
   pointer-events: none;
   will-change: transform;
-}
-.lp-dove-orbit.is-behind {
-  z-index: 1;
 }
 .lp-dove {
   width: 100%;
@@ -346,7 +339,7 @@
 
 .lp-phone-slot {
   position: absolute;
-  z-index: 2;
+  z-index: 6;
   left: 50%;
   top: calc(50% - 141 * var(--u));
   translate: -50% 0;

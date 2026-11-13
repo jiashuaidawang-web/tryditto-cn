@@ -99,11 +99,10 @@ const DOVE: DoveKey[] = [
   { t: 6668, k: 0, side: -1, x: 72, y: -191, r: 0, s: 1 },
   { t: 10143, k: 0, side: -1, x: 15, y: -207, r: -0.4, s: 1 },
   { t: 13121, k: 0, side: -1, x: -30, y: -262, r: -7, s: 1.02 },
-  { t: 15422, k: 0, side: 1, x: 17, y: 167, r: 11.7, s: 0.92 },
-  { t: 16490, k: 0, side: 1, x: 40, y: 307, r: 0.1, s: 1 },
-  { t: 18500, k: 1, side: 1, x: 40, y: 420, r: 0, s: 1 },
+  { t: 15422, k: 0, side: 1, x: 90, y: -300, r: -9, s: 1 },
+  { t: 16490, k: 0.35, side: 1, x: 90, y: -330, r: -6, s: 1 },
+  { t: 18500, k: 1, side: 1, x: 90, y: -366, r: 0, s: 1 },
 ];
-const DOVE_BEHIND_FROM = 14200;
 const DOVE_LOOP_FROM = 1215;
 const DOVE_LOOP_PERIOD = DOVE[DOVE.length - 1]!.t - DOVE_LOOP_FROM;
 const DOVE_FRAMES = 17;
@@ -127,7 +126,6 @@ function doveAt(t: number) {
     y: mix(a.y, b.y),
     r: mix(a.r, b.r),
     s: mix(a.s, b.s),
-    behind: lt >= DOVE_BEHIND_FROM,
     flying: lt < 3842 || lt > 15422,
   };
 }
@@ -149,7 +147,6 @@ function Dove({ t0, reduced }: { t0: number | null; reduced: boolean }) {
     st.setProperty('--y', `${(d.y * u).toFixed(1)}px`);
     st.setProperty('--r', `${d.r.toFixed(2)}deg`);
     st.setProperty('--s', d.s.toFixed(3));
-    orbit.current.classList.toggle('is-behind', d.behind);
     const frame = Math.floor(now / (d.flying ? 41 : 70)) % DOVE_FRAMES;
     sprite.current.style.backgroundPositionX = `${((frame / (DOVE_FRAMES - 1)) * 100).toFixed(3)}%`;
   });
@@ -269,7 +266,7 @@ export function Hero() {
           </span>
         ))}
       </h1>
-      <div className="lp-strip is-campus is-back" aria-hidden>
+      <div className="lp-strip is-campus" aria-hidden>
         {[0, 1, 2, 3].map((n) => (
           <img key={n} src="/landing/hero-campus.jpg" alt="" draggable={false} />
         ))}
@@ -294,11 +291,6 @@ export function Hero() {
             ))}
           </div>
         </div>
-      </div>
-      <div className="lp-strip is-campus" aria-hidden>
-        {[0, 1, 2, 3].map((n) => (
-          <img key={n} src="/landing/hero-campus-front.png" alt="" draggable={false} />
-        ))}
       </div>
       <Dove t0={t0} reduced={reduced} />
       <div className="lp-strip is-river" aria-hidden>
