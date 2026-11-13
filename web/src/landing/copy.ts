@@ -37,35 +37,35 @@ export interface HeroMatch {
   reply: T;
   plan: T;
   yes: T;
-  /** Poster tint (CSS gradient) — placeholder for the match collage. */
-  tint: string;
+  /** Match card image id: public/landing/cards/{card}-{lang}.jpg (scripts/landing/build-cards.mjs). */
+  card: string;
 }
 
-/** Rotating matches in the hero phone (Ditto cycles Emily / Alex / Raymond / Jason). */
+/** Rotating matches in the hero phone (Ditto cycles Jason / Alex / Emily). */
 export const HERO_MATCHES: HeroMatch[] = [
   {
     name: t('Jason', '子涵'),
-    intro: t('Jason · home cooking, long hikes, building things 🛠️', '子涵 · 爱做饭、爱徒步、喜欢自己动手做东西 🛠️'),
+    intro: t('Jason · home cooking, long hikes and an orange cat 🐱', '子涵 · 爱做饭、爱徒步，还养了一只橘猫 🐱'),
     reply: t('omg yes', '好耶'),
     plan: t("Friday 8pm, dinner and a deep talk? I'll set it up with Jason", '周五晚 8 点，吃个饭好好聊聊？我来帮你和子涵约好'),
     yes: t('yes!!', '约！！'),
-    tint: 'linear-gradient(160deg,#f6d3a8 0%,#e98f6f 45%,#5b3a52 100%)',
-  },
-  {
-    name: t('Emily', '一凡'),
-    intro: t('Emily · hip-hop, a skateboard and a sketchbook 🛹', '一凡 · 街舞、滑板和一本速写本 🛹'),
-    reply: t("ok I'm in", '我可以'),
-    plan: t("Saturday 3pm, coffee and a walk by the lake? I'll set it up with Emily", '周六下午 3 点，喝杯咖啡再去湖边走走？我来帮你和一凡约好'),
-    yes: t("let's go", '冲！'),
-    tint: 'linear-gradient(160deg,#c9e3f6 0%,#7aa6d8 45%,#2c3a66 100%)',
+    card: 'zihan',
   },
   {
     name: t('Alex', '嘉怡'),
-    intro: t('Alex · EDM nights and jumbo pizookies 🎧', '嘉怡 · 电音现场和超大份冰淇淋 🎧'),
+    intro: t('Alex · EDM nights, polaroids and a corgi 🐶', '嘉怡 · 电音现场、拍立得和一只柯基 🐶'),
     reply: t('wait I love that', '等等我好喜欢'),
-    plan: t("Thursday 7pm, a gig and late-night snacks? I'll set it up with Alex", '周四晚 7 点，看场演出再吃个夜宵？我来帮你和嘉怡约好'),
-    yes: t('deal!!', '成交！！'),
-    tint: 'linear-gradient(160deg,#f3c6e4 0%,#c56bd0 45%,#3b2a63 100%)',
+    plan: t("Saturday, a late-night sundae run? I'll set it up with Alex", '周六晚上，去吃一份超大号冰淇淋？我来帮你和嘉怡约好'),
+    yes: t('yes!!', '成交！！'),
+    card: 'jiayi',
+  },
+  {
+    name: t('Emily', '一凡'),
+    intro: t('Emily · guitar, a skateboard and a sketchbook 🎸', '一凡 · 吉他、滑板和一本速写本 🎸'),
+    reply: t("ok I'm in", '我可以'),
+    plan: t("Saturday 3pm, coffee and a walk by the lake? I'll set it up with Emily", '周六下午 3 点，喝杯咖啡再去湖边走走？我来帮你和一凡约好'),
+    yes: t("let's go", '冲！'),
+    card: 'yifan',
   },
 ];
 

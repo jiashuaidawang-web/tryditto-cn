@@ -43,11 +43,12 @@
   letter-spacing: 0.02em;
 }
 
-/* Fixed pixel dither over the whole page (the 4×2 lighter-pixel lattice seen in every capture). */
+/* Fixed pixel dither over the sections below the hero. The hero sits above it: Ditto's hero grain is baked
+   into the scenery, so the phone glass and bubbles stay clean. */
 .lp-dither {
   position: fixed;
   inset: 0;
-  z-index: 25;
+  z-index: 15;
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' fill='%23fff' fill-opacity='.10'/%3E%3Crect x='2' y='1' width='1' height='1' fill='%23fff' fill-opacity='.10'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23000' fill-opacity='.05'/%3E%3C/svg%3E");
   background-size: 4px 2px;
@@ -65,7 +66,7 @@
   gap: 16px;
   height: 72px;
   padding: 0 24px;
-  background: rgba(0, 0, 0, 0.1);
+  background: transparent;
   transition: background-color 0.3s cubic-bezier(0, 0, 0.2, 1), backdrop-filter 0.3s cubic-bezier(0, 0, 0.2, 1);
   user-select: none;
 }
@@ -172,8 +173,10 @@
 .lp-hero {
   --u: clamp(0.45px, calc(100svh / 1600), 0.8px);
   --title-fs: clamp(52px, min(calc(140 * var(--u)), 17.5vw), 112px);
-  --title-cy: calc(50% - 305 * var(--u));
+  /* Ditto anchors the stage to the bottom edge; this only differs from centring once --u hits its floor (<720px tall). */
+  --title-cy: calc(100% - 1105 * var(--u));
   position: relative;
+  z-index: 16;
   height: 100svh;
   min-height: 560px;
   overflow: hidden;
@@ -350,7 +353,7 @@
   position: absolute;
   z-index: 2;
   left: 50%;
-  top: calc(50% - 141 * var(--u));
+  top: calc(100% - 942 * var(--u));
   translate: -50% 0;
   width: min(calc(520 * var(--u)), 86vw);
   height: calc(1080 * var(--u));
@@ -557,62 +560,15 @@
   font-size: calc(17 * var(--u));
   color: rgba(60, 70, 80, 0.7);
 }
+/* Ditto `.chat img`: 387×491 card shown at 301u wide, 30u corners. */
 .lp-poster {
+  display: block;
   align-self: flex-start;
-  position: relative;
-  width: calc(250 * var(--u));
-  height: calc(300 * var(--u));
-  border-radius: calc(26 * var(--u));
-  overflow: hidden;
+  width: calc(301 * var(--u));
+  aspect-ratio: 387 / 491;
+  border-radius: calc(30 * var(--u));
+  object-fit: cover;
   transform-origin: 0 100%;
-}
-.lp-poster-card {
-  position: absolute;
-  left: 14%;
-  top: 9%;
-  width: 62%;
-  padding: calc(12 * var(--u));
-  border-radius: calc(12 * var(--u));
-  background: #fff;
-  color: #111;
-  box-shadow: 0 calc(4 * var(--u)) calc(12 * var(--u)) rgba(0, 0, 0, 0.25);
-  transform: rotate(-3deg);
-}
-.lp-poster-card small {
-  display: block;
-  font-size: calc(11 * var(--u));
-  color: #555;
-}
-.lp-poster-card b {
-  display: block;
-  font-size: calc(24 * var(--u));
-  line-height: 1.1;
-  margin-bottom: calc(6 * var(--u));
-}
-.lp-poster-card i {
-  display: block;
-  height: calc(5 * var(--u));
-  margin-top: calc(5 * var(--u));
-  border-radius: 2px;
-  background: #d9d9de;
-}
-.lp-poster-card i:nth-of-type(1) {
-  background: #9a9aa4;
-  width: 90%;
-}
-.lp-poster-card i:nth-of-type(3) {
-  width: 70%;
-}
-.lp-poster-sticker {
-  position: absolute;
-  right: 8%;
-  bottom: 9%;
-  width: calc(64 * var(--u));
-  height: calc(64 * var(--u));
-  border-radius: 50%;
-  background: url('/brand/pigeon-avatar.jpg') center / cover;
-  box-shadow: 0 0 0 calc(4 * var(--u)) #fff;
-  transform: rotate(8deg);
 }
 
 .lp-hero-cta {

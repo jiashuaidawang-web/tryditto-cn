@@ -237,16 +237,12 @@ function Bubble({ item, lang }: { item: Item; lang: Lang }) {
       );
     case 'poster':
       return (
-        <div className="lp-poster lp-enter-in" style={{ background: item.match.tint }}>
-          <div className="lp-poster-card">
-            <small>{pick(HERO.posterKicker, lang)}</small>
-            <b>{pick(item.match.name, lang)}</b>
-            <i />
-            <i />
-            <i />
-          </div>
-          <div className="lp-poster-sticker" />
-        </div>
+        <img
+          className="lp-poster lp-enter-in"
+          src={`/landing/cards/${item.match.card}-${lang}.jpg`}
+          alt={`${pick(HERO.posterKicker, lang)} ${pick(item.match.name, lang)}`}
+          draggable={false}
+        />
       );
     case 'receipt':
       return (
@@ -291,6 +287,10 @@ export function Hero() {
     tick();
     return () => window.clearTimeout(timer);
   }, [reduced]);
+
+  useEffect(() => {
+    for (const m of HERO_MATCHES) new Image().src = `/landing/cards/${m.card}-${lang}.jpg`;
+  }, [lang]);
 
   const items = buildThread(clock.step, clock.cycle, lang);
   let i = 0;
