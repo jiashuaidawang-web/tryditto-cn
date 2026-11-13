@@ -86,7 +86,9 @@ interface DoveKey {
   y: number;
   r: number;
   s: number;
+  b?: number;
 }
+/* From 3842 on: tryditto.com `.dove-orbit` --x/--y sampled every 250 ms at 390×844, px ÷ (844/1600), shifted +674 ms to align arrival. */
 const DOVE: DoveKey[] = [
   { t: 421, k: 1, side: -1, x: 0, y: -366, r: 0, s: 1 },
   { t: 2215, k: 0.957, side: -1, x: 0, y: -360, r: 0.7, s: 1 },
@@ -94,20 +96,48 @@ const DOVE: DoveKey[] = [
   { t: 3024, k: 0.451, side: -1, x: 0, y: -281, r: 3.3, s: 1 },
   { t: 3227, k: 0.294, side: -1, x: 0, y: -256, r: 3.2, s: 1.02 },
   { t: 3432, k: 0.154, side: -1, x: 0, y: -235, r: 2.8, s: 1.04 },
-  { t: 3842, k: 0, side: -1, x: 7.6, y: -209, r: 1.4, s: 1.06 },
-  { t: 4249, k: 0, side: -1, x: 20.9, y: -205, r: 0.2, s: 1.04 },
-  { t: 6668, k: 0, side: -1, x: 72, y: -191, r: 0, s: 1 },
-  { t: 10143, k: 0, side: -1, x: 15, y: -207, r: -0.4, s: 1 },
-  { t: 13121, k: 0, side: -1, x: -30, y: -262, r: -7, s: 1.02 },
-  { t: 15422, k: 0, side: 1, x: 90, y: -300, r: -9, s: 1 },
-  { t: 16490, k: 0.35, side: 1, x: 90, y: -330, r: -6, s: 1 },
-  { t: 18500, k: 1, side: 1, x: 90, y: -366, r: 0, s: 1 },
+  { t: 3842, k: 0, side: -1, x: -17.4, y: -195.3, r: 0.11, s: 1.063 },
+  { t: 5120, k: 0, side: -1, x: 2.3, y: -211.4, r: -0.13, s: 1.054 },
+  { t: 6648, k: 0, side: -1, x: 73.2, y: -185.2, r: 0.63, s: 1.065 },
+  { t: 7156, k: 0, side: -1, x: 83.0, y: -179.5, r: 0.16, s: 1.067 },
+  { t: 8928, k: 0, side: -1, x: 18.2, y: -178.8, r: -0.25, s: 1.071 },
+  { t: 10969, k: 0, side: -1, x: 37.0, y: -192.4, r: 0.05, s: 1.066 },
+  { t: 11477, k: 0, side: -1, x: 45.5, y: -272.8, r: -5.78, s: 1.008 },
+  { t: 11984, k: 0, side: -1, x: 49.9, y: -333.8, r: -0.65, s: 1 },
+  { t: 12490, k: 0, side: -1, x: 41.1, y: -237.2, r: 7.09, s: 0.967, b: 0.973 },
+  { t: 12995, k: 0, side: -1, x: 26.9, y: -33.0, r: 11.59, s: 0.882, b: 0.902 },
+  { t: 13512, k: 0, side: -1, x: 13.3, y: 190.9, r: 10.09, s: 0.929, b: 0.941 },
+  { t: 14024, k: 0, side: -1, x: 8.3, y: 300.3, r: 3.71, s: 1 },
+  { t: 14788, k: 0, side: -1, x: 31.7, y: 305.6, r: 0.13, s: 1 },
+  { t: 15637, k: 0, side: -1, x: 67.3, y: 305.6, r: -0.06, s: 1 },
+  { t: 16143, k: 0, side: -1, x: 62.6, y: 264.5, r: -3.56, s: 1.014 },
+  { t: 16932, k: 0, side: -1, x: 33.2, y: 37.9, r: -8.96, s: 1.118 },
+  { t: 17694, k: 0, side: -1, x: 1.5, y: -212.5, r: -7.89, s: 1.051 },
+  { t: 18472, k: 0, side: -1, x: -10.8, y: -328.0, r: -1.17, s: 1 },
+  { t: 19512, k: 0, side: -1, x: -0.4, y: -272.6, r: 2.27, s: 1.004 },
+  { t: 21039, k: 0, side: -1, x: 8.0, y: -175.7, r: 0.32, s: 1.073 },
+  { t: 21292, k: 0, side: -1, x: 5.1, y: -179.1, r: -0.55, s: 1.071 },
+  { t: 21802, k: 0, side: -1, x: 1.7, y: -295.0, r: -5.61, s: 1 },
+  { t: 22312, k: 0, side: -1, x: -1.7, y: -151.3, r: 12.29, s: 1.086 },
+  { t: 22824, k: 0, side: -1, x: -4.4, y: 221.6, r: 13.98, s: 1.05 },
+  { t: 23372, k: 0, side: -1, x: -2.7, y: 316.8, r: 0.88, s: 1 },
+  { t: 24135, k: 0, side: -1, x: 2.7, y: 317.9, r: -0.71, s: 1 },
+  { t: 24640, k: 0, side: -1, x: 17.3, y: 198.1, r: -8.52, s: 1.066 },
+  { t: 25147, k: 0, side: -1, x: 41.7, y: -38.1, r: -12.69, s: 1.117 },
+  { t: 25909, k: 0, side: -1, x: 66.5, y: -313.9, r: -6.35, s: 1 },
+  { t: 26418, k: 0, side: -1, x: 65.2, y: -326.6, r: 0.88, s: 1 },
+  { t: 27431, k: 0, side: -1, x: 65.6, y: -202.7, r: 2.94, s: 1.059 },
+  { t: 27940, k: 0, side: -1, x: 67.3, y: -184.3, r: 0.37, s: 1.068 },
+  { t: 30224, k: 0, side: -1, x: 13.1, y: -171.2, r: 0.02, s: 1.074 },
 ];
-const DOVE_LOOP_FROM = 1215;
+/* Only the first dive drops below the title (`.behind`); the dove never goes under the phone. */
+const DOVE_BEHIND = [11984, 15774] as const;
+const DOVE_LOOP_FROM = 8928;
 const DOVE_LOOP_PERIOD = DOVE[DOVE.length - 1]!.t - DOVE_LOOP_FROM;
 const DOVE_FRAMES = 17;
 
-const easeInOut = (p: number) => 0.5 - Math.cos(Math.PI * p) / 2;
+const catmull = (p0: number, p1: number, p2: number, p3: number, p: number) =>
+  0.5 * (2 * p1 + (p2 - p0) * p + (2 * p0 - 5 * p1 + 4 * p2 - p3) * p * p + (3 * p1 - p0 - 3 * p2 + p3) * p * p * p);
 
 function doveAt(t: number) {
   const last = DOVE[DOVE.length - 1]!;
@@ -116,17 +146,21 @@ function doveAt(t: number) {
   while (i < DOVE.length - 2 && DOVE[i + 1]!.t <= lt) i++;
   const a = DOVE[i]!;
   const b = DOVE[i + 1]!;
-  const p = easeInOut(Math.min(1, Math.max(0, (lt - a.t) / (b.t - a.t))));
-  const mix = (x: number, y: number) => x + (y - x) * p;
-  const side = a.k > 0 ? a.side : b.side;
+  const a0 = DOVE[i - 1] ?? a;
+  const b1 = DOVE[i + 2] ?? b;
+  const p = Math.min(1, Math.max(0, (lt - a.t) / (b.t - a.t)));
+  const at = (f: (k: DoveKey) => number) => catmull(f(a0), f(a), f(b), f(b1), p);
+  const y = at((k) => k.y);
   return {
-    k: mix(a.k, b.k),
-    side,
-    x: mix(a.x, b.x),
-    y: mix(a.y, b.y),
-    r: mix(a.r, b.r),
-    s: mix(a.s, b.s),
-    flying: lt < 3842 || lt > 15422,
+    k: Math.min(1, Math.max(0, at((k) => k.k))),
+    side: a.side,
+    x: at((k) => k.x),
+    y,
+    r: at((k) => k.r),
+    s: at((k) => k.s),
+    b: at((k) => k.b ?? 1),
+    behind: lt >= DOVE_BEHIND[0] && lt < DOVE_BEHIND[1],
+    flying: lt < 3842 || Math.abs(b.y - a.y) / (b.t - a.t) > 0.05,
   };
 }
 
@@ -147,6 +181,8 @@ function Dove({ t0, reduced }: { t0: number | null; reduced: boolean }) {
     st.setProperty('--y', `${(d.y * u).toFixed(1)}px`);
     st.setProperty('--r', `${d.r.toFixed(2)}deg`);
     st.setProperty('--s', d.s.toFixed(3));
+    st.setProperty('--b', d.b.toFixed(3));
+    orbit.current.classList.toggle('is-behind', d.behind);
     const frame = Math.floor(now / (d.flying ? 41 : 70)) % DOVE_FRAMES;
     sprite.current.style.backgroundPositionX = `${((frame / (DOVE_FRAMES - 1)) * 100).toFixed(3)}%`;
   });
@@ -266,7 +302,7 @@ export function Hero() {
           </span>
         ))}
       </h1>
-      <div className="lp-strip is-campus" aria-hidden>
+      <div className="lp-strip is-campus is-back" aria-hidden>
         {[0, 1, 2, 3].map((n) => (
           <img key={n} src="/landing/hero-campus.jpg" alt="" draggable={false} />
         ))}
@@ -291,6 +327,11 @@ export function Hero() {
             ))}
           </div>
         </div>
+      </div>
+      <div className="lp-strip is-campus" aria-hidden>
+        {[0, 1, 2, 3].map((n) => (
+          <img key={n} src="/landing/hero-campus-front.png" alt="" draggable={false} />
+        ))}
       </div>
       <Dove t0={t0} reduced={reduced} />
       <div className="lp-strip is-river" aria-hidden>
