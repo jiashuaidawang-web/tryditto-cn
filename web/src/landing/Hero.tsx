@@ -184,7 +184,24 @@ function Dove({ t0, reduced }: { t0: number | null; reduced: boolean }) {
     st.setProperty('--b', d.b.toFixed(3));
     orbit.current.classList.toggle('is-behind', d.behind);
     const frame = Math.floor(now / (d.flying ? 41 : 70)) % DOVE_FRAMES;
-    sprite.current.style.backgroundPositionX = `${((frame / (DOVE_FRAMES - 1)) * 100).toFixed(3)}%`;
+    const framePos = `${((frame / (DOVE_FRAMES - 1)) * 100).toFixed(3)}%`;
+    sprite.current.style.backgroundPositionX = framePos;
+
+    const shade = document.querySelector<HTMLElement>('.lp-phone-shade');
+    const phone = shade?.parentElement;
+    if (shade && phone) {
+      const o = orbit.current.getBoundingClientRect();
+      const p = phone.getBoundingClientRect();
+      const fw = orbit.current.offsetWidth * d.s;
+      const fh = orbit.current.offsetHeight * d.s;
+      const cx = o.x + o.width / 2 - p.x + 6 * u;
+      const cy = o.y + o.height / 2 - p.y + 14 * u;
+      shade.style.width = `${fw.toFixed(1)}px`;
+      shade.style.height = `${fh.toFixed(1)}px`;
+      shade.style.transform = `translate(${(cx - fw / 2).toFixed(1)}px, ${(cy - fh / 2).toFixed(1)}px) rotate(${d.r.toFixed(2)}deg)`;
+      shade.style.setProperty('mask-position', `${framePos} 0`);
+      shade.style.setProperty('-webkit-mask-position', `${framePos} 0`);
+    }
   });
   return (
     <div ref={orbit} className="lp-dove-orbit" aria-hidden>
@@ -310,6 +327,7 @@ export function Hero() {
       <div className="lp-phone-slot" aria-hidden>
         <div className={`lp-phone${clock.up ? ' is-up' : ''}`}>
           <div className="lp-island" />
+          <div className="lp-phone-shade" />
           <div className="lp-phone-head">
             <img src="/brand/pigeon-avatar.jpg" alt="" />
             <span>{pick(HERO.ditto, lang)}</span>

@@ -379,6 +379,19 @@
 .lp-phone.is-up {
   transform: none;
 }
+/* The dove's blurred shadow on the glass (Ditto `.phone .shade i`). */
+.lp-phone-shade {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 0;
+  background: rgb(12, 34, 80);
+  -webkit-mask: url('/landing/dove-sheet.png') 0 0 / 1700% 100% no-repeat;
+  mask: url('/landing/dove-sheet.png') 0 0 / 1700% 100% no-repeat;
+  filter: blur(4px);
+  opacity: 0.2;
+  pointer-events: none;
+}
 .lp-island {
   position: absolute;
   left: 50%;
