@@ -40,8 +40,11 @@ docker exec -e MYSQL_PWD="$MYSQL_PASSWORD" ditto-mysql \
 
 OLD=$(readlink api/current.jar 2>/dev/null || true)
 ln -sfn "releases/$JAR" api/current.jar
-docker compose up -d api web
+docker compose up -d web
+# The compose config doesn't change between releases, so a plain `up -d` would keep the old JVM running.
+docker compose up -d --force-recreate api
 docker exec aiditto-web nginx -s reload
+sleep 5
 
 for i in $(seq 1 45); do
   if [ "$(docker inspect -f '{{.State.Health.Status}}' aiditto-api 2>/dev/null)" = healthy ]; then
@@ -56,7 +59,7 @@ echo "api not healthy after 90s; last log lines:" >&2
 docker logs --tail 80 aiditto-api >&2 || true
 if [ -n "$OLD" ]; then
   ln -sfn "$OLD" api/current.jar
-  docker compose restart api
+  docker compose up -d --force-recreate api
   echo "rolled back to $OLD" >&2
 fi
 exit 1
