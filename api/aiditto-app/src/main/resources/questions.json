@@ -1,0 +1,539 @@
+{
+  "source": "web/src/onboarding/questions.ts",
+  "questions": [
+    {
+      "id": "isStudent",
+      "type": "single",
+      "options": [
+        "yes",
+        "no"
+      ],
+      "private": true
+    },
+    {
+      "id": "name",
+      "type": "text",
+      "maxLength": 40
+    },
+    {
+      "id": "gender",
+      "type": "single",
+      "options": [
+        "man",
+        "woman",
+        "nonbinary",
+        "other"
+      ]
+    },
+    {
+      "id": "expectedGender",
+      "type": "multi",
+      "options": [
+        "men",
+        "women",
+        "nonbinary",
+        "everyone"
+      ],
+      "exclusive": [
+        "everyone"
+      ],
+      "private": true
+    },
+    {
+      "id": "birthday",
+      "type": "date"
+    },
+    {
+      "id": "hobbies",
+      "type": "multi",
+      "options": [
+        "cooking",
+        "music",
+        "travel",
+        "reading",
+        "gym",
+        "gaming",
+        "movies",
+        "art"
+      ],
+      "maxSelect": 5,
+      "allowCustom": true
+    },
+    {
+      "id": "cookingStyle",
+      "type": "multi",
+      "options": [
+        "italian",
+        "asian",
+        "mexican",
+        "comfort",
+        "baking",
+        "grilling",
+        "healthy",
+        "brunch"
+      ],
+      "allowCustom": true,
+      "hobby": "cooking"
+    },
+    {
+      "id": "cookingSignatureDish",
+      "type": "text",
+      "hobby": "cooking"
+    },
+    {
+      "id": "musicSound",
+      "type": "multi",
+      "options": [
+        "pop",
+        "hiphop",
+        "indie",
+        "electronic",
+        "rnb",
+        "rock",
+        "country",
+        "jazz",
+        "classical",
+        "kpop",
+        "latin"
+      ],
+      "allowCustom": true,
+      "hobby": "music"
+    },
+    {
+      "id": "musicNowPlaying",
+      "type": "text",
+      "hobby": "music"
+    },
+    {
+      "id": "travelStyle",
+      "type": "multi",
+      "options": [
+        "backpacking",
+        "luxury",
+        "foodie",
+        "adventure",
+        "beach",
+        "city",
+        "solo",
+        "road"
+      ],
+      "allowCustom": true,
+      "hobby": "travel"
+    },
+    {
+      "id": "travelNext",
+      "type": "text",
+      "hobby": "travel"
+    },
+    {
+      "id": "readingGenres",
+      "type": "multi",
+      "options": [
+        "litfic",
+        "fantasy",
+        "scifi",
+        "mystery",
+        "romance",
+        "memoir",
+        "selfhelp",
+        "poetry",
+        "classics",
+        "smut"
+      ],
+      "allowCustom": true,
+      "hobby": "reading"
+    },
+    {
+      "id": "readingLastBook",
+      "type": "text",
+      "hobby": "reading"
+    },
+    {
+      "id": "gymTrainingStyle",
+      "type": "multi",
+      "options": [
+        "lifting",
+        "running",
+        "yoga",
+        "pilates",
+        "crossfit",
+        "boxing",
+        "dance",
+        "cycling",
+        "climbing"
+      ],
+      "allowCustom": true,
+      "hobby": "gym"
+    },
+    {
+      "id": "gymTrainingFor",
+      "type": "text",
+      "hobby": "gym"
+    },
+    {
+      "id": "gamingGenres",
+      "type": "multi",
+      "options": [
+        "fps",
+        "rpg",
+        "sports",
+        "moba",
+        "strategy",
+        "indie",
+        "cozy",
+        "fighting",
+        "mmo"
+      ],
+      "allowCustom": true,
+      "hobby": "gaming"
+    },
+    {
+      "id": "gamingNowPlaying",
+      "type": "text",
+      "hobby": "gaming"
+    },
+    {
+      "id": "moviesContent",
+      "type": "multi",
+      "options": [
+        "indie",
+        "horror",
+        "romcom",
+        "action",
+        "scifi",
+        "documentary",
+        "a24",
+        "foreign",
+        "anime",
+        "reality"
+      ],
+      "allowCustom": true,
+      "hobby": "movies"
+    },
+    {
+      "id": "moviesLastWatch",
+      "type": "text",
+      "hobby": "movies"
+    },
+    {
+      "id": "artMediums",
+      "type": "multi",
+      "options": [
+        "drawing",
+        "painting",
+        "digital",
+        "pottery",
+        "sculpture",
+        "collage",
+        "crafts",
+        "mixed"
+      ],
+      "allowCustom": true,
+      "hobby": "art"
+    },
+    {
+      "id": "artMake",
+      "type": "text",
+      "hobby": "art"
+    },
+    {
+      "id": "ethnicity",
+      "type": "multi",
+      "options": [
+        "americanIndian",
+        "black",
+        "eastAsian",
+        "hispanic",
+        "middleEastern",
+        "pacificIslander",
+        "southAsian",
+        "southEastAsian",
+        "white"
+      ],
+      "private": true,
+      "drop": [
+        "zh"
+      ]
+    },
+    {
+      "id": "expectedEthnicity",
+      "type": "multi",
+      "options": [
+        "noPreference",
+        "americanIndian",
+        "black",
+        "eastAsian",
+        "hispanic",
+        "middleEastern",
+        "pacificIslander",
+        "southAsian",
+        "southEastAsian",
+        "white"
+      ],
+      "exclusive": [
+        "noPreference"
+      ],
+      "private": true,
+      "drop": [
+        "zh"
+      ]
+    },
+    {
+      "id": "expectedAgeRange",
+      "type": "ageRange",
+      "private": true
+    },
+    {
+      "id": "expectedPosition",
+      "type": "multi",
+      "options": [
+        "top",
+        "bottom",
+        "masc",
+        "femme",
+        "flexible",
+        "preferNot"
+      ],
+      "exclusive": [
+        "preferNot"
+      ],
+      "private": true,
+      "drop": [
+        "zh"
+      ]
+    },
+    {
+      "id": "position",
+      "type": "single",
+      "options": [
+        "top",
+        "bottom",
+        "masc",
+        "femme",
+        "flexible",
+        "preferNot"
+      ],
+      "private": true,
+      "drop": [
+        "zh"
+      ]
+    },
+    {
+      "id": "height",
+      "type": "height"
+    },
+    {
+      "id": "heightRange",
+      "type": "heightRange",
+      "private": true
+    },
+    {
+      "id": "schoolEmail",
+      "type": "email",
+      "emailKind": "school"
+    },
+    {
+      "id": "personalEmail",
+      "type": "email",
+      "emailKind": "personal"
+    },
+    {
+      "id": "emailVerify",
+      "type": "code"
+    },
+    {
+      "id": "location",
+      "type": "location"
+    },
+    {
+      "id": "photos",
+      "type": "photos"
+    },
+    {
+      "id": "preferencesIntro",
+      "type": "interstitial"
+    },
+    {
+      "id": "relationshipLooking",
+      "type": "multi",
+      "options": [
+        "lifePartner",
+        "serious",
+        "casual",
+        "friends",
+        "notSure"
+      ],
+      "private": true
+    },
+    {
+      "id": "matchingStyle",
+      "type": "single",
+      "options": [
+        "faster",
+        "steady",
+        "fewer",
+        "theOne"
+      ],
+      "private": true
+    },
+    {
+      "id": "schoolYear",
+      "type": "single",
+      "options": [
+        "freshman",
+        "sophomore",
+        "junior",
+        "senior",
+        "master",
+        "phd",
+        "other"
+      ]
+    },
+    {
+      "id": "hearAbout",
+      "type": "single",
+      "options": [
+        "friend",
+        "poster",
+        "tabling",
+        "instagram",
+        "douyin",
+        "x",
+        "rednote",
+        "google",
+        "facebook",
+        "linkedin",
+        "wechat",
+        "bilibili",
+        "weibo"
+      ],
+      "allowCustom": true
+    },
+    {
+      "id": "occupation",
+      "type": "longText",
+      "maxLength": 120
+    },
+    {
+      "id": "firstDateBudget",
+      "type": "single",
+      "options": [
+        "under20",
+        "20to50",
+        "50to100",
+        "100plus",
+        "noPref"
+      ],
+      "private": true
+    },
+    {
+      "id": "dealbreakers",
+      "type": "longText",
+      "maxLength": 1000,
+      "optional": true,
+      "private": true
+    },
+    {
+      "id": "educationLevel",
+      "type": "single",
+      "options": [
+        "highSchool",
+        "college",
+        "graduate",
+        "preferNot"
+      ],
+      "private": true
+    },
+    {
+      "id": "educationImportance",
+      "type": "single",
+      "options": [
+        "none",
+        "kinda",
+        "super"
+      ],
+      "private": true
+    },
+    {
+      "id": "politics",
+      "type": "single",
+      "options": [
+        "veryLeft",
+        "left",
+        "center",
+        "right",
+        "veryRight",
+        "apolitical"
+      ],
+      "allowCustom": true,
+      "private": true,
+      "drop": [
+        "zh"
+      ]
+    },
+    {
+      "id": "politicsImportance",
+      "type": "single",
+      "options": [
+        "none",
+        "kinda",
+        "super"
+      ],
+      "private": true,
+      "drop": [
+        "zh"
+      ]
+    },
+    {
+      "id": "religion",
+      "type": "multi",
+      "options": [
+        "atheist",
+        "agnostic",
+        "christian",
+        "catholic",
+        "jewish",
+        "muslim",
+        "hindu",
+        "buddhist",
+        "spiritual"
+      ],
+      "allowCustom": true,
+      "private": true,
+      "drop": [
+        "zh"
+      ]
+    },
+    {
+      "id": "religionImportance",
+      "type": "single",
+      "options": [
+        "none",
+        "kinda",
+        "super"
+      ],
+      "private": true,
+      "drop": [
+        "zh"
+      ]
+    },
+    {
+      "id": "firstMessage",
+      "type": "longText",
+      "maxLength": 300
+    },
+    {
+      "id": "datingHelp",
+      "type": "multi",
+      "options": [
+        "approaching",
+        "convo",
+        "intoMe",
+        "confident",
+        "whatIWant",
+        "theDate",
+        "justDate"
+      ]
+    }
+  ]
+}

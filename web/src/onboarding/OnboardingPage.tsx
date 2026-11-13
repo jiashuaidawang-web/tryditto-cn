@@ -17,6 +17,7 @@ const WELCOME = {
   title: t('Welcome back', '欢迎回来'),
   body: t('Your progress is saved. Pick up where you left off.', '进度已保存，从上次的地方继续吧。'),
 };
+const SAVE_FAILED = t("Couldn't save. Please try again.", '没保存上，请再试一次');
 
 function useFlags(): FlowFlags {
   const [params] = useSearchParams();
@@ -47,6 +48,7 @@ export function OnboardingPage() {
   const [welcome, setWelcome] = useState(false);
   const [ageConfirm, setAgeConfirm] = useState<{ age: number; date: Date } | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const busy = useRef(false);
 
   // Resume at the furthest page reached.
@@ -87,11 +89,13 @@ export function OnboardingPage() {
       if (q.type === 'longText' && value === undefined) value = '';
 
       busy.current = true;
+      setSaveError(null);
       try {
         if (q.type === 'code' && !(await verifyEmailCode(emailToVerify(st.answers), String(value ?? '')))) return;
-        if (q.type !== 'interstitial') await api.saveAnswer(q.id, value);
+        // The escape hatch drops whatever was half-typed into the school email box.
+        if (q.type !== 'interstitial') await api.saveAnswer(q.id, opts?.force && q.id === 'schoolEmail' ? undefined : value);
         if (q.id === 'hobbies') st.removeAnswers(staleBranchKeys(useOnboarding.getState().answers));
-        if (q.id === 'schoolEmail' && !opts?.force) st.setAnswer('noSchoolEmail', false);
+        if (q.id === 'schoolEmail' && !opts?.force) await api.saveAnswer('noSchoolEmail', false);
 
         const fresh = useOnboarding.getState();
         const list = buildSteps(fresh.answers, lang, flags);
@@ -113,12 +117,15 @@ export function OnboardingPage() {
         }
         const furthest = indexOf(list, fresh.furthestId);
         const nextFurthest = furthest > i ? fresh.furthestId : next.id;
+        if (nextFurthest !== fresh.furthestId) await api.saveProgress(nextFurthest);
         if (skipped.length) {
           setSpinnerFor(skipped.at(-1)!);
           await new Promise((r) => setTimeout(r, interstitial.skipSpinnerMs));
           setSpinnerFor(null);
         }
         goTo(next.id, nextFurthest);
+      } catch (e) {
+        setSaveError(e instanceof Error && e.message ? e.message : pick(SAVE_FAILED, lang));
       } finally {
         busy.current = false;
       }
@@ -138,9 +145,11 @@ export function OnboardingPage() {
   }, [current, steps, goTo]);
 
   const escape = useCallback(() => {
-    useOnboarding.getState().setAnswer('noSchoolEmail', true);
-    void advance({ force: true });
-  }, [advance]);
+    void api
+      .saveAnswer('noSchoolEmail', true)
+      .then(() => advance({ force: true }))
+      .catch(() => setSaveError(pick(SAVE_FAILED, lang)));
+  }, [advance, lang]);
 
   const firstNavigable = steps.find(navigable);
   const pageKey = spinnerFor ? `spinner:${spinnerFor.id}` : (current?.id ?? 'none');
@@ -188,6 +197,21 @@ export function OnboardingPage() {
               <div className="text-[15px] font-bold leading-5">{pick(WELCOME.title, lang)}</div>
               <div className="text-[13px] leading-[18px] opacity-80">{pick(WELCOME.body, lang)}</div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {saveError && (
+          <motion.div
+            role="alert"
+            className="absolute inset-x-4 top-[84px] z-30 rounded-[20px] bg-white/95 px-4 py-3 text-[14px] font-medium leading-5 text-[#d6336c] shadow-lg"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            onClick={() => setSaveError(null)}
+          >
+            {saveError}
           </motion.div>
         )}
       </AnimatePresence>

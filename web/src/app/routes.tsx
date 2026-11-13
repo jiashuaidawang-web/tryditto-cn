@@ -1,7 +1,8 @@
 import { useEffect, type ReactNode } from 'react';
 import { Navigate, Route } from 'react-router';
-import { demo } from '../api';
+import { MOCK_API, demo, syncOnce } from '../api';
 import { useQuerySuffix } from '../i18n/lang';
+import { useAuth } from '../landing/auth';
 import { useOnboarding } from '../onboarding/store';
 import { AccountPage } from './AccountPage';
 import { BlocklistPage } from './BlocklistPage';
@@ -19,19 +20,31 @@ import { YouPage } from './YouPage';
 import './app.css';
 
 /**
+ * With the real API every logged-in page needs a session; the local caches are refreshed from the server
+ * once per page load. The mock build keeps the old behaviour (no login needed).
+ */
+export function RequireLogin({ children }: { children: ReactNode }) {
+  const token = useAuth((s) => s.token);
+  const suffix = useQuerySuffix();
+  useEffect(syncOnce, [token]);
+  if (!MOCK_API && !token) return <Navigate to={`/login${suffix}`} replace />;
+  return <>{children}</>;
+}
+
+/**
  * Logged-in pages require a finished questionnaire (Ditto's guard sends unfinished users back to
- * /onboarding, 13 §0). With `?demo=1` a sample profile is filled in instead.
+ * /onboarding, 13 §0). In the mock build `?demo=1` fills in a sample profile instead.
  */
 function Onboarded({ children }: { children: ReactNode }) {
   const completed = useOnboarding((s) => s.completed);
-  const isDemo = useIsDemo();
+  const seed = useIsDemo() && MOCK_API;
   const suffix = useQuerySuffix();
   useEffect(() => {
-    if (!completed && isDemo) demo.seedProfile();
-  }, [completed, isDemo]);
-  if (!completed && !isDemo) return <Navigate to={`/onboarding${suffix}`} replace />;
+    if (!completed && seed) demo.seedProfile();
+  }, [completed, seed]);
+  if (!completed && !seed) return <Navigate to={`/onboarding${suffix}`} replace />;
   if (!completed) return null;
-  return <>{children}</>;
+  return <RequireLogin>{children}</RequireLogin>;
 }
 
 const guarded: [string, ReactNode][] = [

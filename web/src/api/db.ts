@@ -1,6 +1,7 @@
 /**
- * Local mock database (localStorage). Only src/api/index.ts writes to it; pages read through the hooks
- * re-exported from there. TODO(spring-boot): delete once every function in index.ts calls the backend.
+ * Local database (localStorage). Only src/api/index.ts writes to it; pages read through the hooks
+ * re-exported from there. With the real backend it is a cache of the server's photo URLs plus the
+ * match-loop demo state, which stays local until M2.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -19,6 +20,8 @@ export interface AppDb {
   deactivated: boolean;
   /** SMS alert when the weekly match drops (Ditto: Verify with iMessage, 09 §10.1). */
   alertsOn: boolean;
+  /** Bumped after a server write that no cached field reflects, so useLive reloads (blocklist). */
+  rev: number;
   set: (patch: Partial<Omit<AppDb, 'set' | 'reset'>>) => void;
   reset: () => void;
 }
@@ -33,6 +36,7 @@ const initial = {
   phone: '',
   deactivated: false,
   alertsOn: false,
+  rev: 0,
 };
 
 export const useDb = create<AppDb>()(

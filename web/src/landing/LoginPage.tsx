@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { pick, useLang, useQuerySuffix } from '../i18n/lang';
+import { pick, t, useLang, useQuerySuffix } from '../i18n/lang';
 import { useOnboarding } from '../onboarding/store';
 import { BRAND, LOGIN } from './copy';
 import { DEMO_CODE, isValidCode, isValidPhone, login, sendCode } from './auth';
 import './landing.css';
 
 type Msg = { tone: 'error' | 'ok'; text: string } | null;
+
+const SERVER_ERR = {
+  locked: t('Too many wrong codes. Try again in 15 minutes.', '验证码错误次数太多，请 15 分钟后再试'),
+  inactive: t('This account is being deleted and can no longer sign in.', '该账号正在注销，无法登录'),
+  network: t('Could not reach the server. Please try again.', '网络开小差了，请稍后再试'),
+  unavailable: t('SMS is not available right now.', '短信服务暂不可用'),
+};
 
 export function LoginPage() {
   const lang = useLang();
@@ -46,7 +53,7 @@ export function LoginPage() {
     setBad(null);
     const res = await sendCode(phone);
     setSending(false);
-    if (!res.ok) return fail('phone', pick(LOGIN.errPhone, lang));
+    if (!res.ok) return fail(res.error === 'phone' ? 'phone' : null, pick(res.error === 'phone' ? LOGIN.errPhone : SERVER_ERR.unavailable, lang));
     setCooldown(res.cooldown);
     setSentOnce(true);
     setMsg({ tone: 'ok', text: pick(LOGIN.sent, lang) });
@@ -65,6 +72,7 @@ export function LoginPage() {
     setSubmitting(false);
     if (!res.ok) {
       if (res.error === 'phone') return fail('phone', pick(LOGIN.errPhone, lang));
+      if (res.error === 'locked' || res.error === 'inactive' || res.error === 'network') return fail(null, pick(SERVER_ERR[res.error], lang));
       return fail('code', pick(res.error === 'wrong' ? LOGIN.errWrong : LOGIN.errCode, lang));
     }
     navigate((useOnboarding.getState().completed ? '/home' : '/onboarding') + q, { replace: true });

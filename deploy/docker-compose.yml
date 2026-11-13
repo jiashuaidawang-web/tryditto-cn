@@ -1,5 +1,7 @@
 name: aiditto
 
+# Lives at /opt/aiditto on the demo server. Secrets come only from /opt/aiditto/.env (mode 600, never in git).
+# One-time host setup (技术方案 §10.2): see docs/backend-notes/M1.md.
 services:
   web:
     image: nginx:1.27-alpine
@@ -9,4 +11,51 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./proxy_params.inc:/etc/nginx/conf.d/proxy_params.inc:ro
+      - ./security_headers.inc:/etc/nginx/conf.d/security_headers.inc:ro
       - ./web:/usr/share/nginx/html:ro
+      - ./data/photos:/srv/photos:ro
+    mem_limit: 64m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  api:
+    image: eclipse-temurin:17-jre
+    container_name: aiditto-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      TZ: Asia/Shanghai
+      DB_URL: jdbc:mysql://ditto-mysql:3306/aiditto?sslMode=REQUIRED&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=utf8
+      PHOTO_ROOT: /data/photos
+      JAVA_TOOL_OPTIONS: >-
+        -Xms256m -Xmx640m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=64m
+        -Xss512k -XX:+ExitOnOutOfMemoryError -Duser.timezone=UTC -Dfile.encoding=UTF-8
+    command: ["java", "-jar", "/app/current.jar"]
+    working_dir: /app
+    volumes:
+      - ./api:/app:ro # current.jar -> releases/aiditto-api-<timestamp>.jar (relative symlink)
+      - ./data/photos:/data/photos
+      - ./logs/api:/logs
+    expose:
+      - "8080"
+    networks: [default, db]
+    mem_limit: 1g
+    healthcheck:
+      # The JRE image has bash but no guaranteed curl; speak HTTP over /dev/tcp to the actuator port.
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c 'exec 3<>/dev/tcp/127.0.0.1/8081 &&
+          printf "GET /actuator/health/readiness HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3 &&
+          grep -q "\"UP\"" <&3'
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
+
+networks:
+  db:
+    external: true
+    name: aiditto-db

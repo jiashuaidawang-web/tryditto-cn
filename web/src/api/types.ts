@@ -124,6 +124,11 @@ export interface Me {
   onboarded: boolean;
   isStudent: boolean;
   email: string;
+  /** Masked by the server: 138****0001. */
   phone: string;
   inviteUrl: string;
+  status?: 'onboarding' | 'active' | 'paused' | 'deactivated' | 'deleting';
+  photoIssue?: string | null;
+  isAdmin?: boolean;
+  demoMode?: boolean;
 }

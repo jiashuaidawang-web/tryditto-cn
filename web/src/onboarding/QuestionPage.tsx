@@ -15,7 +15,8 @@ import { Confetti } from '../components/Confetti';
 import { HelpCircle } from '../components/icons';
 import { LocationInput, SearchSheet, WhySheet, DEFAULT_LOCATION } from '../components/LocationPicker';
 import { t } from '../i18n/lang';
-import { sendEmailCode, setPhotos, uploadPhotos, useDb } from '../api';
+import { ApiError, MOCK_API, sendEmailCode, setPhotos, uploadPhotos, useDb } from '../api';
+import { DEMO_CODE } from '../landing/auth';
 import { PRIVATE_NOTE, optionsOf } from './questions';
 import { isAnswered } from './validate';
 import type { Answers, HeightRangeValue, HeightValue, LocationValue, Step } from './types';
@@ -30,7 +31,9 @@ const CODE_COPY = {
   sending: t('sending code…', '正在发送验证码…'),
   sentTo: t('sent to', '已发送至'),
   resend: t('resend code', '重新发送'),
-  demo: t('Demo: any 6 digits work', '演示环境：输入任意 6 位数字即可'),
+  demo: MOCK_API
+    ? t('Demo: any 6 digits work', '演示环境：输入任意 6 位数字即可')
+    : t(`Demo: no email is sent, use ${DEMO_CODE}`, `演示环境：不会真的发邮件，验证码同登录验证码 ${DEMO_CODE}`),
 };
 
 /** Old page flies up; new column slides up from ~420px below and settles exponentially (12 §4.1). */
@@ -311,7 +314,11 @@ function CodeStatus({ lang, email }: { lang: Lang; email: string }) {
   const [sent, setSent] = useState(false);
   const send = () => {
     setSent(false);
-    void sendEmailCode(email).then(() => setSent(true));
+    // 429 = a code went out under a minute ago (StrictMode runs this effect twice in dev); it is still valid.
+    void sendEmailCode(email).then(
+      () => setSent(true),
+      (e: unknown) => e instanceof ApiError && e.status === 429 && setSent(true),
+    );
   };
   useEffect(send, [email]); // eslint-disable-line react-hooks/exhaustive-deps
   return (

@@ -1,0 +1,50 @@
+package cn.aiditto.domain.common;
+
+/** Stable error codes (技术方案 §6.7). The frontend branches on {@link #name()}. */
+public enum ErrorCode {
+    BAD_REQUEST(400, "请求格式不对"),
+    INVALID_PHONE(400, "手机号格式不对"),
+    INVALID_CODE_FORMAT(400, "验证码格式不对"),
+    INVALID_EMAIL(400, "邮箱格式不对"),
+    UNAUTHENTICATED(401, "请先登录"),
+    AUTH_CODE_WRONG(401, "验证码错误"),
+    FORBIDDEN(403, "没有权限"),
+    ONBOARDING_REQUIRED(403, "请先完成入驻问卷"),
+    PHOTO_ISSUE(403, "照片需要更换"),
+    ACCOUNT_INACTIVE(403, "账号已停用或正在注销"),
+    NOT_FOUND(404, "找不到"),
+    FIELD_LOCKED(409, "这一项不能再修改"),
+    PHOTO_LIMIT(409, "最多 6 张照片"),
+    PHOTO_MIN(409, "至少保留 2 张照片"),
+    BLOCK_LIMIT(409, "屏蔽名单最多 20 条"),
+    EMAIL_NOT_VERIFIED(409, "邮箱还没验证"),
+    UPLOAD_STATE(409, "上传地址已失效"),
+    PHOTO_TOO_LARGE(413, "照片太大"),
+    PHOTO_TYPE(415, "不支持的图片格式"),
+    VALIDATION(422, "填写的内容不对"),
+    ONBOARDING_INCOMPLETE(422, "入驻问卷还没填完"),
+    UNDER_AGE(422, "年满 18 周岁才能加入"),
+    BLOCK_NEEDS_CONTACT(422, "至少填一个邮箱或手机号"),
+    SMS_TOO_FREQUENT(429, "发送太频繁"),
+    EMAIL_TOO_FREQUENT(429, "发送太频繁"),
+    AUTH_CODE_LOCKED(429, "错误次数太多，请稍后再试"),
+    RATE_LIMITED(429, "请求太频繁"),
+    INTERNAL(500, "服务器开小差了"),
+    SMS_UNAVAILABLE(503, "短信服务未开通");
+
+    private final int status;
+    private final String title;
+
+    ErrorCode(int status, String title) {
+        this.status = status;
+        this.title = title;
+    }
+
+    public int status() {
+        return status;
+    }
+
+    public String title() {
+        return title;
+    }
+}

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { deactivateAccount, deleteAccount, getMe, logout } from '../api';
+import { MOCK_API, deactivateAccount, deleteAccount, getMe, logout } from '../api';
 import { ChevronRight, LogOut, Mail, PauseCircle, Smartphone, Trash } from '../components/icons';
 import { pick, t, useLang, type T } from '../i18n/lang';
 import { SectionTitle } from './EditProfilePage';
@@ -91,6 +91,8 @@ export function AccountPage() {
                 cta: C.deactivate,
                 run: async () => {
                   await deactivateAccount();
+                  // The server ends every session on deactivate; logging in again brings the account back.
+                  if (!MOCK_API) return go('/', { replace: true });
                   showToast(pick(C.deactivated, lang));
                 },
               })

@@ -5,7 +5,7 @@ import { MotionConfig } from 'motion/react';
 import './index.css';
 import { OnboardingPage } from './onboarding/OnboardingPage';
 import { landingRoutes } from './landing/routes';
-import { appRoutes } from './app/routes';
+import { RequireLogin, appRoutes } from './app/routes';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -13,7 +13,14 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           {landingRoutes()}
-          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route
+            path="/onboarding"
+            element={
+              <RequireLogin>
+                <OnboardingPage />
+              </RequireLogin>
+            }
+          />
           {appRoutes()}
         </Routes>
       </BrowserRouter>

@@ -1,0 +1,62 @@
+# Local development defaults. Production overrides live in application-prod.yml and /opt/aiditto/.env.
+spring:
+  application:
+    name: aiditto-api
+  datasource:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/aiditto?sslMode=PREFERRED&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=utf8}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  flyway:
+    validate-on-migrate: true
+  servlet:
+    multipart:
+      enabled: false
+  threads:
+    virtual:
+      enabled: false
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: native
+  shutdown: graceful
+  tomcat:
+    threads:
+      max: 50
+      min-spare: 4
+    max-swallow-size: 10MB
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+mybatis-plus:
+  global-config:
+    banner: false
+  configuration:
+    map-underscore-to-camel-case: true
+
+aiditto:
+  demo-mode: ${DEMO_MODE:true}
+  demo-login-code: ${DEMO_LOGIN_CODE:888888}
+  admin-phones: ${ADMIN_PHONES:}
+  invite-base: ${INVITE_BASE:jianyimian.cn}
+  crypto:
+    data-key: ${DATA_KEY:}
+    hash-pepper: ${HASH_PEPPER:}
+    # Dev only: derive throwaway keys when DATA_KEY / HASH_PEPPER are unset. Prod sets this to false.
+    allow-dev-keys: true
+  photos:
+    root: ${PHOTO_ROOT:./data/photos}
+    accel-redirect: false
+    max-bytes: 8388608

@@ -1,0 +1,27 @@
+# Production (docker compose `api` service, env_file /opt/aiditto/.env). No secret has a default here:
+# a missing variable fails startup instead of silently falling back.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+  flyway:
+    clean-disabled: true
+
+logging:
+  file:
+    name: /logs/aiditto-api.log
+  logback:
+    rollingpolicy:
+      max-file-size: 20MB
+      max-history: 7
+
+aiditto:
+  demo-login-code: ${DEMO_LOGIN_CODE}
+  crypto:
+    data-key: ${DATA_KEY}
+    hash-pepper: ${HASH_PEPPER}
+    allow-dev-keys: false
+  photos:
+    root: ${PHOTO_ROOT:/data/photos}
+    accel-redirect: true

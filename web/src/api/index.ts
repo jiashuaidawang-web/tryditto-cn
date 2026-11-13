@@ -4,18 +4,23 @@ import { useOnboarding } from '../onboarding/store';
 import type { Answers, LocationValue } from '../onboarding/types';
 import { samplePhotoUris } from './art';
 import { useDb } from './db';
+import { ApiError, http } from './http';
 import { SAMPLE_ANSWERS, defaultPartnerFor, partnerById, reasonsFor, sharedInterests } from './mock';
 import { searchPlaces as searchLocal, type Place } from './places';
+import { MOCK_API, clearLocal, type ServerPhoto } from './session';
 import { nextDrop, proposedSlots, respondBy } from './time';
 import type { BlockEntry, Feedback, Match, MatchStage, Me } from './types';
 
 /**
- * Backend seam. Every function is the future Spring Boot call named in its TODO; today they resolve
- * against the local stores (onboarding answers + src/api/db.ts). Pages never touch the stores for writes.
+ * Backend seam. Pages never touch the stores for writes. With the real API (default build) account,
+ * onboarding, profile, photos, places and blocklist go to Spring Boot and the local stores are a write-through
+ * cache; the match loop stays local until M2. `VITE_API=mock` resolves everything against the local stores.
  */
 
 export type { BlockEntry, Feedback, Match, MatchStage, Me, Partner, Reason, Slot, Venue } from './types';
 export { useDb } from './db';
+export { ApiError } from './http';
+export { MOCK_API, syncOnce } from './session';
 export { PARTNERS, DECLINE_REASONS, REPORT_CATEGORIES, partnerById } from './mock';
 export { placeById, nearbyCount, CURRENT_PLACE_ID, type Place } from './places';
 export { nextDrop, formatCountdown, formatSlot, formatDropLabel } from './time';
@@ -29,6 +34,8 @@ export interface OnboardingProgress {
 
 export interface OnboardingApi {
   saveAnswer(questionId: string, value: unknown): Promise<void>;
+  /** Furthest page reached (F9); pages without an answer (photos, interstitials) only move this. */
+  saveProgress(furthestStepId: string | null): Promise<void>;
   getProgress(): Promise<OnboardingProgress>;
 }
 
@@ -40,15 +47,31 @@ const simulateLatency = () =>
 const db = () => useDb.getState();
 const answers = () => useOnboarding.getState().answers;
 const uid = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+const bump = () => db().set({ rev: db().rev + 1 });
+
+function setLocalAnswer(questionId: string, value: unknown) {
+  const ob = useOnboarding.getState();
+  if (value === undefined || value === null) ob.removeAnswers([questionId]);
+  else ob.setAnswer(questionId, value);
+}
+
+/** Answers the server does not store: photo count comes from the photo API, the code page from email verify. */
+const NOT_STORED = new Set(['photos']);
 
 export const api: OnboardingApi = {
   async saveAnswer(questionId, value) {
     await simulateLatency();
-    // TODO(spring-boot): PUT /api/onboarding/answers/{questionId}  body: { value }
+    if (!MOCK_API && !NOT_STORED.has(questionId)) {
+      await http('PUT', `/api/onboarding/answers/${encodeURIComponent(questionId)}`, { value: value ?? null });
+    }
     useOnboarding.getState().setAnswer(questionId, value);
   },
+  async saveProgress(furthestStepId) {
+    if (MOCK_API || !furthestStepId) return;
+    await http('PUT', '/api/onboarding/progress', { furthestStepId });
+  },
   async getProgress() {
-    // TODO(spring-boot): GET /api/onboarding/progress
+    if (!MOCK_API) return http<OnboardingProgress>('GET', '/api/onboarding/progress');
     const { answers: a, furthestId, completed } = useOnboarding.getState();
     return { answers: a, furthestStepId: furthestId, completed };
   },
@@ -71,7 +94,7 @@ function meSnapshot(): Me {
 }
 
 export async function getMe(): Promise<Me> {
-  // TODO(spring-boot): GET /api/me
+  if (!MOCK_API) return http<Me>('GET', '/api/me');
   return meSnapshot();
 }
 
@@ -81,70 +104,143 @@ export interface Profile {
   idealPhotos: string[];
 }
 
-/** Everything /you, /edit-profile, /deep-info and /where render. */
+/**
+ * Everything /you, /edit-profile, /deep-info and /where render. Read from the local cache in both modes:
+ * the server copy is pulled at login and page load (session.ts) and every write goes through first.
+ */
 export async function getProfile(): Promise<Profile> {
-  // TODO(spring-boot): GET /api/me  (profile answers + photo urls; Ditto: /user/profile, 13 §2.3)
   return { answers: answers(), photos: db().photos, idealPhotos: db().idealPhotos };
 }
 
 export async function completeOnboarding(): Promise<void> {
-  // TODO(spring-boot): POST /api/onboarding/complete (Ditto: /user/onboarding/enroll, 07 §2)
+  if (!MOCK_API) await http('POST', '/api/onboarding/complete');
   useOnboarding.getState().complete();
 }
 
 export async function logout(): Promise<void> {
-  // TODO(spring-boot): POST /api/auth/logout
-  useAuth.getState().logout();
+  if (MOCK_API) {
+    useAuth.getState().logout();
+    return;
+  }
+  await http('POST', '/api/auth/logout').catch(() => undefined);
+  clearLocal();
 }
 
 export async function deactivateAccount(): Promise<void> {
-  // TODO(spring-boot): POST /api/account/deactivate  (hide profile, nothing deleted — 13 §7)
-  db().set({ deactivated: true });
+  if (MOCK_API) {
+    db().set({ deactivated: true });
+    return;
+  }
+  // Hides the profile and ends every session; logging in again reactivates (技术方案 §5.5).
+  await http('POST', '/api/account/deactivate');
+  clearLocal();
 }
 
 export async function deleteAccount(): Promise<void> {
-  // TODO(spring-boot): DELETE /api/account  (purged after 30 days — 13 §7)
-  resetEverything();
+  if (MOCK_API) {
+    resetEverything();
+    return;
+  }
+  await http('DELETE', '/api/account');
+  clearLocal();
 }
 
 // ───────────────────────── Email code ─────────────────────────
 
 export async function sendEmailCode(email: string): Promise<{ sentTo: string }> {
-  // TODO(spring-boot): POST /api/auth/email/code  body: { email }  (Ditto: /auth/email/code)
+  if (!MOCK_API) return http<{ sentTo: string }>('POST', '/api/auth/email/code', { email });
   await new Promise((r) => setTimeout(r, 900));
   return { sentTo: email };
 }
 
-/** Demo: any 6 digits pass. */
+/** Mock: any 6 digits pass. Real: the demo login code (no mail is sent in demo mode). */
 export async function verifyEmailCode(email: string, code: string): Promise<boolean> {
-  // TODO(spring-boot): POST /api/auth/email/verify  body: { email, code }  (Ditto: /user/email-verification)
+  if (!MOCK_API) {
+    try {
+      return (await http<{ verified: boolean }>('POST', '/api/auth/email/verify', { email, code })).verified;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 429) return false;
+      throw e;
+    }
+  }
   void email;
   return /^\d{6}$/.test(code);
 }
 
 // ───────────────────────── Photos ─────────────────────────
 
-/** Downscale to ≤720px JPEG so the mock DB fits in localStorage. */
-async function toDataUrl(blobUrl: string): Promise<string> {
+async function drawScaled(blobUrl: string, maxEdge: number): Promise<HTMLCanvasElement> {
   const img = new Image();
   img.src = blobUrl;
   await img.decode();
-  const scale = Math.min(1, 720 / Math.max(img.naturalWidth, img.naturalHeight));
+  const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(img.naturalWidth * scale);
   canvas.height = Math.round(img.naturalHeight * scale);
   canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.82);
+  return canvas;
+}
+
+/** Downscale to ≤720px JPEG so the mock DB fits in localStorage. */
+async function toDataUrl(blobUrl: string): Promise<string> {
+  return (await drawScaled(blobUrl, 720)).toDataURL('image/jpeg', 0.82);
+}
+
+/** The server re-encodes anyway; sending a ≤1440px JPEG keeps uploads small and turns HEIC-ish inputs the browser can decode into JPEG. */
+async function toJpegBlob(file: File, blobUrl: string): Promise<Blob> {
+  try {
+    const canvas = await drawScaled(blobUrl, 1440);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.88));
+    if (blob) return blob;
+  } catch {
+    // Fall through: let the server judge the original bytes.
+  }
+  return file;
 }
 
 type PhotoTarget = 'photos' | 'idealPhotos';
+const kindOf = (target: PhotoTarget) => (target === 'photos' ? 'profile' : 'ideal');
+const photoIdOf = (url: string) => /^\/api\/photos\/(\d+)\/raw/.exec(url)?.[1] ?? null;
 
-/** Preview immediately via URL.createObjectURL, then swap in a persisted data URL. */
+async function uploadOne(file: File, blobUrl: string, target: PhotoTarget): Promise<string> {
+  const body = await toJpegBlob(file, blobUrl);
+  const contentType = body.type || 'image/jpeg';
+  const ticket = await http<{ uploadId: string; url: string }>('POST', '/api/photos/upload-url', {
+    kind: kindOf(target),
+    contentType,
+    bytes: body.size,
+  });
+  await http('PUT', ticket.url, body, contentType);
+  const photo = await http<ServerPhoto>('POST', '/api/photos/finalize', { uploadId: ticket.uploadId });
+  return photo.url;
+}
+
+async function refreshPhotos(target: PhotoTarget) {
+  const list = await http<ServerPhoto[]>('GET', `/api/photos?kind=${kindOf(target)}`);
+  db().set({ [target]: list.map((p) => p.url) });
+}
+
+/** Preview immediately via URL.createObjectURL, then swap in the persisted URL. */
 export async function uploadPhotos(files: File[], target: PhotoTarget = 'photos'): Promise<string[]> {
-  // TODO(spring-boot): POST /api/photos/upload-url → PUT object storage → POST /api/photos/finalize
-  //   (Ditto: /user/profile/photo/mint-upload-url, /finalize, 07 §2). Ideal look → idealDateImages.
   const previews = files.map((f) => URL.createObjectURL(f));
   db().set({ [target]: [...db()[target], ...previews].slice(0, 6) });
+  if (!MOCK_API) {
+    // One at a time so the server's positions follow the order the files were picked in.
+    for (const [i, file] of files.entries()) {
+      const blob = previews[i]!;
+      if (!db()[target].includes(blob)) continue;
+      try {
+        const url = await uploadOne(file, blob, target);
+        db().set({ [target]: db()[target].map((u) => (u === blob ? url : u)) });
+      } catch (e) {
+        db().set({ [target]: db()[target].filter((u) => u !== blob) });
+        console.warn('photo upload failed', e);
+      } finally {
+        URL.revokeObjectURL(blob);
+      }
+    }
+    return db()[target];
+  }
   await Promise.all(
     previews.map(async (blob) => {
       try {
@@ -159,50 +255,77 @@ export async function uploadPhotos(files: File[], target: PhotoTarget = 'photos'
   return db()[target];
 }
 
+/** Reorder and remove: the server gets DELETE for each dropped photo, then the new order (F3: ids, not URLs). */
 export async function setPhotos(urls: string[], target: PhotoTarget = 'photos'): Promise<void> {
-  // TODO(spring-boot): PUT /api/photos/order  body: { ids }  (removals: DELETE /api/photos/{id})
+  const before = db()[target];
   db().set({ [target]: urls });
+  if (MOCK_API) return;
+  const keep = urls.map(photoIdOf).filter((id): id is string => !!id);
+  const removed = before.map(photoIdOf).filter((id): id is string => !!id && !keep.includes(id));
+  const order = before.map(photoIdOf).filter((id): id is string => !!id && keep.includes(id));
+  try {
+    for (const id of removed) await http('DELETE', `/api/photos/${id}`);
+    if (keep.length > 1 && keep.join() !== order.join()) await http('PUT', '/api/photos/order', { kind: kindOf(target), ids: keep });
+  } catch (e) {
+    await refreshPhotos(target).catch(() => undefined);
+    throw e;
+  }
 }
 
 // ───────────────────────── Profile ─────────────────────────
 
-/** Saving one answer from /onboarding/edit/:field. */
+/** Saving one answer from /onboarding/edit/:field. `undefined` deletes it (stale hobby branches). */
 export async function updateProfileField(questionId: string, value: unknown): Promise<void> {
-  // TODO(spring-boot): PUT /api/profile/{field}  body: { value }
   await simulateLatency();
+  if (!MOCK_API) {
+    await http('PUT', `/api/profile/${encodeURIComponent(questionId)}`, { value: value ?? null });
+    setLocalAnswer(questionId, value);
+    return;
+  }
   useOnboarding.getState().setAnswer(questionId, value);
 }
 
 export async function saveWhere(value: LocationValue): Promise<void> {
-  // TODO(spring-boot): PUT /api/profile/location  body: { placeId, mode, minutes }  (Ditto: /location/isochrone, 09 §19)
+  if (!MOCK_API) await http('PUT', '/api/profile/location', { placeId: value.placeId, mode: value.mode, minutes: value.minutes });
   useOnboarding.getState().setAnswer('location', value);
 }
 
 export async function searchPlaces(query: string, lang: 'en' | 'zh'): Promise<Place[]> {
-  // TODO(spring-boot): GET /api/places/search?q={query}
+  if (!MOCK_API) {
+    if (!query.trim()) return [];
+    return http<Place[]>('GET', `/api/places/search?q=${encodeURIComponent(query)}&lang=${lang}`);
+  }
   return searchLocal(query, lang);
 }
 
 // ───────────────────────── Blocklist ─────────────────────────
 
 export async function getBlocks(): Promise<BlockEntry[]> {
-  // TODO(spring-boot): GET /api/blocks
+  if (!MOCK_API) return http<BlockEntry[]>('GET', '/api/blocks');
   return db().blocks;
 }
 
 export async function addBlock(entry: Omit<BlockEntry, 'id' | 'createdAt'>): Promise<BlockEntry> {
-  // TODO(spring-boot): POST /api/blocks  body: { name, emails, phones, note }
+  if (!MOCK_API) {
+    const row = await http<BlockEntry>('POST', '/api/blocks', entry);
+    bump();
+    return row;
+  }
   const row: BlockEntry = { ...entry, id: uid('blk'), createdAt: new Date().toISOString() };
   db().set({ blocks: [row, ...db().blocks] });
   return row;
 }
 
 export async function deleteBlock(id: string): Promise<void> {
-  // TODO(spring-boot): DELETE /api/blocks/{id}
+  if (!MOCK_API) {
+    await http('DELETE', `/api/blocks/${encodeURIComponent(id)}`);
+    bump();
+    return;
+  }
   db().set({ blocks: db().blocks.filter((b) => b.id !== id) });
 }
 
-// ───────────────────────── Matches (推断设计) ─────────────────────────
+// ───────────────────────── Matches (推断设计, local until M2) ─────────────────────────
 
 const ORDER: MatchStage[] = [
   'waiting',
@@ -253,7 +376,7 @@ function currentMatch(): Match {
 
 /** Current week's match (+ partner card, AI reasons, interest chips); stage `waiting` before Wednesday's drop. */
 export async function getCurrentMatch(): Promise<MatchView> {
-  // TODO(spring-boot): GET /api/matches/current
+  // TODO(spring-boot, M2): GET /api/matches/current
   return matchView(currentMatch(), answers());
 }
 
@@ -264,13 +387,13 @@ function patchMatch(patch: Partial<Match>) {
 
 /** "I'm in" on the poster; the slot picks follow in confirmSlots (01 §4.3: two gates — the person, then the time). */
 export async function acceptMatch(matchId: string): Promise<void> {
-  // TODO(spring-boot): POST /api/matches/{id}/accept
+  // TODO(spring-boot, M2): POST /api/matches/{id}/accept
   void matchId;
 }
 
 /** Contact is only released once both said "see them again" (01 §4.3, privacy policy). */
 export async function getContact(matchId: string): Promise<{ wechat: string } | null> {
-  // TODO(spring-boot): GET /api/matches/{id}/contact  (403 unless mutual)
+  // TODO(spring-boot, M2): GET /api/matches/{id}/contact  (403 unless mutual)
   void matchId;
   const m = currentMatch();
   return m.stage === 'mutual' ? { wechat: partnerById(m.partnerId).wechat } : null;
@@ -278,20 +401,20 @@ export async function getContact(matchId: string): Promise<{ wechat: string } | 
 
 /** The slots I can make from the proposed 2–3 (01 §5.3: availability, not a fixed time). */
 export async function confirmSlots(matchId: string, slotIds: string[]): Promise<void> {
-  // TODO(spring-boot): POST /api/matches/{id}/slots/confirm  body: { slotIds }
+  // TODO(spring-boot, M2): POST /api/matches/{id}/slots/confirm  body: { slotIds }
   void matchId;
   patchMatch({ stage: 'awaitingPartner', mySlotIds: slotIds });
 }
 
 export async function declineMatch(matchId: string, reasons: string[], note: string): Promise<void> {
-  // TODO(spring-boot): POST /api/matches/{id}/decline  body: { reasons, note }  (not forwarded to them, PRD §4.4)
+  // TODO(spring-boot, M2): POST /api/matches/{id}/decline  body: { reasons, note }  (not forwarded to them, PRD §4.4)
   void matchId;
   patchMatch({ stage: 'declined', declineReasons: reasons, declineNote: note });
 }
 
 /** "This reason is off" on a single AI reason (PRD §4.4). */
 export async function flagReason(matchId: string, index: number): Promise<void> {
-  // TODO(spring-boot): POST /api/matches/{id}/reasons/{index}/flag
+  // TODO(spring-boot, M2): POST /api/matches/{id}/reasons/{index}/flag  body: { flagged }
   void matchId;
   const m = currentMatch();
   const cur = m.flaggedReasons ?? [];
@@ -299,19 +422,19 @@ export async function flagReason(matchId: string, index: number): Promise<void> 
 }
 
 export async function checkIn(matchId: string): Promise<void> {
-  // TODO(spring-boot): POST /api/matches/{id}/checkin
+  // TODO(spring-boot, M2): POST /api/matches/{id}/checkin
   void matchId;
   patchMatch({ stage: 'checkedIn', checkedInAt: new Date().toISOString() });
 }
 
 export async function submitFeedback(matchId: string, feedback: Feedback): Promise<void> {
-  // TODO(spring-boot): POST /api/matches/{id}/feedback
+  // TODO(spring-boot, M2): POST /api/matches/{id}/feedback
   void matchId;
   patchMatch({ stage: 'awaitingFeedback', feedback });
 }
 
 export async function reportMatch(matchId: string, category: string, note: string): Promise<void> {
-  // TODO(spring-boot): POST /api/matches/{id}/report  body: { category, note }  (PRD §4.9)
+  // TODO(spring-boot, M2): POST /api/matches/{id}/report  body: { category, note }  (PRD §4.9)
   void matchId;
   void note;
   patchMatch({ stage: 'reported', reportCategory: category });
@@ -342,7 +465,7 @@ export async function enableMatchAlerts(): Promise<void> {
 }
 
 export async function getInvite(): Promise<{ url: string }> {
-  // TODO(spring-boot): GET /api/referrals/me
+  if (!MOCK_API) return http<{ url: string }>('GET', '/api/referrals/me');
   return { url: meSnapshot().inviteUrl };
 }
 
@@ -352,6 +475,8 @@ function resetEverything() {
   useOnboarding.getState().reset();
   db().reset();
 }
+
+const resetMatchLoop = () => db().set({ match: null, partnerId: null, partnerWantsAgain: true });
 
 export const demo = {
   setStage(stage: MatchStage) {
@@ -379,8 +504,9 @@ export const demo = {
   partnerSubmitsFeedback() {
     resolveFeedback();
   },
-  /** Complete onboarding with sample answers + generated photos. */
+  /** Mock only: complete onboarding with sample answers + generated photos. The real API needs a real walk-through. */
   seedProfile() {
+    if (!MOCK_API) return;
     const ob = useOnboarding.getState();
     ob.setAnswers({ ...SAMPLE_ANSWERS, photos: 2 });
     ob.complete();
@@ -389,5 +515,6 @@ export const demo = {
   resetMatch() {
     db().set({ match: null });
   },
-  resetAll: resetEverything,
+  /** Real API: only the local match loop resets; the account lives on the server. */
+  resetAll: () => (MOCK_API ? resetEverything() : resetMatchLoop()),
 };
