@@ -70,10 +70,13 @@
   transition: background-color 0.3s cubic-bezier(0, 0, 0.2, 1), backdrop-filter 0.3s cubic-bezier(0, 0, 0.2, 1);
   user-select: none;
 }
-.lp-header.is-scrolled {
-  background: rgba(10, 22, 30, 0.22);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  backdrop-filter: blur(14px) saturate(1.2);
+/* Ditto: `bg-black/10 backdrop-blur-md min-[1025px]:bg-transparent min-[1025px]:backdrop-blur-none`. */
+@media (max-width: 1024px) {
+  .lp-header.is-scrolled {
+    background: rgba(0, 0, 0, 0.1);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
 }
 @media (min-width: 481px) {
   .lp-header {
