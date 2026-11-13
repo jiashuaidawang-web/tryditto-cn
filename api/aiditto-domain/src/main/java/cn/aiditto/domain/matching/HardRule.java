@@ -29,5 +29,9 @@ public enum HardRule {
     /** Rule 10: structured dealbreaker constraints (only when AI extraction succeeded). */
     AI_CONSTRAINTS,
     /** Rule 11: in manual runs, nobody with an unfinished match. */
-    OPEN_MATCH
+    OPEN_MATCH,
+    /** Students only match students; working users only match working users. */
+    LIFE_STAGE,
+    /** Real users only match real users. Synthetic users only match the demo accounts. */
+    COHORT
 }

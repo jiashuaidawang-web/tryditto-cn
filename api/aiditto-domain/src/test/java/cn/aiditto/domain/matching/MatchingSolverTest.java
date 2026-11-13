@@ -65,7 +65,7 @@ class MatchingSolverTest {
     @Test
     void belowThresholdIsDropped() {
         Candidate a = Candidate.builder(1).style(MatchingStyle.THE_ONE).hobbies("art").looking(Looking.CASUAL)
-                .budget(Budget.UNDER_20).student(false).build();
+                .budget(Budget.UNDER_20).build();
         Candidate b = Candidate.builder(2).style(MatchingStyle.FASTER).hobbies("gym").looking(Looking.SERIOUS)
                 .budget(Budget.OVER_100).build();
         MatchingResult r = new MatchingSolver().solve(MatchingInput.of(WEEK, List.of(a, b), 1));

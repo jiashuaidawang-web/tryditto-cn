@@ -39,7 +39,7 @@ export function EditFieldPage() {
     if (profile && !draft) setDraft({ ...profile.answers });
   }, [profile, draft]);
 
-  if (!resolved) return <Navigate to={`/edit-profile${suffix}`} replace />;
+  if (!resolved || resolved.row.locked) return <Navigate to={`/edit-profile${suffix}`} replace />;
   const { row, back } = resolved;
 
   const answers = draft ?? profile?.answers ?? {};

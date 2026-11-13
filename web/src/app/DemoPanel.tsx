@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { PARTNERS, avatarUri, demo, getCurrentMatch, useDb, type MatchStage } from '../api';
+import { MOCK_API, PARTNERS, avatarUri, demo, getCurrentMatch, useDb, type MatchStage } from '../api';
 import { pick, t, useLang, useQuerySuffix, type Lang, type T } from '../i18n/lang';
 import { AppShell } from '../components/AppShell';
 import { Sheet, TopBar, useGo, useLive } from './ui';
@@ -91,8 +91,7 @@ export function DemoPanelBody({ lang, onDone }: { lang: Lang; onDone?: () => voi
             key={s.id}
             active={stage === s.id}
             onClick={() => {
-              demo.setStage(s.id);
-              toHome();
+              void demo.setStage(s.id).then(toHome);
             }}
           >
             {pick(s.label, lang)}
@@ -117,16 +116,16 @@ export function DemoPanelBody({ lang, onDone }: { lang: Lang; onDone?: () => voi
 
       <h3 className="mb-2 mt-5 text-[12px] font-bold uppercase tracking-wide text-white/60">{pick(C.server, lang)}</h3>
       <div className="flex flex-wrap gap-2">
-        <Chip disabled={stage !== 'awaitingPartner'} onClick={() => (demo.partnerConfirms(), toHome())}>
+        <Chip disabled={stage !== 'awaitingPartner'} onClick={() => void demo.partnerConfirms().then(toHome)}>
           {pick(C.partnerConfirms, lang)}
         </Chip>
-        <Chip disabled={stage !== 'confirmed'} onClick={() => (demo.openDateDay(), toHome())}>
+        <Chip disabled={stage !== 'confirmed'} onClick={() => void demo.openDateDay().then(toHome)}>
           {pick(C.openDay, lang)}
         </Chip>
-        <Chip disabled={stage !== 'dateDay' && stage !== 'checkedIn'} onClick={() => (demo.endDate(), toHome())}>
+        <Chip disabled={stage !== 'dateDay' && stage !== 'checkedIn'} onClick={() => void demo.endDate().then(toHome)}>
           {pick(C.endDate, lang)}
         </Chip>
-        <Chip disabled={stage !== 'awaitingFeedback'} onClick={() => (demo.partnerSubmitsFeedback(), toHome())}>
+        <Chip disabled={stage !== 'awaitingFeedback'} onClick={() => void demo.partnerSubmitsFeedback().then(toHome)}>
           {pick(C.partnerFeedback, lang)}
         </Chip>
         <Chip active={wantsAgain} onClick={() => demo.setPartnerWantsAgain(!wantsAgain)}>
@@ -138,12 +137,15 @@ export function DemoPanelBody({ lang, onDone }: { lang: Lang; onDone?: () => voi
       <h3 className="mb-2 mt-5 text-[12px] font-bold uppercase tracking-wide text-white/60">{pick(C.data, lang)}</h3>
       <div className="flex flex-wrap gap-2">
         <Chip onClick={() => demo.seedProfile()}>{pick(C.seed, lang)}</Chip>
-        <Chip onClick={() => (demo.resetMatch(), toHome())}>{pick(C.resetMatch, lang)}</Chip>
+        <Chip onClick={() => void demo.resetMatch().then(toHome)}>{pick(C.resetMatch, lang)}</Chip>
         <Chip
           onClick={() => {
-            demo.resetAll();
-            go('/onboarding');
-            onDone?.();
+            void Promise.resolve(demo.resetAll()).then(() => {
+              if (MOCK_API) {
+                go('/onboarding');
+                onDone?.();
+              } else toHome();
+            });
           }}
         >
           {pick(C.resetAll, lang)}

@@ -31,6 +31,15 @@ public class Crypto {
     private final SecretKeySpec dataKey;
     private final SecretKeySpec pepper;
     private final SecureRandom random = new SecureRandom();
+    /** Cipher and Mac lookup is much slower than the crypto itself, and neither object is thread-safe. */
+    private final ThreadLocal<Cipher> aes = ThreadLocal.withInitial(() -> {
+        try {
+            return Cipher.getInstance("AES/GCM/NoPadding");
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    });
+    private final ThreadLocal<Mac> macs;
 
     public Crypto(AppProperties props) {
         AppProperties.Crypto c = props.crypto();
@@ -47,6 +56,15 @@ public class Crypto {
         if (!isBlank(pepper) && pep.length < 16) throw new IllegalStateException("HASH_PEPPER must be at least 16 characters");
         this.dataKey = new SecretKeySpec(key, "AES");
         this.pepper = new SecretKeySpec(pep, "HmacSHA256");
+        this.macs = ThreadLocal.withInitial(() -> {
+            try {
+                Mac mac = Mac.getInstance("HmacSHA256");
+                mac.init(this.pepper);
+                return mac;
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        });
     }
 
     public byte[] encrypt(String plain) {
@@ -54,7 +72,7 @@ public class Crypto {
         try {
             byte[] iv = new byte[IV_LEN];
             random.nextBytes(iv);
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            Cipher cipher = aes.get();
             cipher.init(Cipher.ENCRYPT_MODE, dataKey, new GCMParameterSpec(TAG_BITS, iv));
             cipher.updateAAD(new byte[] {KEY_VERSION});
             byte[] ct = cipher.doFinal(plain.getBytes(StandardCharsets.UTF_8));
@@ -68,7 +86,7 @@ public class Crypto {
         if (blob == null) return null;
         if (blob.length < 1 + IV_LEN + 16 || blob[0] != KEY_VERSION) throw new IllegalStateException("unknown ciphertext version");
         try {
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            Cipher cipher = aes.get();
             cipher.init(Cipher.DECRYPT_MODE, dataKey, new GCMParameterSpec(TAG_BITS, blob, 1, IV_LEN));
             cipher.updateAAD(new byte[] {blob[0]});
             byte[] pt = cipher.doFinal(blob, 1 + IV_LEN, blob.length - 1 - IV_LEN);
@@ -80,13 +98,7 @@ public class Crypto {
 
     /** HMAC-SHA256(HASH_PEPPER, value). Callers normalize first (phone digits, lower-case email). */
     public byte[] hash(String value) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(pepper);
-            return mac.doFinal(value.getBytes(StandardCharsets.UTF_8));
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("hash failed", e);
-        }
+        return macs.get().doFinal(value.getBytes(StandardCharsets.UTF_8));
     }
 
     public String hashHex(String value) {

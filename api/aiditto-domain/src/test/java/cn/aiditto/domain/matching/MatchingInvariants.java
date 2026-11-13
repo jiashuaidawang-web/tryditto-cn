@@ -80,6 +80,8 @@ public final class MatchingInvariants {
                 && Math.abs(a.schoolYear().ordinal() - b.schoolYear().ordinal()) > in.weights().gradeWindow()) out.add("grade window");
         if (!aiOk(a.ai(), b, ageB) || !aiOk(b.ai(), a, ageA)) out.add("dealbreaker constraints");
         if (in.manualRun() && (a.hasOpenMatch() || b.hasOpenMatch())) out.add("open match in manual run");
+        if (a.student() != b.student()) out.add("life stage");
+        if (!cohortOk(a.cohort(), b.cohort())) out.add("cohort");
         return out;
     }
 
@@ -107,6 +109,12 @@ public final class MatchingInvariants {
         if (theirs == null || theirs == EducationLevel.PREFER_NOT) return false;
         if (mine == null || mine == EducationLevel.PREFER_NOT) return true;
         return theirs.ordinal() >= mine.ordinal();
+    }
+
+    /** Restated, not delegated: real-real, demo-synthetic, and demo-demo only. */
+    private static boolean cohortOk(Cohort a, Cohort b) {
+        if (a == Cohort.REAL || b == Cohort.REAL) return a == Cohort.REAL && b == Cohort.REAL;
+        return a == Cohort.DEMO || b == Cohort.DEMO;
     }
 
     private static boolean known(SchoolYear y) {

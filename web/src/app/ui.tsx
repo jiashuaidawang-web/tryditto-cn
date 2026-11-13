@@ -251,15 +251,27 @@ export function PrimaryButton({
   );
 }
 
-/** One editable profile row (13 §2.1): 12px label at 0.9, 19/24 value, 19px pencil (stroke 1.7). */
-export function ProfileRow({ id, label, value, ariaLabel, onClick }: { id: string; label: string; value: string; ariaLabel: string; onClick: () => void }) {
-  return (
-    <button type="button" id={`application-summary-${id}`} aria-label={ariaLabel} onClick={onClick} className="flex min-h-[84px] w-full items-center gap-3 px-5 py-[18px] text-left">
+/** One profile row (13 §2.1): 12px label at 0.9, 19/24 value, 19px pencil (stroke 1.7). Locked rows stay readable and have no pencil. */
+export function ProfileRow({ id, label, value, ariaLabel, onClick, locked }: { id: string; label: string; value: string; ariaLabel: string; onClick: () => void; locked?: boolean }) {
+  const body = (
+    <>
       <span className="min-w-0 flex-1">
         <span className="block text-[12px] leading-4 text-white/90">{label}</span>
         <span className={`mt-[5px] block whitespace-pre-line break-words text-[19px] leading-6 ${value ? 'text-white' : 'text-white/45'}`}>{value || '—'}</span>
       </span>
-      <Pencil size={19} strokeWidth={1.7} className="shrink-0 text-white/90" />
+      {!locked && <Pencil size={19} strokeWidth={1.7} className="shrink-0 text-white/90" />}
+    </>
+  );
+  if (locked) {
+    return (
+      <div id={`application-summary-${id}`} aria-label={ariaLabel} className="flex min-h-[84px] w-full items-center gap-3 px-5 py-[18px] text-left">
+        {body}
+      </div>
+    );
+  }
+  return (
+    <button type="button" id={`application-summary-${id}`} aria-label={ariaLabel} onClick={onClick} className="flex min-h-[84px] w-full items-center gap-3 px-5 py-[18px] text-left">
+      {body}
     </button>
   );
 }

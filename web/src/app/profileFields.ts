@@ -16,11 +16,13 @@ export interface FieldRow {
   only?: 'student' | 'professional';
   /** Deep Info rows show the stored lower-case value as-is (13 §5: `doesn't matter`). */
   raw?: boolean;
+  /** Birthday is locked once onboarding is complete. */
+  locked?: boolean;
 }
 
 export const ABOUT_ROWS: FieldRow[] = [
   { field: 'name', q: 'name', label: t('What’s your name?', '你的名字') },
-  { field: 'birthday', q: 'birthday', label: t('When is your birthday?', '你的生日') },
+  { field: 'birthday', q: 'birthday', label: t('When is your birthday?', '你的生日'), locked: true },
   { field: 'gender', q: 'gender', label: t('What’s your gender?', '你的性别') },
   { field: 'ethnicity', q: 'ethnicity', label: t('What’s your ethnicity?', '你的族裔') },
   { field: 'height', q: 'height', label: t('How tall are you?', '你的身高') },

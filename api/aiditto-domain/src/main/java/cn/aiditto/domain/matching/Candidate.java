@@ -20,6 +20,7 @@ import java.util.TreeMap;
  * @param blockedHashes hashes from this person's block list
  * @param ai constraints from dealbreakers; {@link AiConstraints#NONE} unless {@code ai_status = ok}
  * @param hasOpenMatch has a non-terminal match from an earlier run (excluded in manual runs)
+ * @param cohort real users only match real users; synthetic users only match demo accounts
  */
 public record Candidate(
         long id,
@@ -45,7 +46,8 @@ public record Candidate(
         Set<String> contactHashes,
         Set<String> blockedHashes,
         AiConstraints ai,
-        boolean hasOpenMatch) {
+        boolean hasOpenMatch,
+        Cohort cohort) {
 
     public Candidate {
         Objects.requireNonNull(pool, "pool");
@@ -63,6 +65,7 @@ public record Candidate(
         contactHashes = Set.copyOf(contactHashes);
         blockedHashes = Set.copyOf(blockedHashes);
         ai = ai == null ? AiConstraints.NONE : ai;
+        cohort = cohort == null ? Cohort.REAL : cohort;
         budget = budget == null ? Budget.NO_PREF : budget;
         educationImportance = educationImportance == null ? Importance.NONE : educationImportance;
         if (ageMin > ageMax) throw new IllegalArgumentException("ageMin > ageMax");
@@ -84,7 +87,7 @@ public record Candidate(
         b.schoolYear = schoolYear; b.education = education; b.educationImportance = educationImportance;
         b.budget = budget; b.style = style; b.looking = looking; b.hobbies = hobbies; b.hobbyDetails = hobbyDetails;
         b.location = location; b.emptyWeekStreak = emptyWeekStreak; b.contactHashes = contactHashes;
-        b.blockedHashes = blockedHashes; b.ai = ai; b.hasOpenMatch = hasOpenMatch;
+        b.blockedHashes = blockedHashes; b.ai = ai; b.hasOpenMatch = hasOpenMatch; b.cohort = cohort;
         return b;
     }
 
@@ -114,6 +117,7 @@ public record Candidate(
         private Set<String> blockedHashes = Set.of();
         private AiConstraints ai = AiConstraints.NONE;
         private boolean hasOpenMatch;
+        private Cohort cohort = Cohort.REAL;
 
         private Builder(long id) {
             this.id = id;
@@ -143,11 +147,12 @@ public record Candidate(
         public Builder blockedHashes(Set<String> v) { blockedHashes = v; return this; }
         public Builder ai(AiConstraints v) { ai = v; return this; }
         public Builder hasOpenMatch(boolean v) { hasOpenMatch = v; return this; }
+        public Builder cohort(Cohort v) { cohort = v; return this; }
 
         public Candidate build() {
             return new Candidate(id, pool, gender, wants, birthday, ageMin, ageMax, heightCm, heightPref, student,
                     schoolYear, education, educationImportance, budget, style, looking, hobbies, hobbyDetails,
-                    location, emptyWeekStreak, contactHashes, blockedHashes, ai, hasOpenMatch);
+                    location, emptyWeekStreak, contactHashes, blockedHashes, ai, hasOpenMatch, cohort);
         }
     }
 }

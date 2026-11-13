@@ -22,6 +22,8 @@ public class User {
     public String status;
     public String lang;
     public Boolean isSynthetic;
+    /** real / demo / synthetic. Real users are never paired with the other two. */
+    public String cohort;
     public String handle;
     public String inviteCode;
     public Long referredBy;
@@ -30,6 +32,9 @@ public class User {
     public String photoIssue;
     public Instant suspendedUntil;
     public Integer noShowCount;
+    public Integer lateCancelCount;
+    public Integer noResponseStreak;
+    public Integer disputeCount;
     public Integer emptyWeekStreak;
     public Instant deactivatedAt;
     public Instant deleteRequestedAt;

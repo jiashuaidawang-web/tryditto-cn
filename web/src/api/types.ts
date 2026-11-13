@@ -77,6 +77,8 @@ export interface Reason {
   text: T;
   /** Which answers the reason rests on (PRD §4.4: every reason points to concrete answers). */
   basis: T;
+  /** False for template copy. The reveal page hides the AI line when every reason says so. */
+  ai?: boolean;
 }
 
 export interface Slot {

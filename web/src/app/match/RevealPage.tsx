@@ -141,7 +141,7 @@ function Reveal({ view, lang }: { view: MatchView; lang: Lang }) {
                 <br />
               </>
             )}
-            {pick(C.ai, lang)}
+            {reasons.some((r) => r.ai !== false) && pick(C.ai, lang)}
           </p>
         </div>
       </div>

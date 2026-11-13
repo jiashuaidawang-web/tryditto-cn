@@ -32,7 +32,10 @@ export function RowsCard({ rows, answers, lang, onEdit }: { rows: FieldRow[]; an
           label={pick(row.label, lang)}
           value={formatAnswer(row, answers, lang)}
           ariaLabel={editAria(row, lang)}
-          onClick={() => onEdit(row)}
+          locked={row.locked}
+          onClick={() => {
+            if (!row.locked) onEdit(row);
+          }}
         />
       ))}
     </div>

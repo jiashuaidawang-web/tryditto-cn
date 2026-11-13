@@ -51,6 +51,9 @@ abstract class ApiIT {
         r.add("aiditto.demo-mode", () -> "true");
         r.add("aiditto.demo-login-code", () -> DEMO_CODE);
         r.add("aiditto.photos.root", () -> "target/it-photos");
+        r.add("aiditto.admin-phones", () -> "13800000001");
+        r.add("aiditto.scheduler.enabled", () -> "false");
+        r.add("aiditto.synthetic.autoload", () -> "false");
         r.add("management.server.port", () -> "0");
     }
 

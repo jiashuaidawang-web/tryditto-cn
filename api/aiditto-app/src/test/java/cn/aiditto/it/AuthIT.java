@@ -11,7 +11,7 @@ class AuthIT extends ApiIT {
     @Test
     void schemaMigratesFromZeroAndSeedsPlaces() {
         assertThat(jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success = 1 AND version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4");
+                .containsExactly("1", "2", "3", "4", "5");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM place WHERE kind = 'area'", Integer.class)).isEqualTo(21);
         assertThat(jdbc.queryForObject("SELECT VERSION()", String.class)).startsWith("8.4");
     }

@@ -167,7 +167,7 @@ class HardFilterTest {
         Candidate other = base(4).schoolYear(SchoolYear.OTHER).build();
         Candidate worker = base(5).student(false).build();
         passes(freshman, other, in(freshman, other));
-        passes(freshman, worker, in(freshman, worker));
+        onlyRule(HardRule.LIFE_STAGE, freshman, worker, in(freshman, worker));
     }
 
     @Test
@@ -177,7 +177,10 @@ class HardFilterTest {
         onlyRule(HardRule.AI_CONSTRAINTS, picky, shortB, in(picky, shortB));
         Candidate studentsOnly = base(3).ai(new AiConstraints(null, null, null, null, true, false)).build();
         Candidate worker = base(4).student(false).build();
-        onlyRule(HardRule.AI_CONSTRAINTS, studentsOnly, worker, in(studentsOnly, worker));
+        assertThat(HardFilter.violations(studentsOnly, worker, in(studentsOnly, worker)))
+                .containsExactly(HardRule.AI_CONSTRAINTS, HardRule.LIFE_STAGE);
+        assertThat(HardFilter.violations(worker, studentsOnly, in(worker, studentsOnly)))
+                .containsExactly(HardRule.AI_CONSTRAINTS, HardRule.LIFE_STAGE);
         Candidate maxAge = base(5).ai(new AiConstraints(null, null, null, 19, false, false)).build();
         Candidate twenty = base(6).birthday(WEEK.minusYears(20)).build();
         onlyRule(HardRule.AI_CONSTRAINTS, maxAge, twenty, in(maxAge, twenty));

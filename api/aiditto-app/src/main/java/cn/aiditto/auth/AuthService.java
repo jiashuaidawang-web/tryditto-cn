@@ -7,6 +7,7 @@ import cn.aiditto.domain.common.DomainException;
 import cn.aiditto.domain.common.ErrorCode;
 import cn.aiditto.infra.crypto.Pii;
 import cn.aiditto.infra.web.Times;
+import cn.aiditto.match.OutboundGuard;
 import org.springframework.stereotype.Service;
 
 /** Phone login with the demo code (技术方案 §6.3). */
@@ -16,16 +17,19 @@ public class AuthService {
     private final AccountService accounts;
     private final SessionService sessions;
     private final MeService me;
+    private final OutboundGuard outbound;
 
-    public AuthService(CodeGuard guard, AccountService accounts, SessionService sessions, MeService me) {
+    public AuthService(CodeGuard guard, AccountService accounts, SessionService sessions, MeService me, OutboundGuard outbound) {
         this.guard = guard;
         this.accounts = accounts;
         this.sessions = sessions;
         this.me = me;
+        this.outbound = outbound;
     }
 
     public long sendSms(String rawPhone, String ip) {
         String phone = requirePhone(rawPhone);
+        if (!outbound.mayText(phone)) return CodeGuard.COOLDOWN.toSeconds();
         guard.recordSend(AuthCode.SMS, accounts.phoneHash(phone), ip, ErrorCode.SMS_TOO_FREQUENT);
         return CodeGuard.COOLDOWN.toSeconds();
     }

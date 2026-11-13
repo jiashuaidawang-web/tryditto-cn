@@ -37,6 +37,8 @@ public final class HardFilter {
         if (!withinGradeWindow(a, b, in.weights())) out.add(HardRule.GRADE_WINDOW);
         if (!aiConstraintsOk(a, b, week) || !aiConstraintsOk(b, a, week)) out.add(HardRule.AI_CONSTRAINTS);
         if (in.manualRun() && (a.hasOpenMatch() || b.hasOpenMatch())) out.add(HardRule.OPEN_MATCH);
+        if (a.student() != b.student()) out.add(HardRule.LIFE_STAGE);
+        if (!cohortsCompatible(a.cohort(), b.cohort())) out.add(HardRule.COHORT);
         return Collections.unmodifiableList(out);
     }
 
@@ -104,6 +106,15 @@ public final class HardFilter {
     static int gradeIndex(Candidate c) {
         if (!c.student() || c.schoolYear() == null || c.schoolYear() == SchoolYear.OTHER) return -1;
         return c.schoolYear().ordinal();
+    }
+
+    /**
+     * Real only with real. A synthetic user only with a demo account (never another synthetic, never a real user).
+     * Two demo accounts may match each other.
+     */
+    public static boolean cohortsCompatible(Cohort a, Cohort b) {
+        if (a == Cohort.REAL || b == Cohort.REAL) return a == Cohort.REAL && b == Cohort.REAL;
+        return a == Cohort.DEMO || b == Cohort.DEMO;
     }
 
     /** One direction of rule 10: {@code chooser}'s extracted constraints accept {@code partner}. */

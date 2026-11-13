@@ -60,3 +60,8 @@ aiditto:
     root: ${PHOTO_ROOT:./data/photos}
     accel-redirect: false
     max-bytes: 8388608
+  scheduler:
+    enabled: ${SCHEDULER_ENABLED:true}
+    delay-ms: ${SCHEDULER_DELAY_MS:30000}
+  synthetic:
+    autoload: ${SYNTHETIC_AUTOLOAD:true}

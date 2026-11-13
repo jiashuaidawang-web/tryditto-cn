@@ -1,3 +1,4 @@
+import { t, type T } from '../i18n/lang';
 import { useAuth } from '../landing/auth';
 import { SAVE_LATENCY_MS } from '../motion/tokens';
 import { useOnboarding } from '../onboarding/store';
@@ -9,7 +10,7 @@ import { SAMPLE_ANSWERS, defaultPartnerFor, partnerById, reasonsFor, sharedInter
 import { searchPlaces as searchLocal, type Place } from './places';
 import { MOCK_API, clearLocal, type ServerPhoto } from './session';
 import { nextDrop, proposedSlots, respondBy } from './time';
-import type { BlockEntry, Feedback, Match, MatchStage, Me } from './types';
+import type { AvatarSpec, BlockEntry, Feedback, Match, MatchStage, Me, Partner, SceneKind } from './types';
 
 /**
  * Backend seam. Pages never touch the stores for writes. With the real API (default build) account,
@@ -374,9 +375,110 @@ function currentMatch(): Match {
   return db().match ?? buildMatch('waiting');
 }
 
-/** Current week's match (+ partner card, AI reasons, interest chips); stage `waiting` before Wednesday's drop. */
+const both = (s: string | null | undefined): T => t(s ?? '', s ?? '');
+
+const STUB_AVATAR: AvatarSpec = { bg: ['#ffb4a2', '#ffd6a5'], skin: '#f6d1b5', hair: 'bob', hairColor: '#2b1d1a', shirt: '#5b8def' };
+
+function stubPartner(): Partner {
+  const empty = both('');
+  return {
+    id: '',
+    name: empty,
+    gender: 'woman',
+    age: 0,
+    school: empty,
+    major: empty,
+    year: empty,
+    heightCm: 0,
+    hobbies: [],
+    extraTags: [],
+    avatar: STUB_AVATAR,
+    scenes: ['coffee', 'books'],
+    headline: empty,
+    blurb: [],
+    wechat: '',
+    venue: { id: '', name: empty, address: empty, activity: empty, extra: empty },
+    openers: [],
+    fallbackReasons: [],
+  };
+}
+
+interface RawPartner {
+  id: string;
+  name: string;
+  gender: string;
+  age: number;
+  school: string;
+  major: string;
+  year: string;
+  heightCm: number;
+  hobbies: string[];
+  extraTags: string[];
+  avatar: AvatarSpec;
+  scenes: string[];
+  headline: string;
+  blurb: string[];
+  wechat: string;
+  venue: { id: string; name: string; address: string; activity: string; extra: string };
+  openers: string[];
+}
+
+interface RawView {
+  match: Match;
+  partner: RawPartner | null;
+  reasons: { text: string; basis: string; ai?: boolean }[];
+  interests: { label: string; shared: boolean }[];
+  partnerWantsAgain?: boolean;
+}
+
+function adaptPartner(p: RawPartner): Partner {
+  const gender = p.gender === 'man' || p.gender === 'woman' || p.gender === 'nonbinary' ? p.gender : 'nonbinary';
+  const scenes = (p.scenes?.length ? p.scenes : ['coffee', 'books']) as SceneKind[];
+  return {
+    id: p.id,
+    name: both(p.name),
+    gender,
+    age: p.age,
+    school: both(p.school),
+    major: both(p.major),
+    year: both(p.year),
+    heightCm: p.heightCm,
+    hobbies: p.hobbies ?? [],
+    extraTags: (p.extraTags ?? []).map((s) => both(s)),
+    avatar: p.avatar ?? STUB_AVATAR,
+    scenes,
+    headline: both(p.headline),
+    blurb: (p.blurb ?? []).map((s) => both(s)),
+    wechat: p.wechat ?? '',
+    venue: {
+      id: p.venue?.id ?? '',
+      name: both(p.venue?.name),
+      address: both(p.venue?.address),
+      activity: both(p.venue?.activity),
+      extra: both(p.venue?.extra),
+    },
+    openers: (p.openers ?? []).map((s) => both(s)),
+    fallbackReasons: [],
+  };
+}
+
+function adaptView(raw: RawView): MatchView {
+  return {
+    match: raw.match,
+    partner: raw.partner ? adaptPartner(raw.partner) : stubPartner(),
+    reasons: (raw.reasons ?? []).map((r) => ({ text: both(r.text), basis: both(r.basis), ai: r.ai })),
+    interests: (raw.interests ?? []).map((i) => ({ label: both(i.label), shared: i.shared })),
+  };
+}
+
+async function touch(path: string, body?: object) {
+  await http('POST', path, body);
+  bump();
+}
+
+/** Current week's match (+ partner card, reasons, interest chips); stage `waiting` before Wednesday's drop. */
 export async function getCurrentMatch(): Promise<MatchView> {
-  // TODO(spring-boot, M2): GET /api/matches/current
+  if (!MOCK_API) return adaptView(await http<RawView>('GET', '/api/matches/current'));
   return matchView(currentMatch(), answers());
 }
 
@@ -387,56 +489,50 @@ function patchMatch(patch: Partial<Match>) {
 
 /** "I'm in" on the poster; the slot picks follow in confirmSlots (01 §4.3: two gates — the person, then the time). */
 export async function acceptMatch(matchId: string): Promise<void> {
-  // TODO(spring-boot, M2): POST /api/matches/{id}/accept
-  void matchId;
+  if (!MOCK_API) return touch(`/api/matches/${matchId}/accept`);
 }
 
 /** Contact is only released once both said "see them again" (01 §4.3, privacy policy). */
 export async function getContact(matchId: string): Promise<{ wechat: string } | null> {
-  // TODO(spring-boot, M2): GET /api/matches/{id}/contact  (403 unless mutual)
-  void matchId;
+  if (!MOCK_API) {
+    const c = await http<{ wechat: string | null }>('GET', `/api/matches/${matchId}/contact`);
+    return c.wechat ? { wechat: c.wechat } : null;
+  }
   const m = currentMatch();
   return m.stage === 'mutual' ? { wechat: partnerById(m.partnerId).wechat } : null;
 }
 
 /** The slots I can make from the proposed 2–3 (01 §5.3: availability, not a fixed time). */
 export async function confirmSlots(matchId: string, slotIds: string[]): Promise<void> {
-  // TODO(spring-boot, M2): POST /api/matches/{id}/slots/confirm  body: { slotIds }
-  void matchId;
+  if (!MOCK_API) return touch(`/api/matches/${matchId}/slots/confirm`, { slotIds });
   patchMatch({ stage: 'awaitingPartner', mySlotIds: slotIds });
 }
 
 export async function declineMatch(matchId: string, reasons: string[], note: string): Promise<void> {
-  // TODO(spring-boot, M2): POST /api/matches/{id}/decline  body: { reasons, note }  (not forwarded to them, PRD §4.4)
-  void matchId;
+  if (!MOCK_API) return touch(`/api/matches/${matchId}/decline`, { reasons, note });
   patchMatch({ stage: 'declined', declineReasons: reasons, declineNote: note });
 }
 
-/** "This reason is off" on a single AI reason (PRD §4.4). */
+/** "This reason is off" on a single reason (PRD §4.4). */
 export async function flagReason(matchId: string, index: number): Promise<void> {
-  // TODO(spring-boot, M2): POST /api/matches/{id}/reasons/{index}/flag  body: { flagged }
-  void matchId;
+  if (!MOCK_API) return touch(`/api/matches/${matchId}/reasons/${index}/flag`);
   const m = currentMatch();
   const cur = m.flaggedReasons ?? [];
   patchMatch({ flaggedReasons: cur.includes(index) ? cur.filter((i) => i !== index) : [...cur, index] });
 }
 
 export async function checkIn(matchId: string): Promise<void> {
-  // TODO(spring-boot, M2): POST /api/matches/{id}/checkin
-  void matchId;
+  if (!MOCK_API) return touch(`/api/matches/${matchId}/checkin`);
   patchMatch({ stage: 'checkedIn', checkedInAt: new Date().toISOString() });
 }
 
 export async function submitFeedback(matchId: string, feedback: Feedback): Promise<void> {
-  // TODO(spring-boot, M2): POST /api/matches/{id}/feedback
-  void matchId;
+  if (!MOCK_API) return touch(`/api/matches/${matchId}/feedback`, feedback);
   patchMatch({ stage: 'awaitingFeedback', feedback });
 }
 
 export async function reportMatch(matchId: string, category: string, note: string): Promise<void> {
-  // TODO(spring-boot, M2): POST /api/matches/{id}/report  body: { category, note }  (PRD §4.9)
-  void matchId;
-  void note;
+  if (!MOCK_API) return touch(`/api/matches/${matchId}/report`, { category, note });
   patchMatch({ stage: 'reported', reportCategory: category });
 }
 
@@ -476,32 +572,37 @@ function resetEverything() {
   db().reset();
 }
 
-const resetMatchLoop = () => db().set({ match: null, partnerId: null, partnerWantsAgain: true });
-
 export const demo = {
-  setStage(stage: MatchStage) {
+  async setStage(stage: MatchStage) {
+    if (!MOCK_API) return touch('/api/demo/match/stage', { stage });
     db().set({ match: buildMatch(stage) });
   },
-  setPartner(id: string) {
+  async setPartner(id: string) {
+    if (!MOCK_API) return touch('/api/demo/match/partner', { partnerId: id });
     db().set({ partnerId: id });
     const m = db().match;
     if (m) db().set({ match: { ...buildMatch(m.stage), mySlotIds: m.mySlotIds } });
   },
-  setPartnerWantsAgain(v: boolean) {
+  async setPartnerWantsAgain(v: boolean) {
+    if (!MOCK_API) await touch('/api/demo/match/partner-feedback-intent', { wantsAgain: v });
     db().set({ partnerWantsAgain: v });
   },
   /** Partner picks one of my slots → both confirmed. */
-  partnerConfirms() {
+  async partnerConfirms() {
+    if (!MOCK_API) return touch('/api/demo/match/partner-action', { action: 'confirm' });
     const m = currentMatch();
     patchMatch({ stage: 'confirmed', confirmedSlotId: m.mySlotIds[0] ?? 'slot_0' });
   },
-  openDateDay() {
+  async openDateDay() {
+    if (!MOCK_API) return touch('/api/demo/match/time', { to: 'dateDay' });
     patchMatch({ stage: 'dateDay' });
   },
-  endDate() {
+  async endDate() {
+    if (!MOCK_API) return touch('/api/demo/match/time', { to: 'ended' });
     patchMatch({ stage: 'feedback' });
   },
-  partnerSubmitsFeedback() {
+  async partnerSubmitsFeedback() {
+    if (!MOCK_API) return touch('/api/demo/match/partner-action', { action: 'feedback' });
     resolveFeedback();
   },
   /** Mock only: complete onboarding with sample answers + generated photos. The real API needs a real walk-through. */
@@ -512,9 +613,13 @@ export const demo = {
     ob.complete();
     if (db().photos.length < 2) db().set({ photos: samplePhotoUris() });
   },
-  resetMatch() {
+  async resetMatch() {
+    if (!MOCK_API) return touch('/api/demo/reset-me');
     db().set({ match: null });
   },
-  /** Real API: only the local match loop resets; the account lives on the server. */
-  resetAll: () => (MOCK_API ? resetEverything() : resetMatchLoop()),
+  /** Real API resets this demo account's match on the server and leaves every real user alone. */
+  resetAll() {
+    if (!MOCK_API) return touch('/api/demo/reset-me');
+    resetEverything();
+  },
 };

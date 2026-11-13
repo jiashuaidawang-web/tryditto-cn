@@ -79,7 +79,11 @@ public class AccountService {
         u.status = User.ONBOARDING;
         u.lang = "zh";
         u.isSynthetic = false;
+        u.cohort = "real";
         u.noShowCount = 0;
+        u.lateCancelCount = 0;
+        u.noResponseStreak = 0;
+        u.disputeCount = 0;
         u.emptyWeekStreak = 0;
         u.createdAt = now;
         u.updatedAt = now;
