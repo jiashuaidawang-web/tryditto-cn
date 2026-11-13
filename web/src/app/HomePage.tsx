@@ -307,7 +307,7 @@ function StageView({ view, lang }: { view: MatchView; lang: Lang }) {
   const title = (copy: ReturnType<typeof t>, cls = 'mt-5', size = lang === 'en' ? 'text-[44px] leading-[50px]' : 'text-[36px] leading-[46px]') => (
     <DisplayTitle key={`${match.stage}-${lang}`} text={fill(pick(copy, lang), v)} className={`${cls} ${size} text-center text-white`} />
   );
-  const wrap = (children: ReactNode, justify = 'justify-center') => <div className={`flex h-full flex-col ${justify} pb-2`}>{children}</div>;
+  const wrap = (children: ReactNode, justify = 'justify-center') => <div className={`flex h-full flex-col ${justify} pb-2 *:shrink-0`}>{children}</div>;
 
   switch (match.stage) {
     case 'waiting':

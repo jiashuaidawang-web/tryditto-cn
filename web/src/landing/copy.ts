@@ -198,7 +198,7 @@ export const FAQ: { q: T; a: T }[] = [
     q: t('What will I know about my match before the date?', '约会前我能知道对方哪些信息？'),
     a: t(
       "You'll get a date card with your match's name, photos, the basics, and why we think you two will click. Contact info is only shared after you both confirm your availability.",
-      '你会收到一张专属介绍卡：对方的名字、照片、基本信息，以及我们觉得你们合拍的理由。双方都确认有空之后，才会交换联系方式。',
+      '你会收到一张专属介绍卡：对方的名字、照片、基本信息，以及我们觉得你们合拍的理由。约会前不交换联系方式；见面后双方都想再见，才会互相显示微信。',
     ),
   },
   {
