@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { motion } from 'motion/react';
+import { useA11y } from '../i18n/a11y';
 import { pick, type Lang, type T } from '../i18n/lang';
 import { pill } from '../motion/tokens';
 import type { Option } from '../onboarding/types';
@@ -90,6 +91,7 @@ export function OptionList({ lang, options, multi, value, onChange, exclusive = 
 }
 
 function CustomChip({ placeholder, disabled, onSubmit }: { placeholder: string; disabled: boolean; onSubmit: (v: string) => void }) {
+  const a11y = useA11y();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const input = useRef<HTMLInputElement>(null);
@@ -130,7 +132,7 @@ function CustomChip({ placeholder, disabled, onSubmit }: { placeholder: string; 
           />
           <button
             type="button"
-            aria-label="Add"
+            aria-label={a11y.add}
             onMouseDown={(e) => e.preventDefault()}
             onClick={commit}
             className="grid h-7 w-9 shrink-0 place-items-center rounded-full bg-white/15 text-white/80"

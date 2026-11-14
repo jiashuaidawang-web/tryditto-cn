@@ -229,7 +229,7 @@ function Bubble({ item, lang }: { item: Item; lang: Lang }) {
       );
     case 'typing':
       return (
-        <div className="lp-msg is-in has-tail lp-typing lp-enter-in" aria-label="typing">
+        <div className="lp-msg is-in has-tail lp-typing lp-enter-in" aria-label={lang === 'zh' ? '正在输入' : 'typing'}>
           <i />
           <i />
           <i />
@@ -348,7 +348,7 @@ export function Hero() {
       </div>
       <div className="lp-strip is-campus" aria-hidden>
         {[0, 1, 2, 3].map((n) => (
-          <img key={n} src="/landing/hero-campus-front.png" alt="" draggable={false} />
+          <img key={n} src="/landing/hero-campus-front.webp" alt="" draggable={false} />
         ))}
       </div>
       <Dove t0={t0} reduced={reduced} />

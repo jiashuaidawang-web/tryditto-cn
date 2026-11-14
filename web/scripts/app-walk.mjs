@@ -153,14 +153,14 @@ for (let guard = 0; guard < 40; guard++) {
   }
   if (step === 'emailVerify' && order.includes('personalEmail')) {
     await sleep(500);
-    await page.locator('[aria-label="Send"][aria-disabled="false"]').last().click();
+    await page.locator('[data-action="send"][aria-disabled="false"]').last().click();
     await shot('onb-zz-final-done', 700);
     await shot('onb-zz-heart', 1600);
     await page.waitForURL(/\/home/, { timeout: 20000 });
     break;
   }
   await sleep(500);
-  const next = page.locator('[aria-label="Next"][aria-disabled="false"], [aria-label="Send"][aria-disabled="false"]').last();
+  const next = page.locator('[data-action="next"][aria-disabled="false"], [data-action="send"][aria-disabled="false"]').last();
   if (!(await next.count())) {
     const radio = page.getByRole('radio');
     const box = page.getByRole('checkbox');
@@ -191,9 +191,9 @@ const visit = async (path, name, wait = 1600) => {
   await shot(name, wait);
 };
 await visit('/home', '01-home', 2500);
-await page.getByRole('button', { name: 'Menu' }).click();
+await page.locator('[data-action="menu"]').click();
 await shot('12-menu');
-await page.getByRole('button', { name: 'Close menu' }).click();
+await page.locator('[data-action="menu"]').click();
 await btn(L('Invite', '邀请')).click();
 await shot('11-invite');
 await closeSheet();

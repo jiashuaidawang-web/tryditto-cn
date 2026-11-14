@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useA11y } from '../i18n/a11y';
 import { Close, Plus } from './icons';
 
 export const PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp,image/bmp,image/heic,image/heif,.heic,.heif';
@@ -22,6 +23,7 @@ export function PhotoGrid({
   variant?: 'dock' | 'plain';
   max?: number;
 }) {
+  const a11y = useA11y();
   const file = useRef<HTMLInputElement>(null);
   const slots = Array.from({ length: max }, (_, i) => urls[i]);
 
@@ -32,7 +34,7 @@ export function PhotoGrid({
         type="file"
         multiple
         hidden
-        aria-label="Add photos"
+        aria-label={a11y.addPhotos}
         accept={PHOTO_ACCEPT}
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
@@ -47,7 +49,7 @@ export function PhotoGrid({
             <div key={i} className="relative aspect-square rounded-[16px] bg-cover bg-center" style={{ backgroundImage: `url("${url}")` }}>
               <button
                 type="button"
-                aria-label="Remove photo"
+                aria-label={a11y.removePhoto}
                 onClick={() => onChange(urls.filter((_, j) => j !== i))}
                 className="absolute -right-[6px] -top-[6px] grid size-6 place-items-center rounded-full bg-[#8e9aa6] text-[#1d2833]"
               >
@@ -58,7 +60,7 @@ export function PhotoGrid({
             <button
               key={i}
               type="button"
-              aria-label="Add photo"
+              aria-label={a11y.addPhoto}
               onClick={() => file.current?.click()}
               className="grid aspect-square place-items-center rounded-[16px] bg-[#c6d2e0]/90 text-ink"
             >

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { animate, motion, useMotionValue, useMotionValueEvent, useTransform } from 'motion/react';
+import { useA11y } from '../i18n/a11y';
 import type { HeightValue } from '../onboarding/types';
 
 const PX_PER_STEP = 12;
@@ -28,6 +29,7 @@ export function HeightRuler({
   allowFt: boolean;
   onChange: (v: HeightValue) => void;
 }) {
+  const a11y = useA11y();
   const [unit, setUnit] = useState<'cm' | 'ft'>(value?.unit ?? defaultUnit);
   const range = unit === 'cm' ? CM : IN;
   const startCm = value?.cm ?? defaultCm;
@@ -71,7 +73,7 @@ export function HeightRuler({
         className="ob-dock relative h-[139px] w-full touch-none overflow-hidden rounded-[24px]"
         role="slider"
         tabIndex={0}
-        aria-label="Height"
+        aria-label={a11y.height}
         aria-valuemin={range.min}
         aria-valuemax={range.max}
         aria-valuenow={shown}

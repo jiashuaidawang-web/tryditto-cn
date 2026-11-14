@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import type { Lang } from '../i18n/lang';
+import { pick, t, type Lang } from '../i18n/lang';
 import { parseIsoDate } from '../onboarding/validate';
-import { TextBar } from './Inputs';
+import { Helper, TextBar } from './Inputs';
+
+const INVALID = t("That date doesn't look right. Use MM / DD / YYYY.", '这个日期好像不对，请按 年 / 月 / 日 填写，例如 2003 / 06 / 15');
 
 /** en: MM / DD / YYYY (Ditto). zh: YYYY / MM / DD. Digits only; emits ISO 'YYYY-MM-DD' when complete and real. */
 export function BirthdayInput({
@@ -34,19 +36,24 @@ export function BirthdayInput({
     return parseIsoDate(iso) ? iso : undefined;
   };
 
+  const valid = toIso(digits) !== undefined;
+
   return (
-    <TextBar
-      value={shown}
-      placeholder={placeholder}
-      inputMode="numeric"
-      autoComplete="bday"
-      onChange={(raw) => {
-        const d = raw.replace(/\D/g, '').slice(0, 8);
-        setDigits(d);
-        onChange(toIso(d));
-      }}
-      onSubmit={onSubmit}
-      canSubmit={toIso(digits) !== undefined}
-    />
+    <>
+      {digits.length === 8 && !valid && <Helper className="mb-[14px]">{pick(INVALID, lang)}</Helper>}
+      <TextBar
+        value={shown}
+        placeholder={placeholder}
+        inputMode="numeric"
+        autoComplete="bday"
+        onChange={(raw) => {
+          const d = raw.replace(/\D/g, '').slice(0, 8);
+          setDigits(d);
+          onChange(toIso(d));
+        }}
+        onSubmit={onSubmit}
+        canSubmit={valid}
+      />
+    </>
   );
 }

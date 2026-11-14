@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useA11y } from '../i18n/a11y';
 import { pick, t, type Lang } from '../i18n/lang';
 import { CURRENT_PLACE_ID, nearbyCount, placeById, searchPlaces, type Place } from '../api';
 import type { LocationValue, TravelMode } from '../onboarding/types';
@@ -183,6 +184,7 @@ export function SearchRow({
   onLocate: () => void;
   className?: string;
 }) {
+  const a11y = useA11y();
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <button
@@ -198,7 +200,7 @@ export function SearchRow({
         {place && (
           <span
             role="button"
-            aria-label="Clear"
+            aria-label={a11y.clear}
             onClick={(e) => {
               e.stopPropagation();
               onClear();
@@ -211,7 +213,7 @@ export function SearchRow({
       </button>
       <button
         type="button"
-        aria-label="Use my current location"
+        aria-label={a11y.useLocation}
         onClick={onLocate}
         className="grid size-[40px] shrink-0 place-items-center rounded-full border border-white/20 text-white"
         style={{ background: 'rgba(8,23,33,0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
@@ -222,10 +224,10 @@ export function SearchRow({
   );
 }
 
-const MODES: { id: TravelMode; Icon: typeof Car; label: string }[] = [
-  { id: 'walk', Icon: Footprints, label: 'Walk' },
-  { id: 'transit', Icon: Train, label: 'Transit' },
-  { id: 'drive', Icon: Car, label: 'Drive' },
+const MODES: { id: TravelMode; Icon: typeof Car }[] = [
+  { id: 'walk', Icon: Footprints },
+  { id: 'transit', Icon: Train },
+  { id: 'drive', Icon: Car },
 ];
 
 /** "1h max driving" + walk/transit/drive segmented + tick slider (pink ticks up to the thumb). */
@@ -240,6 +242,7 @@ export function TravelControls({
   lang: Lang;
   onChange: (v: { mode: TravelMode; minutes: number }) => void;
 }) {
+  const a11y = useA11y();
   const TICKS = 44;
   const frac = (minutes - MIN_MINUTES) / (MAX_MINUTES - MIN_MINUTES);
   return (
@@ -250,11 +253,11 @@ export function TravelControls({
           <span className="text-[14px] text-white/85">{lang === 'zh' ? `以内 · ${MODE_COPY[mode].zh}` : `max ${MODE_COPY[mode].en}`}</span>
         </div>
         <div className="flex h-[42px] items-center gap-[2px] rounded-full border border-white/25 p-[3px]" style={{ background: 'rgba(8,23,33,0.25)' }}>
-          {MODES.map(({ id, Icon, label }) => (
+          {MODES.map(({ id, Icon }) => (
             <button
               key={id}
               type="button"
-              aria-label={label}
+              aria-label={pick(MODE_COPY[id], lang)}
               aria-pressed={mode === id}
               onClick={() => onChange({ mode: id, minutes })}
               className={`grid size-[34px] place-items-center rounded-full transition-colors ${mode === id ? 'bg-white text-[#ff2cab]' : 'text-white/85'}`}
@@ -276,7 +279,7 @@ export function TravelControls({
         />
         <input
           type="range"
-          aria-label="Max travel time"
+          aria-label={a11y.maxTravel}
           min={MIN_MINUTES}
           max={MAX_MINUTES}
           step={5}
@@ -290,6 +293,7 @@ export function TravelControls({
 }
 
 export function SearchSheet({ open, lang, onClose, onPick }: { open: boolean; lang: Lang; onClose: () => void; onPick: (id: string) => void }) {
+  const a11y = useA11y();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<Place[]>([]);
   const input = useRef<HTMLInputElement>(null);
@@ -317,7 +321,7 @@ export function SearchSheet({ open, lang, onClose, onPick }: { open: boolean; la
           transition={{ type: 'spring', damping: 32, stiffness: 320 }}
         >
           <div className="flex items-center gap-3 px-4 pb-3 pt-3">
-            <button type="button" aria-label="Close" onClick={onClose} className="grid size-9 place-items-center text-white">
+            <button type="button" aria-label={a11y.close} onClick={onClose} className="grid size-9 place-items-center text-white">
               <ChevronDown size={22} />
             </button>
             <div className="flex h-[44px] flex-1 items-center gap-2 rounded-full bg-white/12 px-4">
@@ -330,7 +334,7 @@ export function SearchSheet({ open, lang, onClose, onPick }: { open: boolean; la
                 className="ob-input min-w-0 flex-1 bg-transparent text-[16px] text-white outline-none"
               />
               {q && (
-                <button type="button" aria-label="Clear" onClick={() => setQ('')} className="text-white/80">
+                <button type="button" aria-label={a11y.clear} onClick={() => setQ('')} className="text-white/80">
                   <Close size={15} />
                 </button>
               )}

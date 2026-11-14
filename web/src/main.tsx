@@ -4,7 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import { MotionConfig } from 'motion/react';
 import './index.css';
 import { OnboardingPage } from './onboarding/OnboardingPage';
-import { landingRoutes } from './landing/routes';
+import { landingRoutes, notFoundRoute } from './landing/routes';
 import { RequireLogin, appRoutes } from './app/routes';
 
 createRoot(document.getElementById('root')!).render(
@@ -22,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
             }
           />
           {appRoutes()}
+          {notFoundRoute()}
         </Routes>
       </BrowserRouter>
     </MotionConfig>

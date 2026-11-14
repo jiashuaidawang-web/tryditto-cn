@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useDb } from '../api';
 import { AppShell } from '../components/AppShell';
 import { ChevronLeft, ChevronRight, Close, MapPin, Pencil, Sparkles, UserIcon } from '../components/icons';
+import { useA11y } from '../i18n/a11y';
 import { pick, t, useLang, useQuerySuffix } from '../i18n/lang';
 import { useOnboarding } from '../onboarding/store';
 import { DemoFab } from './DemoPanel';
@@ -53,9 +54,10 @@ const TABS: { id: Tab; to: string; label: ReturnType<typeof t>; Icon: typeof Spa
 /** Bottom 3 tabs (08: Ditto / Where / You). Active white, inactive white 45%. */
 export function TabBar({ active }: { active: Tab }) {
   const lang = useLang();
+  const a11y = useA11y();
   const suffix = useQuerySuffix();
   return (
-    <nav className="absolute inset-x-0 bottom-0 z-20 grid h-[72px] grid-cols-3 px-[15px] pb-[12px]" aria-label="Tabs">
+    <nav className="absolute inset-x-0 bottom-0 z-20 grid h-[72px] grid-cols-3 px-[15px] pb-[12px]" aria-label={a11y.tabs}>
       {TABS.map(({ id, to, label, Icon }) => (
         <Link
           key={id}
@@ -87,11 +89,12 @@ export function AppScreen({ tab, children }: { tab?: Tab; children: ReactNode })
  * Back + centred title. `page` (/edit-profile, /deep-info, /blocklist, /account): row centred at y=40.
  * `edit` (/onboarding/edit/*, 13 §3): row centred at y=20, title 16/500.
  */
-export function TopBar({ title, onBack, variant = 'page', backLabel = 'Back' }: { title: string; onBack: () => void; variant?: 'page' | 'edit'; backLabel?: string }) {
+export function TopBar({ title, onBack, variant = 'page', backLabel }: { title: string; onBack: () => void; variant?: 'page' | 'edit'; backLabel?: string }) {
+  const a11y = useA11y();
   const top = variant === 'edit' ? 0 : 20;
   return (
     <div className="absolute inset-x-0 z-20 h-10" style={{ top }}>
-      <button type="button" aria-label={backLabel} onClick={onBack} className="absolute left-[8px] top-0 grid size-10 place-items-center text-white">
+      <button type="button" aria-label={backLabel ?? a11y.back} onClick={onBack} className="absolute left-[8px] top-0 grid size-10 place-items-center text-white">
         <ChevronLeft size={22} strokeWidth={2.4} />
       </button>
       <h1 className={`absolute inset-x-14 top-0 truncate text-center leading-10 text-white ${variant === 'edit' ? 'text-[16px] font-medium' : 'text-[17px] font-normal'}`}>
@@ -187,8 +190,9 @@ export function Sheet({
 }
 
 export function SheetClose({ onClick, className = '' }: { onClick: () => void; className?: string }) {
+  const a11y = useA11y();
   return (
-    <button type="button" aria-label="Close" onClick={onClick} className={`grid size-8 place-items-center text-ink ${className}`}>
+    <button type="button" aria-label={a11y.close} onClick={onClick} className={`grid size-8 place-items-center text-ink ${className}`}>
       <Close size={18} strokeWidth={2.2} />
     </button>
   );

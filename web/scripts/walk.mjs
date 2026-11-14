@@ -106,7 +106,7 @@ async function walk(id) {
       await sc.actions[step](page);
       await sleep(900);
     }
-    const btn = page.locator('[aria-label="Next"][aria-disabled="false"], [aria-label="Send"][aria-disabled="false"]').last();
+    const btn = page.locator('[data-action="next"][aria-disabled="false"], [data-action="send"][aria-disabled="false"]').last();
     await btn.click({ timeout: 3000 });
   }
   console.log(`${id}:\n  ${log.join('\n  ')}`);

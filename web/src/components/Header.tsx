@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useA11y } from '../i18n/a11y';
 import { useLang, t, pick } from '../i18n/lang';
 import { progress as progressTokens } from '../motion/tokens';
 import { ChevronLeft, Lock } from './icons';
@@ -27,6 +28,7 @@ function Avatar() {
 
 export function Header({ onBack, fills }: { onBack?: () => void; fills: [number, number, number] }) {
   const lang = useLang();
+  const a11y = useA11y();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -34,7 +36,7 @@ export function Header({ onBack, fills }: { onBack?: () => void; fills: [number,
         {onBack && (
           <button
             type="button"
-            aria-label="Back"
+            aria-label={a11y.back}
             onClick={onBack}
             className="absolute left-[8px] top-[12px] grid size-10 place-items-center text-white"
           >
@@ -63,7 +65,7 @@ export function Header({ onBack, fills }: { onBack?: () => void; fills: [number,
         </div>
         <button
           type="button"
-          aria-label="What the lock means"
+          aria-label={a11y.lockInfo}
           onClick={() => setOpen(true)}
           className="absolute right-[6px] top-[12px] grid size-10 place-items-center text-white"
         >

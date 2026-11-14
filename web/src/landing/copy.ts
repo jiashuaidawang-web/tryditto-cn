@@ -4,10 +4,10 @@ import { t, type T } from '../i18n/lang';
 export const BRAND = t('Ditto', '见一面');
 
 export const HEADER = {
-  ghostingMobile: t('Ditto ghosting?', '见一面没回你？'),
-  fixIt: t('Fix it', '点这里'),
-  ghostingDesktop: t('Ditto not replying?', '见一面不回消息？'),
-  newNumber: t('Get a new number', '换个新号码'),
+  ghostingMobile: t('Ditto ghosting?', '有疑问？'),
+  fixIt: t('Fix it', '看常见问题'),
+  ghostingDesktop: t('Ditto not replying?', '有疑问？'),
+  newNumber: t('Get a new number', '看看常见问题'),
   logIn: t('Log In', '登录'),
   joinNow: t('Join Now', '立即加入'),
   continue: t('Continue', '继续'),
@@ -84,7 +84,7 @@ export const STEPS: { title: T; desc: T; img: string; w: number; color: string }
   {
     title: t('Tell Ditto Your Type', '告诉见一面你的理想型'),
     desc: t('Submit your preferences by Tuesday 11:59 PM.', '每周二 23:59 前提交你的偏好。'),
-    img: '/landing/how-1.png',
+    img: '/landing/how-1.webp',
     w: 163,
     color: '#f5b400',
   },
@@ -94,21 +94,21 @@ export const STEPS: { title: T; desc: T; img: string; w: number; color: string }
       'Check your iMessage at 7pm. We will send you one personalized match and curate your date for you!',
       '周三晚 7 点查收短信。我们只为你推荐一位专属匹配，并帮你安排好这次约会！',
     ),
-    img: '/landing/how-2.png',
+    img: '/landing/how-2.webp',
     w: 212,
     color: '#ff2cab',
   },
   {
     title: t('Schedule the Date', '约个时间'),
     desc: t('Find a time that works for both of you to meet up.', '找一个你们俩都方便的时间见面。'),
-    img: '/landing/how-3.png',
+    img: '/landing/how-3.webp',
     w: 105,
     color: '#f5d000',
   },
   {
     title: t('Have fun!', '好好享受吧！'),
     desc: t('Enjoy a good time with your personalized date!', '和为你挑选的 TA 度过一段美好时光！'),
-    img: '/landing/how-4.png',
+    img: '/landing/how-4.webp',
     w: 119,
     color: '#2fb8ff',
   },
@@ -120,10 +120,12 @@ export const STATS = [
   { big: t('92%', '92%'), small: t('Want a 2nd Date', '想再约一次'), tone: 'blue' },
 ] as const;
 
+export const STATS_NOTE = t('Sample data', '示例数据');
+
 export const MATCHMAKER = [
-  { title: t('Backed by best research', '有扎实的研究撑腰'), img: '/landing/match-1.png', w: 258, mw: 180 },
-  { title: t('Ditto learns your preferences', '见一面会学习你的偏好'), img: '/landing/match-2.png', w: 262, mw: 200 },
-  { title: t('Scans the entire pool to find the one', '翻遍整个池子，只为找到那个人'), img: '/landing/match-3.png', w: 222, mw: 190 },
+  { title: t('Backed by best research', '有扎实的研究撑腰'), img: '/landing/match-1.webp', w: 258, mw: 180 },
+  { title: t('Ditto learns your preferences', '见一面会学习你的偏好'), img: '/landing/match-2.webp', w: 262, mw: 200 },
+  { title: t('Scans the entire pool to find the one', '翻遍整个池子，只为找到那个人'), img: '/landing/match-3.webp', w: 222, mw: 190 },
 ];
 
 export const TESTIMONIALS: { who: T; text: T; img: string; icon: string }[] = [
@@ -213,6 +215,10 @@ export const FAQ: { q: T; a: T }[] = [
     a: t('Verified college students, 18 and older.', '年满 18 岁、通过学校认证的在校大学生。'),
   },
   {
+    q: t('Does it cost anything?', '收费吗？'),
+    a: t('No. Ditto is completely free right now.', '目前完全免费。'),
+  },
+  {
     q: t("What if I can't make it last minute?", '临时去不了怎么办？'),
     a: t(
       'Text your date as soon as possible. Otherwise, you may be banned from future dates.',
@@ -227,10 +233,10 @@ export const FAQ: { q: T; a: T }[] = [
     ),
   },
   {
-    q: t("What if I'm not getting Ditto's replies?", '收不到见一面的回复怎么办？'),
+    q: t("What if I'm not getting Ditto's replies?", '没看到本周的匹配怎么办？'),
     a: t(
       'Our line can get busy. Get a new Ditto number to restart the conversation — your profile, preferences and matches stay the same.',
-      '消息通道偶尔会拥堵。换一个新的见一面号码重新开始对话即可，你的资料、偏好和匹配都不会丢。',
+      '见一面目前不发短信，匹配结果只在网站上显示：每周三 19:00 以后登录打开首页就能看到。如果没看到，先确认问卷已经填完；也可能这周暂时没有合适的人，下周三会再为你匹配。',
     ),
   },
   {
@@ -250,7 +256,6 @@ export const MANIFESTO = {
 
 export const FOOTER = {
   resources: t('Resources', '更多'),
-  careers: t('Careers', '加入我们'),
   manifesto: t('Manifesto', '宣言'),
   byCity: t('Dating by City', '按城市约会'),
   byCollege: t('Dating by College', '按高校约会'),

@@ -4,7 +4,7 @@ import { pick, useLang, useQuerySuffix } from '../i18n/lang';
 import { BRAND, HEADER } from './copy';
 import { useContinuePath } from './auth';
 
-export function LandingHeader() {
+export function LandingHeader({ ghost = true }: { ghost?: boolean }) {
   const lang = useLang();
   const q = useQuerySuffix();
   const continuePath = useContinuePath();
@@ -18,18 +18,20 @@ export function LandingHeader() {
   }, []);
 
   return (
-    <header className={`lp-header${scrolled ? ' is-scrolled' : ''}`}>
+    <header className={`lp-header${scrolled ? ' is-scrolled' : ''}${ghost ? '' : ' is-plain'}`}>
       <Link to={`/${q}`} className="lp-logo" lang={lang === 'zh' ? 'zh-CN' : 'en'}>
         {pick(BRAND, lang)}
       </Link>
-      <p className="lp-ghost">
-        <span className="lp-ghost-m">{pick(HEADER.ghostingMobile, lang)} </span>
-        <span className="lp-ghost-d">{pick(HEADER.ghostingDesktop, lang)} </span>
-        <a href="#faq">
-          <span className="lp-ghost-m">{pick(HEADER.fixIt, lang)}</span>
-          <span className="lp-ghost-d">{pick(HEADER.newNumber, lang)}</span>
-        </a>
-      </p>
+      {ghost && (
+        <p className="lp-ghost">
+          <span className="lp-ghost-m">{pick(HEADER.ghostingMobile, lang)} </span>
+          <span className="lp-ghost-d">{pick(HEADER.ghostingDesktop, lang)} </span>
+          <a href="#faq">
+            <span className="lp-ghost-m">{pick(HEADER.fixIt, lang)}</span>
+            <span className="lp-ghost-d">{pick(HEADER.newNumber, lang)}</span>
+          </a>
+        </p>
+      )}
       <nav className="lp-nav">
         {continuePath ? (
           <Link to={continuePath + q} className="lp-pill is-join is-continue">

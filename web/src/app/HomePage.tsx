@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { avatarUri, enableMatchAlerts, formatSlot, getContact, getCurrentMatch, getInvite, sceneUri, type MatchView } from '../api';
 import { Confetti } from '../components/Confetti';
 import { BookOpen, Close, ContactCard, Copy, Gear, HeartArrow, ImageIcon, LinkIcon, Mail, MenuIcon, MessageCircle, Share } from '../components/icons';
+import { useA11y } from '../i18n/a11y';
 import { pick, t, useLang, type Lang } from '../i18n/lang';
 import { NextDrop } from './Countdown';
 import { AppScreen, DisplayTitle, PrimaryButton, Sheet, SheetClose, useGo, useLive, useToast } from './ui';
@@ -88,6 +89,7 @@ export function HomePage() {
 }
 
 function HomeHeader({ lang, menuOpen, onMenu, onInvite }: { lang: Lang; menuOpen: boolean; onMenu: () => void; onInvite: () => void }) {
+  const a11y = useA11y();
   return (
     <div className="absolute inset-x-0 top-0 z-40 h-[80px]">
       <div
@@ -106,7 +108,8 @@ function HomeHeader({ lang, menuOpen, onMenu, onInvite }: { lang: Lang; menuOpen
       </button>
       <button
         type="button"
-        aria-label={menuOpen ? 'Close menu' : 'Menu'}
+        aria-label={menuOpen ? a11y.closeMenu : a11y.menu}
+        data-action="menu"
         aria-expanded={menuOpen}
         onClick={onMenu}
         className="app-glass absolute right-[16px] top-[25px] grid size-[38px] place-items-center rounded-full text-white"

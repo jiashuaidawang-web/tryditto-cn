@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { getProfile, setPhotos, uploadPhotos } from '../api';
 import { PHOTO_ACCEPT } from '../components/PhotoGrid';
 import { Close, Plus } from '../components/icons';
+import { useA11y } from '../i18n/a11y';
 import { pick, t, useLang } from '../i18n/lang';
 import { RowsCard } from './EditProfilePage';
 import { DEEP_ROWS, rowsFor } from './profileFields';
@@ -21,6 +22,7 @@ const C = {
  */
 export function DeepInfoPage() {
   const lang = useLang();
+  const a11y = useA11y();
   const go = useGo();
   const profile = useLive(getProfile);
   const file = useRef<HTMLInputElement>(null);
@@ -46,7 +48,7 @@ export function DeepInfoPage() {
             type="file"
             multiple
             hidden
-            aria-label="Add photos"
+            aria-label={a11y.addPhotos}
             accept={PHOTO_ACCEPT}
             onChange={(e) => {
               void uploadPhotos(Array.from(e.target.files ?? []), 'idealPhotos');
@@ -58,7 +60,7 @@ export function DeepInfoPage() {
               <div key={i} className="relative size-[98px] rounded-[16px] bg-cover bg-center" style={{ backgroundImage: `url("${url}")` }}>
                 <button
                   type="button"
-                  aria-label="Remove photo"
+                  aria-label={a11y.removePhoto}
                   onClick={() => void setPhotos(ideal.filter((_, j) => j !== i), 'idealPhotos')}
                   className="absolute -right-[6px] -top-[6px] grid size-6 place-items-center rounded-full bg-[#8e9aa6] text-[#1d2833]"
                 >
@@ -67,7 +69,7 @@ export function DeepInfoPage() {
               </div>
             ))}
             {ideal.length < 6 && (
-              <button type="button" aria-label="Add photos" onClick={() => file.current?.click()} className="grid size-[98px] place-items-center rounded-[16px] bg-white/70 text-ink">
+              <button type="button" aria-label={a11y.addPhotos} onClick={() => file.current?.click()} className="grid size-[98px] place-items-center rounded-[16px] bg-white/70 text-ink">
                 <Plus size={40} strokeWidth={1.6} />
               </button>
             )}

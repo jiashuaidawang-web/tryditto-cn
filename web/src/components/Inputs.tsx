@@ -1,5 +1,6 @@
 import { forwardRef, type ReactNode } from 'react';
 import { motion } from 'motion/react';
+import { useA11y } from '../i18n/a11y';
 import { nextButton } from '../motion/tokens';
 import { ArrowRight, Lock, PaperPlane } from './icons';
 
@@ -15,10 +16,12 @@ export function RoundButton({
   label?: 'Next' | 'Send';
   className?: string;
 }) {
+  const a11y = useA11y();
   return (
     <button
       type="button"
-      aria-label={label}
+      aria-label={label === 'Send' ? a11y.send : a11y.next}
+      data-action={label.toLowerCase()}
       aria-disabled={!enabled}
       onClick={() => enabled && onClick()}
       className={`grid h-12 w-[72px] place-items-center rounded-full ${className}`}

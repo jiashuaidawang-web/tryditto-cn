@@ -14,6 +14,7 @@ import { IntroIllustration, Spinner } from '../components/Illustration';
 import { Confetti } from '../components/Confetti';
 import { HelpCircle } from '../components/icons';
 import { LocationInput, SearchSheet, WhySheet, DEFAULT_LOCATION } from '../components/LocationPicker';
+import { useA11y } from '../i18n/a11y';
 import { t } from '../i18n/lang';
 import { ApiError, MOCK_API, sendEmailCode, setPhotos, uploadPhotos, useDb } from '../api';
 import { DEMO_CODE } from '../landing/auth';
@@ -101,6 +102,7 @@ interface Props {
 }
 
 export function QuestionPage({ step, lang, answers, onNext, onEscape, mode = 'onboarding', editNext, finalTap, onSet, verifyEmail }: Props) {
+  const a11y = useA11y();
   const q = step.question;
   const value = answers[q.id];
   const setAnswer = useOnboarding((s) => s.setAnswer);
@@ -151,7 +153,7 @@ export function QuestionPage({ step, lang, answers, onNext, onEscape, mode = 'on
                 <ChatBubbles copies={(edit ? q.bubbles.slice(-1) : q.bubbles).map((b) => pick(b, lang))} lang={lang} startDelayMs={startDelayMs} />
               </div>
               {q.type === 'location' && (
-                <button type="button" aria-label="Why we ask where you'd date" onClick={() => setWhyOpen(true)} className="mr-[42px] mt-3 grid size-6 place-items-center text-white">
+                <button type="button" aria-label={a11y.whyWhere} onClick={() => setWhyOpen(true)} className="mr-[42px] mt-3 grid size-6 place-items-center text-white">
                   <HelpCircle size={22} />
                 </button>
               )}

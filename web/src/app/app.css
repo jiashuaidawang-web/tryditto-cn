@@ -82,7 +82,7 @@
 
 /* Flying dove: 17-frame sprite, 200×150 per frame. */
 .app-dove {
-  background-image: url('/app/dove-sheet.png');
+  background-image: url('/app/dove-sheet.webp');
   background-repeat: no-repeat;
   animation: app-dove-flap 1.15s steps(17) infinite;
 }

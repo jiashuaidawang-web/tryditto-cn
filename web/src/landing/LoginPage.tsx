@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { pick, t, useLang, useQuerySuffix } from '../i18n/lang';
 import { useOnboarding } from '../onboarding/store';
 import { BRAND, LOGIN } from './copy';
@@ -19,7 +19,11 @@ export function LoginPage() {
   const lang = useLang();
   const q = useQuerySuffix();
   const navigate = useNavigate();
-  const [phone, setPhone] = useState('');
+  const location = useLocation();
+  const [phone, setPhone] = useState(() => {
+    const p = (location.state as { phone?: unknown } | null)?.phone;
+    return typeof p === 'string' ? p : '';
+  });
   const [code, setCode] = useState('');
   const [agree, setAgree] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -141,13 +145,13 @@ export function LoginPage() {
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
               <span>
                 {pick(LOGIN.agreePrefix, lang)}
-                <a href="#" onClick={(e) => e.stopPropagation()}>
+                <Link to={`/terms${q}`} target="_blank" onClick={(e) => e.stopPropagation()}>
                   {pick(LOGIN.terms, lang)}
-                </a>
+                </Link>
                 {pick(LOGIN.and, lang)}
-                <a href="#" onClick={(e) => e.stopPropagation()}>
+                <Link to={`/privacy${q}`} target="_blank" onClick={(e) => e.stopPropagation()}>
                   {pick(LOGIN.privacy, lang)}
-                </a>
+                </Link>
               </span>
             </label>
             <button type="submit" className="lg-submit" disabled={submitting}>

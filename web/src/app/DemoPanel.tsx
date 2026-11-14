@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { MOCK_API, PARTNERS, avatarUri, demo, getCurrentMatch, useDb, type MatchStage } from '../api';
+import { useA11y } from '../i18n/a11y';
 import { pick, t, useLang, useQuerySuffix, type Lang, type T } from '../i18n/lang';
 import { AppShell } from '../components/AppShell';
 import { Sheet, TopBar, useGo, useLive } from './ui';
@@ -167,6 +168,7 @@ export function DemoPanelBody({ lang, onDone }: { lang: Lang; onDone?: () => voi
 /** Floating "Demo" pill shown on every logged-in page when `?demo=1`. */
 export function DemoFab() {
   const lang = useLang();
+  const a11y = useA11y();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -174,7 +176,7 @@ export function DemoFab() {
         type="button"
         onClick={() => setOpen(true)}
         className="absolute right-[12px] top-[86px] z-[45] flex h-8 items-center gap-[6px] rounded-full bg-black/45 px-3 text-[12px] font-bold text-white backdrop-blur"
-        aria-label="Open demo controls"
+        aria-label={a11y.openDemo}
       >
         <span className="size-2 rounded-full bg-[#ff2cab]" />
         Demo

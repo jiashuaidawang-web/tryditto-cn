@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { useA11y } from '../i18n/a11y';
 
 /**
  * Submit → home transition (09 §6, 21-flow-4.png): a heart of round dots on the bare sky, centre dots
@@ -22,8 +23,9 @@ const BLUSH = new Set(['0,2', '-1,5', '0,5', '1,5']);
 const DOTS = ROWS.flatMap((spans, row) => spans.flatMap(([a, b]) => Array.from({ length: b - a + 1 }, (_, i) => ({ col: a + i, row }))));
 
 export function HeartDots() {
+  const a11y = useA11y();
   return (
-    <div className="absolute inset-0 grid place-items-center" aria-label="Loading" role="status">
+    <div className="absolute inset-0 grid place-items-center" aria-label={a11y.loading} role="status">
       <div className="relative" style={{ width: 225, height: 225 }}>
         {DOTS.map(({ col, row }) => {
           const key = `${col},${row}`;

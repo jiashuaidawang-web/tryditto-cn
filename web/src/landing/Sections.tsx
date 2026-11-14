@@ -1,6 +1,7 @@
 import { Fragment, useState, type CSSProperties, type ReactNode } from 'react';
-import { pick, useLang, type Lang, type T } from '../i18n/lang';
-import { CHIPS, COMPARISON, FAQ, MANIFESTO, MATCHMAKER, SAFETY, STAMP, STATS, STEPS, TESTIMONIALS } from './copy';
+import { Link } from 'react-router';
+import { pick, useLang, useQuerySuffix, type Lang, type T } from '../i18n/lang';
+import { CHIPS, COMPARISON, FAQ, MANIFESTO, MATCHMAKER, SAFETY, STAMP, STATS, STATS_NOTE, STEPS, TESTIMONIALS } from './copy';
 import { useReveal } from './useReveal';
 
 function Reveal({ children, className = '', style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
@@ -75,6 +76,7 @@ export function RealDates() {
           </div>
         ))}
       </Reveal>
+      <span className="lp-collage-note">{pick(STATS_NOTE, lang)}</span>
     </section>
   );
 }
@@ -162,7 +164,7 @@ export function Comparison() {
             {pick(COMPARISON.otherTitle[2], lang)}
           </h3>
           <div className="lp-paper">
-            <img src="/landing/paper.png" alt="" loading="lazy" />
+            <img src="/landing/paper.webp" alt="" loading="lazy" />
             <span className="lp-app is-1">
               {pick(COMPARISON.app1, lang)}
               <b>3,321</b>
@@ -217,7 +219,7 @@ export function Safety() {
               {s.kind === 'stamp' ? (
                 <VerifiedStamp lang={lang} />
               ) : (
-                <img src={s.kind === 'photo' ? '/landing/safe-2.png' : '/landing/safe-3.png'} alt="" loading="lazy" />
+                <img src={s.kind === 'photo' ? '/landing/safe-2.webp' : '/landing/safe-3.webp'} alt="" loading="lazy" />
               )}
             </div>
             <div className="lp-safe-text">
@@ -266,15 +268,15 @@ export function Faq() {
 
 export function Manifesto() {
   const lang = useLang();
+  const q = useQuerySuffix();
   return (
     <section className="lp-section lp-manifesto">
       <span className="lp-mani-line">{pick(MANIFESTO.line, lang)}</span>
       <span className="lp-mani-script">{pick(MANIFESTO.script, lang)}</span>
       <span className="lp-mani-line">{pick(MANIFESTO.line, lang)}</span>
-      {/* TODO: /manifesto page */}
-      <a href="#" className="lp-pill lp-mani-btn">
+      <Link to={`/manifesto${q}`} className="lp-pill lp-mani-btn">
         {pick(MANIFESTO.cta, lang)}
-      </a>
+      </Link>
     </section>
   );
 }

@@ -166,7 +166,7 @@ for (let guard = 0; guard < 70; guard++) {
     break;
   }
   await sleep(400);
-  const next = A.page.locator('[aria-label="Next"][aria-disabled="false"], [aria-label="Send"][aria-disabled="false"]').last();
+  const next = A.page.locator('[data-action="next"][aria-disabled="false"], [data-action="send"][aria-disabled="false"]').last();
   for (let k = 0; k < 3 && !(await next.count()); k++) {
     const radio = A.page.getByRole('radio');
     const box = A.page.getByRole('checkbox');
@@ -232,7 +232,7 @@ await B.shot('blocklist', 300);
 await B.page.goto(`${BASE}/onboarding/edit/name?lang=zh`);
 await sleep(1500);
 await B.page.locator('input').last().fill('林晓晓');
-await B.page.locator('[aria-label="Next"][aria-disabled="false"], [aria-label="Send"][aria-disabled="false"], button:has-text("完成")').last().click();
+await B.page.locator('[data-action="next"][aria-disabled="false"], [data-action="send"][aria-disabled="false"], button:has-text("完成")').last().click();
 await sleep(1500);
 const me = await (await fetch(`${BASE}/api/profile`, { headers: { Authorization: `Bearer ${tokenA}` } })).json();
 check(me.answers?.name === '林晓晓', `profile edit in the second browser is visible to the first session (name=${me.answers?.name})`);
