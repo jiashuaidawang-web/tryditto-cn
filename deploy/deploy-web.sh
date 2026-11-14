@@ -9,6 +9,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 (cd "$ROOT/web" && npm run build)
 ssh "$HOST" 'mkdir -p /opt/aiditto/web /opt/aiditto/data/photos'
 rsync -az --delete "$ROOT/web/dist/" "$HOST:/opt/aiditto/web/"
-rsync -az "$ROOT/deploy/nginx.conf" "$ROOT/deploy/proxy_params.inc" "$ROOT/deploy/security_headers.inc" \
+# --inplace: the confs are single-file bind mounts, and a renamed-in copy would leave the container on the old inode.
+rsync -az --inplace "$ROOT/deploy/nginx.conf" "$ROOT/deploy/proxy_params.inc" "$ROOT/deploy/security_headers.inc" \
   "$ROOT/deploy/docker-compose.yml" "$HOST:/opt/aiditto/"
 ssh "$HOST" 'cd /opt/aiditto && docker compose up -d web && docker exec aiditto-web nginx -t && docker exec aiditto-web nginx -s reload'
