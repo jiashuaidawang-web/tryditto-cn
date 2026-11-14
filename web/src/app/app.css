@@ -80,9 +80,9 @@
   color: rgba(2, 43, 78, 0.38);
 }
 
-/* Flying dove: 17-frame sprite, 200×150 per frame. */
+/* Flying dove: tryditto.com dove-flap-2, 17 frames of 358×364. */
 .app-dove {
-  background-image: url('/app/dove-sheet.webp');
+  background-image: url('/app/dove.webp');
   background-repeat: no-repeat;
   animation: app-dove-flap 1.15s steps(17) infinite;
 }

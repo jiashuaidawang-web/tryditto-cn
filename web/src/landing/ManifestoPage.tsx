@@ -6,7 +6,7 @@ import { BRAND } from './copy';
 import { Footer } from './Footer';
 import { LandingHeader } from './LandingHeader';
 import { MANIFESTO_PAGE as M, type ManifestoLine } from './manifesto';
-import { Group } from './Sections';
+import { BG, Group } from './Sections';
 import './landing.css';
 
 function Line({ line, lang }: { line: ManifestoLine; lang: Lang }) {
@@ -77,7 +77,7 @@ export function ManifestoPage() {
     <div className="lp is-manifesto" lang={lang === 'zh' ? 'zh-CN' : 'en'}>
       <LandingHeader ghost={false} />
       <main>
-        <Group bg="mf-bg is-1">
+        <Group bg={BG.manifesto}>
           <article className="mf-page">
             <h1>
               {pick(M.title[0], lang)}
@@ -97,7 +97,7 @@ export function ManifestoPage() {
             )}
           </article>
         </Group>
-        <Group bg="mf-bg is-2" zig>
+        <Group bg={BG.manifestoCta} zig>
           <section className="mf-cta">
             {M.cta.map((c, i) => (
               <div key={i} className="mf-cta-title">
@@ -109,7 +109,6 @@ export function ManifestoPage() {
         </Group>
       </main>
       <Footer />
-      <div className="lp-dither" aria-hidden />
     </div>
   );
 }

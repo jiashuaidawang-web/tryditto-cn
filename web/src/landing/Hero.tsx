@@ -174,7 +174,7 @@ function Dove({ t0, reduced }: { t0: number | null; reduced: boolean }) {
     const now = performance.now();
     const d = doveAt(now - t0);
     const u = heroUnit();
-    const w = 379 * u;
+    const w = 358 * 0.82 * u;
     const x = d.k * d.side * (window.innerWidth / 2 + w) + (1 - d.k) * d.x * u;
     const st = orbit.current.style;
     st.setProperty('--x', `${x.toFixed(1)}px`);
@@ -301,7 +301,7 @@ export function Hero() {
       <div className="lp-rays" />
       <div className="lp-strip is-far" aria-hidden>
         {[0, 1, 2, 3].map((n) => (
-          <img key={n} src="/landing/hero-far.jpg" alt="" draggable={false} />
+          <img key={n} src="/landing/hero/sky.webp" alt="" draggable={false} />
         ))}
       </div>
       <h1 className="lp-title" lang={lang === 'zh' ? 'zh-CN' : 'en'} aria-label={lines.join(' ')}>
@@ -319,42 +319,39 @@ export function Hero() {
           </span>
         ))}
       </h1>
-      <div className="lp-strip is-campus is-back" aria-hidden>
-        {[0, 1, 2, 3].map((n) => (
-          <img key={n} src="/landing/hero-campus.jpg" alt="" draggable={false} />
-        ))}
-      </div>
-      <div className="lp-phone-slot" aria-hidden>
-        <div className={`lp-phone${clock.up ? ' is-up' : ''}`}>
-          <div className="lp-island" />
-          <div className="lp-phone-shade" />
-          <div className="lp-phone-head">
-            <img src="/brand/pigeon-avatar.jpg" alt="" />
-            <span>{pick(HERO.ditto, lang)}</span>
-          </div>
-          <div className={`lp-thread${clock.fading ? ' is-fading' : ''}`}>
-            {items.map((it) => (
-              <motion.div
-                key={it.key}
-                layout="position"
-                transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-                className={`lp-row ${ROW_CLASS[it.kind]}`}
-              >
-                <Bubble item={it} lang={lang} />
-              </motion.div>
-            ))}
+      <div className="lp-phone-clip" aria-hidden>
+        <div className="lp-phone-slot">
+          <div className={`lp-phone${clock.up ? ' is-up' : ''}`}>
+            <div className="lp-island" />
+            <div className="lp-phone-shade" />
+            <div className="lp-phone-head">
+              <img src="/brand/pigeon-avatar.webp" alt="" />
+              <span>{pick(HERO.ditto, lang)}</span>
+            </div>
+            <div className={`lp-thread${clock.fading ? ' is-fading' : ''}`}>
+              {items.map((it) => (
+                <motion.div
+                  key={it.key}
+                  layout="position"
+                  transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+                  className={`lp-row ${ROW_CLASS[it.kind]}`}
+                >
+                  <Bubble item={it} lang={lang} />
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
       <div className="lp-strip is-campus" aria-hidden>
         {[0, 1, 2, 3].map((n) => (
-          <img key={n} src="/landing/hero-campus-front.webp" alt="" draggable={false} />
+          <img key={n} src="/landing/hero/campus.webp" alt="" draggable={false} />
         ))}
       </div>
       <Dove t0={t0} reduced={reduced} />
       <div className="lp-strip is-river" aria-hidden>
         {[0, 1, 2, 3].map((n) => (
-          <img key={n} src="/landing/hero-river.jpg" alt="" draggable={false} />
+          <img key={n} src="/landing/hero/river.webp" alt="" draggable={false} />
         ))}
       </div>
       <Link className="lp-hero-cta" to={(continuePath ?? '/login') + q}>

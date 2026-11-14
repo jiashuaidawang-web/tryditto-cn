@@ -2,6 +2,7 @@ import { Fragment, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { pick, useLang, useQuerySuffix, type Lang, type T } from '../i18n/lang';
 import { CHIPS, COMPARISON, FAQ, MANIFESTO, MATCHMAKER, SAFETY, STAMP, STATS, STATS_NOTE, STEPS, TESTIMONIALS } from './copy';
+import { SectionBackground, type SectionBg } from './Dither';
 import { useReveal } from './useReveal';
 
 function Reveal({ children, className = '', style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
@@ -27,11 +28,21 @@ function Chip({ parts, lang, hot = [], br, size }: { parts: readonly T[]; lang: 
   );
 }
 
-export function Group({ bg, zig, children, id }: { bg: string; zig?: boolean; children: ReactNode; id?: string }) {
+export const BG = {
+  how: { d: '/landing/bg/how.jpg', m: '/landing/bg/how-mobile.jpg' },
+  real: { d: '/landing/bg/real.jpg', m: '/landing/bg/real-mobile.jpg', dither: true },
+  night: { d: '/landing/bg/night.webp', m: '/landing/bg/night-mobile.webp', dither: true },
+  safe: { d: '/landing/bg/safe.jpg', m: '/landing/bg/safe-mobile.jpg', dither: true },
+  closing: { d: '/landing/bg/closing.webp', m: '/landing/bg/closing-mobile.webp', dither: true },
+  manifesto: { d: '/landing/manifesto/manifesto-bg.jpg', m: '/landing/manifesto/manifesto-bg-mobile.jpg', dither: true },
+  manifestoCta: { d: '/landing/manifesto/manifesto-bg-2.jpg', m: '/landing/manifesto/manifesto-bg-mobile-2.jpg', dither: true },
+} satisfies Record<string, SectionBg>;
+
+export function Group({ bg, zig, children, id }: { bg: SectionBg; zig?: boolean; children: ReactNode; id?: string }) {
   return (
     <div id={id} className={`lp-group${zig ? ' lp-zig' : ''}`}>
       <div className="lp-group-bg" aria-hidden>
-        <div className={bg} />
+        <SectionBackground bg={bg} />
       </div>
       {children}
     </div>
@@ -67,8 +78,10 @@ export function RealDates() {
     <section className="lp-section">
       <Chip parts={CHIPS.real} lang={lang} hot={[0]} />
       <Reveal className="lp-collage">
-        <img className="is-mobile" src="/landing/photos-mobile.jpg" alt="" loading="lazy" />
-        <img className="is-desktop" src="/landing/photos-desktop.jpg" alt="" loading="lazy" />
+        <img className="lp-pic is-1" src="/landing/real/pic-1.webp" alt="" loading="lazy" />
+        <img className="lp-pic is-2" src="/landing/real/pic-2.webp" alt="" loading="lazy" />
+        <img className="lp-pic is-2 is-wide" src="/landing/real/pic-2-wide.webp" alt="" loading="lazy" />
+        <img className="lp-pic is-3" src="/landing/real/pic-3.webp" alt="" loading="lazy" />
         {STATS.map((s) => (
           <div key={s.tone} className={`lp-sticker is-${s.tone}`}>
             <b>{pick(s.big, lang)}</b>
@@ -164,7 +177,7 @@ export function Comparison() {
             {pick(COMPARISON.otherTitle[2], lang)}
           </h3>
           <div className="lp-paper">
-            <img src="/landing/paper.webp" alt="" loading="lazy" />
+            <img src="/landing/art/paper.webp" alt="" loading="lazy" />
             <span className="lp-app is-1">
               {pick(COMPARISON.app1, lang)}
               <b>3,321</b>
@@ -219,7 +232,7 @@ export function Safety() {
               {s.kind === 'stamp' ? (
                 <VerifiedStamp lang={lang} />
               ) : (
-                <img src={s.kind === 'photo' ? '/landing/safe-2.webp' : '/landing/safe-3.webp'} alt="" loading="lazy" />
+                <img src={s.kind === 'photo' ? '/landing/art/safe-2.webp' : '/landing/art/safe-3.webp'} alt="" loading="lazy" />
               )}
             </div>
             <div className="lp-safe-text">

@@ -262,7 +262,7 @@ const S = {
 const fill = (copy: string, vars: Record<string, string | number>) => copy.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
 
 function Dove({ size = 152, className = '' }: { size?: number; className?: string }) {
-  const h = (size * 150) / 200;
+  const h = (size * 364) / 358;
   return (
     <motion.div
       className={`app-dove mx-auto ${className}`}

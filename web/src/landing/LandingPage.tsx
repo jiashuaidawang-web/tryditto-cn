@@ -4,7 +4,7 @@ import { BRAND } from './copy';
 import { Footer } from './Footer';
 import { Hero } from './Hero';
 import { LandingHeader } from './LandingHeader';
-import { Comparison, Faq, GreatTimes, Group, HowItWorks, Manifesto, Matchmaker, RealDates, Safety } from './Sections';
+import { BG, Comparison, Faq, GreatTimes, Group, HowItWorks, Manifesto, Matchmaker, RealDates, Safety } from './Sections';
 import './landing.css';
 
 export function LandingPage() {
@@ -26,27 +26,26 @@ export function LandingPage() {
       <LandingHeader />
       <main>
         <Hero />
-        <Group bg="lp-how-bg">
+        <Group bg={BG.how}>
           <HowItWorks />
         </Group>
-        <Group bg="lp-real-bg" zig>
+        <Group bg={BG.real} zig>
           <RealDates />
           <Matchmaker />
         </Group>
-        <Group bg="lp-night-bg" zig>
+        <Group bg={BG.night} zig>
           <GreatTimes />
           <Comparison />
         </Group>
-        <Group bg="lp-safe-bg" zig>
+        <Group bg={BG.safe} zig>
           <Safety />
           <Faq />
         </Group>
-        <Group bg="lp-manifesto-bg" zig>
+        <Group bg={BG.closing} zig>
           <Manifesto />
         </Group>
       </main>
       <Footer />
-      <div className="lp-dither" aria-hidden />
     </div>
   );
 }

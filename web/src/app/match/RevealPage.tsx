@@ -238,7 +238,7 @@ function Poster({ view, lang }: { view: MatchView; lang: Lang }) {
       </motion.div>
       <span
         className="app-dove absolute left-[178px] top-[18px] rotate-[-8deg]"
-        style={{ width: 84, height: 63, backgroundSize: `${84 * 17}px 63px`, ['--dove-w' as string]: '84px' }}
+        style={{ width: 84, height: 85, backgroundSize: `${84 * 17}px 85px`, ['--dove-w' as string]: '84px' }}
         aria-hidden
       />
       <svg className="absolute bottom-[150px] left-[214px] size-[34px] text-[#f5c242]" viewBox="0 0 24 24" fill="currentColor" aria-hidden>

@@ -43,16 +43,13 @@
   letter-spacing: 0.02em;
 }
 
-/* Fixed pixel dither over the sections below the hero. The hero sits above it: Ditto's hero grain is baked
-   into the scenery, so the phone glass and bubbles stay clean. */
-.lp-dither {
-  position: fixed;
+/* tryditto.com `DitherOverlay`: soft-light 4×4 grain on plain backgrounds (how it works, footer), never over photos. */
+.lp-grain {
+  position: absolute;
   inset: 0;
-  z-index: 15;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' fill='%23fff' fill-opacity='.10'/%3E%3Crect x='2' y='1' width='1' height='1' fill='%23fff' fill-opacity='.10'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23000' fill-opacity='.05'/%3E%3C/svg%3E");
-  background-size: 4px 2px;
-  image-rendering: pixelated;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23fff' fill-opacity='.16' d='M0 0h1v1H0zm2 1h1v1H2zM1 2h1v1H1zm2 1h1v1H3z'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
 }
 
 /* ───────────── Header ───────────── */
@@ -184,7 +181,12 @@
   min-height: 560px;
   overflow: hidden;
   isolation: isolate;
-  background: linear-gradient(180deg, #5b8792 0%, #6b95a0 38%, #7ea3ab 60%, #8aa9a8 70%);
+  background: #557c86;
+}
+@media (max-width: 480px) {
+  .lp-hero {
+    background: linear-gradient(to top, #50655d 40px, #557c86 40px);
+  }
 }
 .lp-rays {
   position: absolute;
@@ -214,42 +216,33 @@
   user-select: none;
   pointer-events: none;
 }
+/* tryditto.com `.austin-hero.scenery-campus`: sky.webp, painted-campus-2.webp, painted-river-soft.webp at 1px = 1u. */
 .lp-strip.is-far {
   z-index: 0;
-  bottom: calc(462 * var(--u));
-  animation-duration: 516s;
+  bottom: calc(20 * var(--u));
+  animation-duration: 413.274s;
 }
 .lp-strip.is-far img {
-  width: calc(1920 * var(--u));
-  height: calc(978 * var(--u));
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 22%);
+  width: calc(1536 * var(--u));
+  height: calc(1637 * var(--u));
 }
 .lp-strip.is-campus {
   z-index: 3;
-  bottom: calc(124 * var(--u));
-  animation-duration: 91.2s;
-}
-/* Opaque copy (with the hills) sits behind the phone; the keyed buildings-only copy in front. */
-.lp-strip.is-campus.is-back {
-  z-index: 1;
+  bottom: calc(-20 * var(--u));
+  animation-duration: 90.561s;
 }
 .lp-strip.is-campus img {
-  width: calc(1934 * var(--u));
-  height: calc(409 * var(--u));
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 26%);
+  width: calc(1920 * var(--u));
+  height: calc(501 * var(--u));
 }
 .lp-strip.is-river {
   z-index: 5;
-  bottom: 0;
-  animation-duration: 51.3s;
+  bottom: calc(-64 * var(--u));
+  animation-duration: 50.9406s;
 }
 .lp-strip.is-river img {
-  width: calc(1934 * var(--u));
-  height: calc(231 * var(--u));
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 30%);
+  width: calc(1920 * var(--u));
+  height: calc(347 * var(--u));
 }
 /* Below the river there is only water: extend it so tall viewports never show a gap. */
 .lp-hero::after {
@@ -262,13 +255,13 @@
 }
 .lp-hero.is-intro .lp-strip.is-far {
   animation-name: lp-pan, lp-settle;
-  animation-duration: 516s, 1.3s;
+  animation-duration: 413.274s, 1.3s;
   animation-timing-function: linear, cubic-bezier(0.2, 0.8, 0.2, 1);
   animation-iteration-count: infinite, 1;
 }
 .lp-hero.is-intro .lp-strip.is-campus {
   animation-name: lp-pan, lp-rise;
-  animation-duration: 91.2s, 1.2s;
+  animation-duration: 90.561s, 1.2s;
   animation-delay: 0s, 50ms;
   animation-timing-function: linear, cubic-bezier(0.2, 0.8, 0.2, 1);
   animation-iteration-count: infinite, 1;
@@ -276,7 +269,7 @@
 }
 .lp-hero.is-intro .lp-strip.is-river {
   animation-name: lp-pan, lp-rise-near;
-  animation-duration: 51.3s, 1.2s;
+  animation-duration: 50.9406s, 1.2s;
   animation-delay: 0s, 0.25s;
   animation-timing-function: linear, cubic-bezier(0.2, 0.8, 0.2, 1);
   animation-iteration-count: infinite, 1;
@@ -332,8 +325,8 @@
   z-index: 9;
   left: 50%;
   top: var(--title-cy);
-  width: calc(379 * var(--u));
-  height: calc(284 * var(--u));
+  width: calc(358 * 0.82 * var(--u));
+  height: calc(364 * 0.82 * var(--u));
   transform: translate(-50%, -50%) translate(var(--x, 0px), var(--y, calc(-270 * var(--u)))) rotate(var(--r, 0deg)) scale(var(--s, 1));
   filter: brightness(var(--b, 1));
   pointer-events: none;
@@ -345,23 +338,28 @@
 .lp-dove {
   width: 100%;
   height: 100%;
-  background: url('/landing/dove-sheet.webp') 0 0 / 1700% 100% no-repeat;
-  filter: drop-shadow(0 6px 10px rgba(14, 40, 96, 0.18));
+  background: url('/landing/dove.webp') 0 0 / 1700% 100% no-repeat;
 }
 .lp-hero:not(.is-intro) .lp-dove-orbit {
   visibility: hidden;
 }
 
-.lp-phone-slot {
+/* Ditto `.phone-slot`: the phone is cut off at --phone-floor, just under the campus roofline. */
+.lp-phone-clip {
   position: absolute;
   z-index: 2;
+  inset: 0 0 calc(250 * var(--u)) 0;
+  overflow: hidden;
+}
+.lp-phone-slot {
+  position: absolute;
   left: 50%;
-  top: calc(100% - 942 * var(--u));
+  top: calc(100% - 692 * var(--u));
   translate: -50% 0;
   width: min(calc(520 * var(--u)), 86vw);
   height: calc(1080 * var(--u));
 }
-.lp-hero.is-intro .lp-phone-slot {
+.lp-hero.is-intro .lp-phone-clip {
   animation: lp-fade 0.3s ease-out 1s backwards;
 }
 .lp-phone {
@@ -392,8 +390,8 @@
   top: 0;
   left: 0;
   background: rgb(12, 34, 80);
-  -webkit-mask: url('/landing/dove-sheet.webp') 0 0 / 1700% 100% no-repeat;
-  mask: url('/landing/dove-sheet.webp') 0 0 / 1700% 100% no-repeat;
+  -webkit-mask: url('/landing/dove-shadow.webp') 0 0 / 1700% 100% no-repeat;
+  mask: url('/landing/dove-shadow.webp') 0 0 / 1700% 100% no-repeat;
   filter: blur(4px);
   opacity: 0.2;
   pointer-events: none;
@@ -687,7 +685,7 @@
   }
   .lp-hero.is-intro .lp-ch,
   .lp-hero.is-intro .lp-rays,
-  .lp-hero.is-intro .lp-phone-slot,
+  .lp-hero.is-intro .lp-phone-clip,
   .lp-hero.is-intro .lp-hero-cta {
     animation: none;
   }
@@ -702,7 +700,7 @@
   }
 }
 
-/* ───────────── Section groups (sticky blurred backgrounds + zigzag seams) ───────────── */
+/* ───────────── Section groups (sticky backgrounds + zigzag seams) ───────────── */
 .lp-group {
   position: relative;
   isolation: isolate;
@@ -715,9 +713,26 @@
   z-index: -1;
   overflow: hidden;
 }
-.lp-group-bg > * {
+.lp-bg {
   position: absolute;
-  inset: -40px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: 50% 50% / cover no-repeat;
+}
+.lp-bg.is-m {
+  background-position: 50% 100%;
+}
+.lp-bg.is-d {
+  display: none;
+}
+@media (min-width: 480px) {
+  .lp-bg.is-m {
+    display: none;
+  }
+  .lp-bg.is-d {
+    display: block;
+  }
 }
 .lp-zig {
   margin-top: -14px;
@@ -817,14 +832,6 @@
 }
 
 /* How it works */
-.lp-how-bg {
-  background:
-    url('/landing/hero-river.jpg') 0 100% / auto 16% repeat-x,
-    url('/landing/hero-campus.jpg') 0 86% / auto 34% repeat-x,
-    url('/landing/hero-far.jpg') 0 30% / auto 90% repeat-x,
-    #5b8792;
-  filter: blur(14px) saturate(1.05);
-}
 .lp-steps {
   display: flex;
   flex-direction: column;
@@ -901,39 +908,94 @@
 }
 
 /* Real dates / matchmaker */
-.lp-real-bg {
-  background:
-    radial-gradient(ellipse 40% 30% at 52% 8%, rgba(120, 150, 210, 0.55), transparent 70%),
-    radial-gradient(ellipse 30% 45% at 24% 50%, rgba(10, 14, 30, 0.55), transparent 70%),
-    radial-gradient(ellipse 30% 45% at 78% 46%, rgba(10, 14, 30, 0.5), transparent 70%),
-    linear-gradient(180deg, #1d2d55 0%, #172447 45%, #0e1a33 100%);
-  filter: blur(4px);
-}
+/* tryditto.com real-dates collage: three photos + three stat stickers, % boxes measured at 390 / 768 / 1440. */
 .lp-collage {
   position: relative;
-  margin-top: 40px;
-  width: min(100vw, 420px);
+  isolation: isolate;
+  margin-top: 32px;
+  width: min(390px, calc(100vw - 15px));
+  aspect-ratio: 390 / 676;
+  container-type: inline-size;
 }
-.lp-collage > img {
+.lp-collage.lp-reveal {
+  opacity: 1;
+  transform: none;
+}
+.lp-collage > * {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.8s ease-out,
+    transform 0.8s ease-out;
+  transition-delay: var(--d, 0ms);
+}
+.lp-collage.is-in > * {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-collage > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+.lp-pic {
   display: block;
-  width: 100%;
   height: auto;
-  -webkit-mask-image: radial-gradient(ellipse 75% 72% at 50% 50%, #000 82%, transparent 100%);
-  mask-image: radial-gradient(ellipse 75% 72% at 50% 50%, #000 82%, transparent 100%);
 }
-.lp-collage .is-desktop {
+.lp-pic.is-1 {
+  left: 5.9%;
+  top: 5.92%;
+  width: 77.69%;
+  --d: 100ms;
+}
+.lp-pic.is-2 {
+  z-index: -1;
+  left: 17.18%;
+  top: 36.98%;
+  width: 82.82%;
+}
+.lp-pic.is-2.is-wide {
   display: none;
+}
+.lp-pic.is-3 {
+  left: 23.33%;
+  top: 64.79%;
+  width: 71.79%;
+  --d: 200ms;
+}
+@media (min-width: 481px) {
+  .lp-pic.is-2 {
+    display: none;
+  }
+  .lp-pic.is-2.is-wide {
+    display: block;
+  }
 }
 @media (min-width: 1025px) {
   .lp-collage {
-    width: min(100%, 1043px);
-    margin-top: 64px;
+    width: min(100%, 1032px);
+    aspect-ratio: 1032 / 649;
   }
-  .lp-collage .is-mobile {
-    display: none;
+  .lp-pic.is-1 {
+    left: 0.68%;
+    top: 4.93%;
+    width: 45.25%;
+    --d: 0ms;
   }
-  .lp-collage .is-desktop {
-    display: block;
+  .lp-pic.is-2.is-wide {
+    z-index: auto;
+    left: 44.28%;
+    top: 18.8%;
+    width: 50%;
+    --d: 100ms;
+  }
+  .lp-pic.is-3 {
+    left: 31.4%;
+    top: 48.07%;
+    width: 40.6%;
   }
 }
 .lp-collage-note {
@@ -967,9 +1029,6 @@
   margin-left: auto;
   text-align: right;
 }
-.lp-collage {
-  container-type: inline-size;
-}
 .lp-sticker {
   --big: 12cqw;
   --small: 6.2cqw;
@@ -988,25 +1047,28 @@
   white-space: nowrap;
 }
 .lp-sticker.is-pink {
-  left: 48.8%;
-  top: 1.5%;
-  width: 43.7%;
-  height: 13.2%;
+  left: 48.72%;
+  top: 1.04%;
+  width: 44.36%;
+  height: 13.61%;
   rotate: -3deg;
+  --d: 300ms;
 }
 .lp-sticker.is-yellow {
-  left: 5.3%;
-  top: 55.6%;
-  width: 39.2%;
-  height: 12.9%;
+  left: 5.38%;
+  top: 55.77%;
+  width: 39.49%;
+  height: 13.46%;
   rotate: -3deg;
+  --d: 400ms;
 }
 .lp-sticker.is-blue {
-  left: 52.8%;
-  top: 82.3%;
-  width: 42.7%;
-  height: 13.2%;
+  left: 52.56%;
+  top: 82.69%;
+  width: 43.33%;
+  height: 13.91%;
   rotate: 3deg;
+  --d: 500ms;
 }
 @media (min-width: 1025px) {
   .lp-sticker {
@@ -1014,23 +1076,23 @@
     --small: 2.5cqw;
   }
   .lp-sticker.is-pink {
-    left: 31.2%;
-    top: 1.7%;
-    width: 19.9%;
-    height: 17.1%;
+    left: 31.5%;
+    top: 0;
+    width: 20.74%;
+    height: 17.57%;
   }
   .lp-sticker.is-yellow {
-    left: 80.5%;
-    top: 41.2%;
-    width: 18%;
-    height: 16.4%;
+    left: 81.49%;
+    top: 40.83%;
+    width: 18.51%;
+    height: 17.41%;
     rotate: 3deg;
   }
   .lp-sticker.is-blue {
-    left: 22.9%;
-    top: 76.4%;
-    width: 19.8%;
-    height: 17.6%;
+    left: 22.97%;
+    top: 76.89%;
+    width: 20.35%;
+    height: 18.03%;
     rotate: -2deg;
   }
 }
@@ -1082,14 +1144,6 @@
 }
 
 /* Great times + comparison */
-.lp-night-bg {
-  background:
-    radial-gradient(ellipse 60% 14% at 30% 18%, rgba(140, 170, 230, 0.35), transparent 70%),
-    radial-gradient(ellipse 50% 10% at 75% 30%, rgba(140, 170, 230, 0.28), transparent 70%),
-    radial-gradient(ellipse 70% 16% at 50% 52%, rgba(110, 140, 210, 0.25), transparent 70%),
-    linear-gradient(180deg, #1f3b86 0%, #18306f 35%, #10224f 70%, #0b1838 100%);
-  filter: blur(3px);
-}
 .lp-marquee {
   width: 100vw;
   margin-top: 36px;
@@ -1114,7 +1168,7 @@
   position: relative;
   flex: none;
   width: 238px;
-  aspect-ratio: 288 / 428;
+  aspect-ratio: 574 / 844;
   background: center / cover no-repeat;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
@@ -1130,11 +1184,13 @@
     width: 288px;
   }
 }
+/* Covers the English quote baked into the photo (66–91% tall, 5–10% in from the sides, slightly rotated). */
 .lp-quote {
   position: absolute;
-  left: 7%;
-  right: 7%;
-  top: 60%;
+  left: 4.5%;
+  right: 4.5%;
+  top: 65%;
+  bottom: 7.5%;
   padding: 7px 8px 9px;
   background: #fff;
   border-radius: 3px;
@@ -1230,16 +1286,8 @@
   border-radius: 24px;
   overflow: hidden;
   border: 1.5px solid rgba(255, 255, 255, 0.55);
-  background: url('/landing/hero-far.jpg') 30% 30% / 200% auto;
+  background: url('/landing/invite-sky.webp') 50% 50% / cover;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
-}
-.lp-invite::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(60, 110, 200, 0.25), rgba(40, 90, 190, 0.45));
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
 }
 .lp-msgs-icon {
   position: absolute;
@@ -1293,7 +1341,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: url('/brand/pigeon-avatar.jpg') center / cover;
+  background: url('/brand/pigeon-avatar.webp') center / cover;
 }
 .lp-notif-avatar::after {
   content: '';
@@ -1369,15 +1417,6 @@
 }
 
 /* Safety + FAQ */
-.lp-safe-bg {
-  background:
-    radial-gradient(ellipse 20% 38% at 50% 64%, rgba(6, 18, 40, 0.75), transparent 70%),
-    radial-gradient(ellipse 10% 18% at 50% 30%, rgba(6, 18, 40, 0.6), transparent 70%),
-    radial-gradient(ellipse 60% 18% at 30% 22%, rgba(80, 160, 230, 0.35), transparent 70%),
-    radial-gradient(ellipse 50% 14% at 70% 48%, rgba(80, 160, 230, 0.3), transparent 70%),
-    linear-gradient(180deg, #0f4a94 0%, #0c4b9b 40%, #0a3f86 75%, #082f66 100%);
-  filter: blur(4px);
-}
 .lp-safe-list {
   display: flex;
   flex-direction: column;
@@ -1507,15 +1546,6 @@
   gap: 0;
   text-align: center;
 }
-.lp-manifesto-bg {
-  background: url('/landing/manifesto-bg.jpg') 50% 40% / cover no-repeat;
-}
-.lp-manifesto-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(20, 24, 40, 0.18);
-}
 .lp-mani-line {
   font-family: var(--lp-display);
   font-size: 24px;
@@ -1556,6 +1586,9 @@
   background: var(--lp-footer);
   padding: 48px 24px 32px;
   color: var(--lp-cream);
+}
+.lp-footer > :not(.lp-grain) {
+  position: relative;
 }
 .lp-footer-grid {
   display: flex;
@@ -1992,27 +2025,6 @@
 /* ───────────── /manifesto (tryditto.com/manifesto) ───────────── */
 .lp.is-manifesto {
   background: var(--lp-footer);
-}
-.lp-group-bg > .mf-bg {
-  inset: 0;
-  background: 50% 50% / cover no-repeat;
-}
-.mf-bg.is-1 {
-  background-image: url('/landing/manifesto/manifesto-bg.jpg');
-}
-.mf-bg.is-2 {
-  background-image: url('/landing/manifesto/manifesto-bg-2.jpg');
-}
-@media (max-width: 479px) {
-  .lp-group-bg > .mf-bg {
-    background-position: 50% 100%;
-  }
-  .mf-bg.is-1 {
-    background-image: url('/landing/manifesto/manifesto-bg-mobile.jpg');
-  }
-  .mf-bg.is-2 {
-    background-image: url('/landing/manifesto/manifesto-bg-mobile-2.jpg');
-  }
 }
 .mf-page {
   position: relative;

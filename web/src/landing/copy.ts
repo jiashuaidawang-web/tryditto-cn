@@ -84,7 +84,7 @@ export const STEPS: { title: T; desc: T; img: string; w: number; color: string }
   {
     title: t('Tell Ditto Your Type', '告诉见一面你的理想型'),
     desc: t('Submit your preferences by Tuesday 11:59 PM.', '每周二 23:59 前提交你的偏好。'),
-    img: '/landing/how-1.webp',
+    img: '/landing/art/how-1.webp',
     w: 163,
     color: '#f5b400',
   },
@@ -94,21 +94,21 @@ export const STEPS: { title: T; desc: T; img: string; w: number; color: string }
       'Check your iMessage at 7pm. We will send you one personalized match and curate your date for you!',
       '周三晚 7 点查收短信。我们只为你推荐一位专属匹配，并帮你安排好这次约会！',
     ),
-    img: '/landing/how-2.webp',
+    img: '/landing/art/how-2.webp',
     w: 212,
     color: '#ff2cab',
   },
   {
     title: t('Schedule the Date', '约个时间'),
     desc: t('Find a time that works for both of you to meet up.', '找一个你们俩都方便的时间见面。'),
-    img: '/landing/how-3.webp',
+    img: '/landing/art/how-3.webp',
     w: 105,
     color: '#f5d000',
   },
   {
     title: t('Have fun!', '好好享受吧！'),
     desc: t('Enjoy a good time with your personalized date!', '和为你挑选的 TA 度过一段美好时光！'),
-    img: '/landing/how-4.webp',
+    img: '/landing/art/how-4.webp',
     w: 119,
     color: '#2fb8ff',
   },
@@ -123,46 +123,46 @@ export const STATS = [
 export const STATS_NOTE = t('Sample data', '示例数据');
 
 export const MATCHMAKER = [
-  { title: t('Backed by best research', '有扎实的研究撑腰'), img: '/landing/match-1.webp', w: 258, mw: 180 },
-  { title: t('Ditto learns your preferences', '见一面会学习你的偏好'), img: '/landing/match-2.webp', w: 262, mw: 200 },
-  { title: t('Scans the entire pool to find the one', '翻遍整个池子，只为找到那个人'), img: '/landing/match-3.webp', w: 222, mw: 190 },
+  { title: t('Backed by best research', '有扎实的研究撑腰'), img: '/landing/art/match-1.webp', w: 258, mw: 180 },
+  { title: t('Ditto learns your preferences', '见一面会学习你的偏好'), img: '/landing/art/match-2.webp', w: 262, mw: 200 },
+  { title: t('Scans the entire pool to find the one', '翻遍整个池子，只为找到那个人'), img: '/landing/art/match-3.webp', w: 222, mw: 190 },
 ];
 
 export const TESTIMONIALS: { who: T; text: T; img: string; icon: string }[] = [
   {
     who: t('Sophia @Cal', '思琪 @复旦'),
     text: t("I had been matched a few weeks ago, and I'm in an exclusive relationship with my date now!", '几周前被匹配上，现在我们已经正式在一起啦！'),
-    img: '/landing/gt-leo.jpg',
+    img: '/landing/gt-1.webp',
     icon: '💗',
   },
   {
     who: t('Justin @UCSD', '一凡 @浙大'),
     text: t('way more efficient than juggling 10 chats on other apps.', '比在别的 App 上同时聊 10 个人高效太多了。'),
-    img: '/landing/gt-justin.jpg',
+    img: '/landing/gt-2.webp',
     icon: '👍',
   },
   {
     who: t('Angelina @UCLA', '雨桐 @北大'),
     text: t('Date was AMAZING, I feel like the AI made good hit!! We are currently going to meet again.', '约会超棒！感觉 AI 这次真的配准了！！我们已经约好下次再见。'),
-    img: '/landing/gt-angelina.jpg',
+    img: '/landing/gt-3.webp',
     icon: '❤️',
   },
   {
     who: t('Ali @USC', '子轩 @中大'),
     text: t('ditto makes it super easy to meet ppl i actually wanna see irl', '见一面让我轻松见到真正想线下见的人'),
-    img: '/landing/gt-ali.jpg',
+    img: '/landing/gt-4.webp',
     icon: '💗',
   },
   {
     who: t('Leo @Cal', '浩然 @清华'),
     text: t("I literally don't need to do anything and just wait for the AI match.", '我啥都不用做，等着 AI 匹配就行。'),
-    img: '/landing/gt-leo.jpg',
+    img: '/landing/gt-5.webp',
     icon: '‼️',
   },
   {
     who: t('Mani @Cal', '嘉怡 @南大'),
     text: t("Because it's tied to your school, the quality feels guaranteed, and it just feels safer.", '因为绑定了本校，质量有保障，也更安心。'),
-    img: '/landing/gt-angelina.jpg',
+    img: '/landing/gt-6.webp',
     icon: '💬',
   },
 ];

@@ -34,6 +34,7 @@ export function Footer() {
   const q = useQuerySuffix();
   return (
     <footer className="lp-footer">
+      <div className="lp-grain" aria-hidden />
       <div className="lp-footer-grid">
         <nav className="lp-res">
           <h4>{pick(FOOTER.resources, lang)}</h4>

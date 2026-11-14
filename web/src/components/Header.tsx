@@ -17,7 +17,7 @@ const PRIVACY = {
 function Avatar() {
   return (
     <img
-      src="/brand/pigeon-avatar.jpg"
+      src="/brand/pigeon-avatar.webp"
       alt=""
       aria-hidden
       draggable={false}
