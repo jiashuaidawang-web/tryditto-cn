@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -161,13 +162,13 @@ public class DemoService {
     @Transactional
     public int resetNonReal(Instant now) {
         List<Long> ids = jdbc.query("""
-                SELECT m.id FROM `match` m
-                JOIN `user` a ON a.id = m.user_low
-                JOIN `user` b ON b.id = m.user_high
+                SELECT m.id FROM "match" m
+                JOIN "user" a ON a.id = m.user_low
+                JOIN "user" b ON b.id = m.user_high
                 WHERE a.cohort <> 'real' AND b.cohort <> 'real'
                 """, (rs, n) -> rs.getLong(1));
         for (long id : ids) db.deleteMatch(id);
-        jdbc.update("UPDATE week SET state = 'locked', updated_at = ? WHERE trigger_kind = 'demo'", Times.millis(now));
+        jdbc.update("UPDATE week SET state = 'locked', updated_at = ? WHERE trigger_kind = 'demo'", Timestamp.from(Times.millis(now)));
         return ids.size();
     }
 
@@ -258,7 +259,7 @@ public class DemoService {
 
     private long partner(long userId, String handle) {
         if (handle == null || handle.isBlank()) handle = defaultHandle(userId);
-        List<Long> ids = jdbc.query("SELECT id FROM `user` WHERE handle = ?", (rs, n) -> rs.getLong(1), handle);
+        List<Long> ids = jdbc.query("SELECT id FROM \"user\" WHERE handle = ?", (rs, n) -> rs.getLong(1), handle);
         if (ids.isEmpty()) throw new DomainException(ErrorCode.NOT_FOUND, "没有这个演示对象");
         return ids.get(0);
     }

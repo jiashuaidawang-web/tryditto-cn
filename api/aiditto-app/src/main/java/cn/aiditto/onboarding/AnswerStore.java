@@ -69,7 +69,7 @@ public class AnswerStore {
             args.add(secret ? crypto.encrypt(json) : null);
             args.add(Timestamp.from(at));
         }
-        sql.append(" AS new ON DUPLICATE KEY UPDATE value_json = new.value_json, value_enc = new.value_enc, updated_at = new.updated_at");
+        sql.append(" ON CONFLICT (user_id, question_id) DO UPDATE SET value_json = EXCLUDED.value_json, value_enc = EXCLUDED.value_enc, updated_at = EXCLUDED.updated_at");
         jdbc.update(sql.toString(), args.toArray());
     }
 

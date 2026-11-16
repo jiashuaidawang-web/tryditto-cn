@@ -12,8 +12,8 @@ public interface AnswerMapper extends BaseMapper<Answer> {
 
     @Insert("""
             INSERT INTO onboarding_answer (user_id, question_id, value_json, value_enc, updated_at)
-            VALUES (#{userId}, #{questionId}, CAST(#{valueJson} AS JSON), #{valueEnc}, #{updatedAt})
-            AS new ON DUPLICATE KEY UPDATE value_json = new.value_json, value_enc = new.value_enc, updated_at = new.updated_at
+            VALUES (#{userId}, #{questionId}, CAST(#{valueJson} AS JSONB), #{valueEnc}, #{updatedAt})
+            ON CONFLICT (user_id, question_id) DO UPDATE SET value_json = EXCLUDED.value_json, value_enc = EXCLUDED.value_enc, updated_at = EXCLUDED.updated_at
             """)
     void upsert(@Param("userId") long userId, @Param("questionId") String questionId, @Param("valueJson") String valueJson,
                 @Param("valueEnc") byte[] valueEnc, @Param("updatedAt") Instant updatedAt);

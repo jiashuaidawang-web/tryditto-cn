@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.Instant;
 
 /** "Don't match me with" entry (技术方案 §4.7). Contents are encrypted; {@code block_contact} keeps lookup hashes. */
-@TableName("`block`")
+@TableName("\"block\"")
 public class Block {
     @TableId(type = IdType.ASSIGN_ID)
     public Long id;

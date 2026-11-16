@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
 public interface BlockMapper extends BaseMapper<Block> {
-    @Insert("INSERT IGNORE INTO block_contact (block_id, user_id, kind, value_hash) VALUES (#{blockId}, #{userId}, #{kind}, #{hash})")
+    @Insert("INSERT INTO block_contact (block_id, user_id, kind, value_hash) VALUES (#{blockId}, #{userId}, #{kind}, #{hash}) ON CONFLICT DO NOTHING")
     int insertContact(long blockId, long userId, String kind, byte[] hash);
 
     @Delete("DELETE FROM block_contact WHERE block_id = #{blockId}")

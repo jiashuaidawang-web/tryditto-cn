@@ -143,16 +143,22 @@ public class MatchDb {
     }
 
     public List<long[]> pastPairs() {
-        return jdbc.query("SELECT user_low, user_high FROM `match`", (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)});
+        return jdbc.query("SELECT user_low, user_high FROM \"match\"", (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)});
     }
 
     public List<long[]> reportedPairs() {
         return jdbc.query("SELECT reporter_id, reported_id FROM report", (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)});
     }
 
+    /** Step 8：双向拒绝 / 举报后永久 forbidden 的对，硬过滤第一道就排除（A04）。 */
+    public List<long[]> forbiddenPairs() {
+        return jdbc.query("SELECT user_lo, user_hi FROM ai_pair_memory WHERE forbidden",
+                (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)});
+    }
+
     public void insertDraft(long matchId, long weekId, long low, long high, int score, String scoreJson, Instant now) {
         jdbc.update("""
-                INSERT INTO `match` (id, week_id, user_low, user_high, score, score_json, state, version, created_at, updated_at)
+                INSERT INTO "match" (id, week_id, user_low, user_high, score, score_json, state, version, created_at, updated_at)
                 VALUES (?,?,?,?,?,?,'draft',0,?,?)
                 """, matchId, weekId, low, high, score, scoreJson, ts(now), ts(now));
     }
@@ -160,7 +166,7 @@ public class MatchDb {
     public void insertSide(long matchId, long weekId, long userId) {
         jdbc.update("""
                 INSERT INTO match_side (match_id, user_id, week_id, response, slot_ids, reselected, flagged_reasons)
-                VALUES (?,?,?,'pending','[]',0,'[]')
+                VALUES (?,?,?,'pending','[]',FALSE,'[]')
                 """, matchId, userId, weekId);
     }
 
@@ -171,10 +177,22 @@ public class MatchDb {
     }
 
     public void insertCopy(long matchId, long viewerId, String lang, String headline, String blurb, String reasons, String openers) {
+        insertCopy(matchId, viewerId, lang, headline, blurb, reasons, openers, "template", "template-v1");
+    }
+
+    /** Step 7：source='ai' 时同时落 prompt_version，便于按版本追溯与回滚。 */
+    public void insertCopy(long matchId, long viewerId, String lang, String headline, String blurb,
+                           String reasons, String openers, String source, String promptVersion) {
         jdbc.update("""
                 INSERT INTO match_copy (match_id, viewer_id, lang, headline, blurb, reasons, openers, source, prompt_version)
-                VALUES (?,?,?,?,?,?,?,'template','template-v1')
-                """, matchId, viewerId, lang, headline, blurb, reasons, openers);
+                VALUES (?,?,?,?,?,?,?,?,?)
+                """, matchId, viewerId, lang, headline, blurb, reasons, openers, source, promptVersion);
+    }
+
+    /** 合并写入周批统计，不覆盖 SOLVE 阶段已写的 agentMode / pairs 等字段。 */
+    public void mergeWeekStats(long id, String stats) {
+        jdbc.update("UPDATE week SET stats = COALESCE(stats, '{}'::JSONB) || CAST(? AS JSONB) WHERE id = ?",
+                stats, id);
     }
 
     public boolean hasCopy(long matchId) {
@@ -184,27 +202,27 @@ public class MatchDb {
 
     public int countCopies(long weekId) {
         Integer n = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM match_copy c JOIN `match` m ON m.id = c.match_id WHERE m.week_id = ?
+                SELECT COUNT(*) FROM match_copy c JOIN "match" m ON m.id = c.match_id WHERE m.week_id = ?
                 """, Integer.class, weekId);
         return n == null ? 0 : n;
     }
 
     public int countMatches(long weekId) {
-        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM `match` WHERE week_id = ?", Integer.class, weekId);
+        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM \"match\" WHERE week_id = ?", Integer.class, weekId);
         return n == null ? 0 : n;
     }
 
     public List<Long> matchIds(long weekId) {
-        return jdbc.query("SELECT id FROM `match` WHERE week_id = ? ORDER BY id", (rs, n) -> rs.getLong(1), weekId);
+        return jdbc.query("SELECT id FROM \"match\" WHERE week_id = ? ORDER BY id", (rs, n) -> rs.getLong(1), weekId);
     }
 
     public List<Long> draftIds(long weekId) {
-        return jdbc.query("SELECT id FROM `match` WHERE week_id = ? AND state = 'draft' ORDER BY id", (rs, n) -> rs.getLong(1), weekId);
+        return jdbc.query("SELECT id FROM \"match\" WHERE week_id = ? AND state = 'draft' ORDER BY id", (rs, n) -> rs.getLong(1), weekId);
     }
 
     public boolean allTerminal(long weekId) {
         Integer n = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM `match` WHERE week_id = ? AND state NOT IN
+                SELECT COUNT(*) FROM "match" WHERE week_id = ? AND state NOT IN
                 ('declined','expired','unscheduled','cancelled','closed','halted')
                 """, Integer.class, weekId);
         return n == null || n == 0;
@@ -217,7 +235,7 @@ public class MatchDb {
     /** One round trip. Keys are user ids. */
     public void setStreaks(Map<Long, Integer> streaks, Instant now) {
         if (streaks.isEmpty()) return;
-        StringBuilder sql = new StringBuilder("UPDATE `user` SET empty_week_streak = CASE id ");
+        StringBuilder sql = new StringBuilder("UPDATE \"user\" SET empty_week_streak = CASE id ");
         List<Object> args = new ArrayList<>(streaks.size() * 3 + 1);
         for (Map.Entry<Long, Integer> e : streaks.entrySet()) {
             sql.append("WHEN ? THEN ? ");
@@ -237,19 +255,19 @@ public class MatchDb {
     }
 
     public int streak(long userId) {
-        Integer n = jdbc.queryForObject("SELECT empty_week_streak FROM `user` WHERE id = ?", Integer.class, userId);
+        Integer n = jdbc.queryForObject("SELECT empty_week_streak FROM \"user\" WHERE id = ?", Integer.class, userId);
         return n == null ? 0 : n;
     }
 
     public LoadedMatch lockMatch(long id) {
-        List<Long> ids = jdbc.query("SELECT id FROM `match` WHERE id = ? FOR UPDATE", (rs, n) -> rs.getLong(1), id);
+        List<Long> ids = jdbc.query("SELECT id FROM \"match\" WHERE id = ? FOR UPDATE", (rs, n) -> rs.getLong(1), id);
         if (ids.isEmpty()) return null;
         return load(id);
     }
 
     public LoadedMatch latestFor(long userId) {
         List<Long> ids = jdbc.query("""
-                SELECT m.id FROM match_side s JOIN `match` m ON m.id = s.match_id
+                SELECT m.id FROM match_side s JOIN "match" m ON m.id = s.match_id
                 WHERE s.user_id = ?
                 ORDER BY (m.state NOT IN ('declined','expired','unscheduled','cancelled','closed','halted')) DESC, m.created_at DESC
                 LIMIT 1
@@ -281,14 +299,14 @@ public class MatchDb {
     /** Publish every draft in the week. Same columns {@code MatchMachine} sets on {@code Publish}, and no effects. */
     public int publishDrafts(long weekId, Instant respondDue, Instant now) {
         return jdbc.update("""
-                UPDATE `match` SET state = 'published', published_at = ?, respond_due = ?,
+                UPDATE "match" SET state = 'published', published_at = ?, respond_due = ?,
                 version = version + 1, updated_at = ? WHERE week_id = ? AND state = 'draft'
                 """, ts(now), ts(respondDue), ts(now), weekId);
     }
 
     public void saveSnapshot(long matchId, MatchSnapshot s, Instant now) {
         jdbc.update("""
-                UPDATE `match` SET state = ?, outcome = ?, published_at = ?, respond_due = ?, reselect_due = ?,
+                UPDATE "match" SET state = ?, outcome = ?, published_at = ?, respond_due = ?, reselect_due = ?,
                 slot_start = ?, slot_end = ?, feedback_due = ?, closed_at = ?, reporter_id = ?, cancelled_by = ?,
                 version = version + 1, updated_at = ?
                 WHERE id = ?
@@ -319,7 +337,7 @@ public class MatchDb {
     }
 
     public void reschedule(long matchId, Instant start, Instant end, Instant now) {
-        jdbc.update("UPDATE `match` SET slot_start = ?, slot_end = ?, feedback_due = ?, updated_at = ? WHERE id = ?",
+        jdbc.update("UPDATE \"match\" SET slot_start = ?, slot_end = ?, feedback_due = ?, updated_at = ? WHERE id = ?",
                 ts(start), ts(end), ts(end.plus(cn.aiditto.domain.slot.Deadlines.FEEDBACK_WINDOW)), ts(now), matchId);
     }
 
@@ -336,42 +354,42 @@ public class MatchDb {
     }
 
     public void addNoShow(long userId) {
-        jdbc.update("UPDATE `user` SET no_show_count = no_show_count + 1 WHERE id = ?", userId);
+        jdbc.update("UPDATE \"user\" SET no_show_count = no_show_count + 1 WHERE id = ?", userId);
     }
 
     public void addLateCancel(long userId) {
-        jdbc.update("UPDATE `user` SET late_cancel_count = late_cancel_count + 1 WHERE id = ?", userId);
+        jdbc.update("UPDATE \"user\" SET late_cancel_count = late_cancel_count + 1 WHERE id = ?", userId);
     }
 
     public void addNoResponse(long userId) {
-        jdbc.update("UPDATE `user` SET no_response_streak = no_response_streak + 1 WHERE id = ?", userId);
+        jdbc.update("UPDATE \"user\" SET no_response_streak = no_response_streak + 1 WHERE id = ?", userId);
     }
 
     public void clearNoResponse(long userId) {
-        jdbc.update("UPDATE `user` SET no_response_streak = 0 WHERE id = ?", userId);
+        jdbc.update("UPDATE \"user\" SET no_response_streak = 0 WHERE id = ?", userId);
     }
 
     public void addDispute(long userId) {
-        jdbc.update("UPDATE `user` SET dispute_count = dispute_count + 1 WHERE id = ?", userId);
+        jdbc.update("UPDATE \"user\" SET dispute_count = dispute_count + 1 WHERE id = ?", userId);
     }
 
     public int[] penaltyCounts(long userId) {
-        return jdbc.queryForObject("SELECT no_show_count, late_cancel_count, no_response_streak, dispute_count FROM `user` WHERE id = ?",
+        return jdbc.queryForObject("SELECT no_show_count, late_cancel_count, no_response_streak, dispute_count FROM \"user\" WHERE id = ?",
                 (rs, n) -> new int[] {rs.getInt(1), rs.getInt(2), rs.getInt(3), rs.getInt(4)}, userId);
     }
 
     public void pause(long userId, Instant now) {
-        jdbc.update("UPDATE `user` SET status = 'paused', updated_at = ? WHERE id = ?", ts(now), userId);
+        jdbc.update("UPDATE \"user\" SET status = 'paused', updated_at = ? WHERE id = ?", ts(now), userId);
     }
 
-    /** Suspend applies to whoever earned it, including real users. The SQL above is just `id = ?` twice; kept simple below. */
+    /** Suspend applies to whoever earned it, including real users. The SQL above is just "id = ?" twice; kept simple below. */
     public void suspendUser(long userId, Instant until, Instant now) {
-        jdbc.update("UPDATE `user` SET status = 'suspended', suspended_until = ?, updated_at = ? WHERE id = ?",
+        jdbc.update("UPDATE \"user\" SET status = 'suspended', suspended_until = ?, updated_at = ? WHERE id = ?",
                 ts(until), ts(now), userId);
     }
 
     public List<Long> due(String column, String state, Instant now) {
-        return jdbc.query("SELECT id FROM `match` WHERE state = ? AND " + column + " <= ? ORDER BY id",
+        return jdbc.query("SELECT id FROM \"match\" WHERE state = ? AND " + column + " <= ? ORDER BY id",
                 (rs, n) -> rs.getLong(1), state, ts(now));
     }
 
@@ -382,13 +400,13 @@ public class MatchDb {
         jdbc.update("DELETE FROM match_demo WHERE match_id = ?", matchId);
         jdbc.update("DELETE FROM date_plan WHERE match_id = ?", matchId);
         jdbc.update("DELETE FROM match_side WHERE match_id = ?", matchId);
-        jdbc.update("DELETE FROM `match` WHERE id = ?", matchId);
+        jdbc.update("DELETE FROM \"match\" WHERE id = ?", matchId);
     }
 
     public void setWantsAgain(long matchId, boolean wants) {
         jdbc.update("""
                 INSERT INTO match_demo (match_id, partner_wants_again) VALUES (?,?)
-                ON DUPLICATE KEY UPDATE partner_wants_again = VALUES(partner_wants_again)
+                ON CONFLICT (match_id) DO UPDATE SET partner_wants_again = EXCLUDED.partner_wants_again
                 """, matchId, wants);
     }
 
@@ -429,11 +447,11 @@ public class MatchDb {
                 SELECT m.id, m.user_low, m.user_high, m.score, m.state, lo.name AS low_name, hi.name AS high_name,
                        ulo.cohort AS low_cohort, uhi.cohort AS high_cohort, ulo.handle AS low_handle, uhi.handle AS high_handle,
                        (SELECT c.source FROM match_copy c WHERE c.match_id = m.id LIMIT 1) AS source
-                FROM `match` m
+                FROM "match" m
                 JOIN profile lo ON lo.user_id = m.user_low
                 JOIN profile hi ON hi.user_id = m.user_high
-                JOIN `user` ulo ON ulo.id = m.user_low
-                JOIN `user` uhi ON uhi.id = m.user_high
+                JOIN "user" ulo ON ulo.id = m.user_low
+                JOIN "user" uhi ON uhi.id = m.user_high
                 WHERE m.week_id = ?
                 ORDER BY m.id
                 """, (rs, n) -> {
@@ -474,7 +492,7 @@ public class MatchDb {
     }
 
     private LoadedMatch load(long id) {
-        return jdbc.queryForObject("SELECT * FROM `match` WHERE id = ?", (rs, n) -> {
+        return jdbc.queryForObject("SELECT * FROM \"match\" WHERE id = ?", (rs, n) -> {
             long low = rs.getLong("user_low");
             long high = rs.getLong("user_high");
             List<Slot> slots = slots(id);

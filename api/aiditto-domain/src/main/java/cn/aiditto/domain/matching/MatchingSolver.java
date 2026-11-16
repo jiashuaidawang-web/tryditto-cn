@@ -114,19 +114,41 @@ public final class MatchingSolver {
                     for (HardRule r : v) filtered.merge(r, 1, Integer::sum);
                     continue;
                 }
+                // Step 6：硬约束与风格门槛都在 AI 之前完成，AI 分只影响边权，
+                // 绝不能让模型幻觉把没通过硬约束/门槛的对放进候选。
                 ScoreBreakdown s = Scorer.score(a, b, in.weekStart(), w);
                 if (s.score() < w.pairThreshold(a, b)) {
                     below[0]++;
                     continue;
                 }
-                edges.add(new Edge(a.id(), b.id(), s, weight(s, in.seed(), a.id(), b.id())));
+                edges.add(new Edge(a.id(), b.id(), s,
+                        weight(s, in.seed(), a.id(), b.id(), aiScore(in, a.id(), b.id()))));
             }
         }
         return edges;
     }
 
+    /** M2 原逻辑，保留供既有性质测试与无 AI 分场景逐位一致使用。 */
     static long weight(ScoreBreakdown s, long seed, long low, long high) {
         return s.objective() * 1000L + tiebreak(seed, low, high);
+    }
+
+    /**
+     * Step 6 边权：AI 分主导配对排序（Q1），规则分作次级、公平分与确定性 tiebreak 保留。
+     * <ul>
+     *   <li>{@code ai == null}：完全走 M2 原公式，零回归。</li>
+     *   <li>有 AI 分：{@code ai(0-100) * 1_000_000 + 规则 objective * 1000 + tiebreak}，
+     *       即 AI 分差 1 分 ≈ 规则分差 1000 分，AI 主导但同分时规则/公平仍能定序。</li>
+     * </ul>
+     * 展示分 {@code ScoreBreakdown.score()}、硬约束、门槛一律不变。
+     */
+    static long weight(ScoreBreakdown s, long seed, long low, long high, Integer ai) {
+        if (ai == null) return weight(s, seed, low, high);
+        return ai.longValue() * 1_000_000L + s.objective() * 1000L + tiebreak(seed, low, high);
+    }
+
+    private static Integer aiScore(MatchingInput in, long a, long b) {
+        return in.aiScores().get(PairKey.of(a, b));
     }
 
     /** {@code hash(seed, low, high) mod 1000}, SplitMix64 finaliser. */

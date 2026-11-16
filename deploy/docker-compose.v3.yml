@@ -1,0 +1,104 @@
+name: aiditto-v3
+
+# v3 分支（master_agent_v3）的并行基础设施。
+# 重要：Step 10 切流前，线上 /opt/aiditto/docker-compose.yml 与其 3 个容器保持原样，本文件不执行 up。
+# 当前服务器上的两个容器按「见一面-落地实施与验收计划.md」Step 0.5 手动启动；
+# 正式接管时先 stop/rm 同名手动容器，再由本 compose 纳管（不删除任何数据卷）。
+# 镜像不依赖 Docker Hub：两个镜像都从本地 nginx:1.27-alpine 基础镜像 + Alpine CDN / 静态二进制构建。
+
+services:
+  pg16:
+    image: aiditto-pg16:16
+    build:
+      context: ./pg
+      dockerfile: Dockerfile
+    container_name: aiditto-pg16
+    restart: unless-stopped
+    environment:
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - /opt/aiditto-v3/pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    mem_limit: 384m
+    networks: [v3]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiditto -d aiditto_pg"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  qdrant:
+    image: aiditto-qdrant:1.12.5
+    build:
+      context: ./qdrant
+      dockerfile: Dockerfile
+    container_name: aiditto-qdrant
+    restart: unless-stopped
+    volumes:
+      - /opt/aiditto-v3/qdrant/storage:/qdrant/storage
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    mem_limit: 512m
+    networks: [v3]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:6333/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Step 10 切流时才启用：把 api 纳入同一网络，才能用容器名访问 PG/Qdrant。
+  # 用 profile 隔离，默认 `docker compose up`（不带 --profile）绝不会启动它，
+  # 避免误把线上演示站从 MySQL 版切走。切流前必须先 stop/rm 旧 aiditto-api 容器。
+  api:
+    profiles: ["cutover"]
+    image: aiditto-api:v3
+    container_name: aiditto-api-v3
+    restart: unless-stopped
+    # 用 v3 专用独立环境文件（含 embedding key，chmod 600），
+    # 不复用线上 /opt/aiditto/.env，避免切流前后互相污染、也便于一键回滚到 MySQL 版。
+    env_file:
+      - /opt/aiditto-v3/.env
+    environment:
+      DB_URL: jdbc:postgresql://pg16:5432/aiditto_pg?stringtype=unspecified
+      QDRANT_URL: http://aiditto-qdrant:6333
+      EMBEDDING_MODE: ${EMBEDDING_MODE:-openai}
+      EMBEDDING_MODEL: text-embedding-v3
+      EMBEDDING_DIM: "1024"
+      EMBEDDING_SEND_DIMENSIONS: "true"
+      EMBEDDING_BATCH_SIZE: "5"
+      EMBEDDING_MAX_BATCH_ITEMS: "10"
+      QDRANT_COLLECTION: match_user_live_v3
+      RECALL_ENABLED: "true"
+      RECALL_ISO_ENABLED: "true"
+      MATCH_AGENT_ENABLED: "true"
+      MATCH_AGENT_TOP_PAIRS: "15"
+      MATCH_AGENT_MIN_TOTAL: "72"
+      # Step 7 AI 文案 / Step 8 反馈学习
+      MATCH_COPY_AI_ENABLED: "true"
+      MATCH_COPY_MAX_ATTEMPTS: "2"
+      LEARNING_ENABLED: "true"
+      LEARNING_MIN_CALIBRATION_SAMPLES: "30"
+      LEARNING_CALIBRATION_CAP: "10"
+    ports:
+      - "127.0.0.1:8080:8080"
+    mem_limit: 768m
+    depends_on:
+      pg16:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks: [v3]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+networks:
+  v3:
+    external: true
+    name: aiditto-db

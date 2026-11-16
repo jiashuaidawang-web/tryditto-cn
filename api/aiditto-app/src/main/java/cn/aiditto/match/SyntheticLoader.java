@@ -17,6 +17,7 @@ import tools.jackson.databind.JsonNode;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,11 +69,11 @@ public class SyntheticLoader {
         String kind = node.get("kind").asString();
         String cohort = "demo".equals(kind) ? "demo" : "synthetic";
         byte[] hash = crypto.hash(phone);
-        List<Long> existing = jdbc.query("SELECT id FROM `user` WHERE phone_hash = ?", (rs, n) -> rs.getLong(1), hash);
+        List<Long> existing = jdbc.query("SELECT id FROM \"user\" WHERE phone_hash = ?", (rs, n) -> rs.getLong(1), hash);
         Long userId = existing.isEmpty() ? null : existing.get(0);
         if (userId != null) {
-            String current = jdbc.queryForObject("SELECT cohort FROM `user` WHERE id = ?", String.class, userId);
-            Instant done = jdbc.queryForObject("SELECT onboarding_completed_at FROM `user` WHERE id = ?",
+            String current = jdbc.queryForObject("SELECT cohort FROM \"user\" WHERE id = ?", String.class, userId);
+            Instant done = jdbc.queryForObject("SELECT onboarding_completed_at FROM \"user\" WHERE id = ?",
                     (rs, n) -> rs.getTimestamp(1) == null ? null : rs.getTimestamp(1).toInstant(), userId);
             boolean real = current == null || "real".equals(current);
             if (real && (!SyntheticPhones.isDemo(phone) || done != null)) return false;
@@ -86,9 +87,9 @@ public class SyntheticLoader {
         }
         String handle = node.get("handle").asString();
         jdbc.update("""
-                UPDATE `user` SET cohort = ?, is_synthetic = ?, handle = ?, status = 'active',
+                UPDATE "user" SET cohort = ?, is_synthetic = ?, handle = ?, status = 'active',
                 onboarding_completed_at = COALESCE(onboarding_completed_at, ?), updated_at = ? WHERE id = ?
-                """, cohort, "synthetic".equals(cohort), handle, now, now, userId);
+                """, cohort, "synthetic".equals(cohort), handle, Timestamp.from(now), Timestamp.from(now), userId);
         Map<String, Object> values = new LinkedHashMap<>();
         node.get("answers").properties().forEach(e -> {
             Object v = Json.toPlain(e.getValue());
@@ -112,7 +113,7 @@ public class SyntheticLoader {
         jdbc.update("""
                 INSERT INTO email_verification (id, user_id, kind, email_enc, email_hash, domain, verified_at)
                 VALUES (?,?,?,?,?,?,?)
-                """, newId(), userId, kind, crypto.encrypt(email), crypto.hash(email), domain, now);
+                """, newId(), userId, kind, crypto.encrypt(email), crypto.hash(email), domain, Timestamp.from(now));
     }
 
     private void card(long userId, JsonNode card, JsonNode ai) {

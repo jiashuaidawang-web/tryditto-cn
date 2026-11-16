@@ -39,7 +39,7 @@ import java.util.Set;
 @Component
 public class People {
     private static final String OPEN = """
-            SELECT s.user_id FROM match_side s JOIN `match` m ON m.id = s.match_id
+            SELECT s.user_id FROM match_side s JOIN "match" m ON m.id = s.match_id
             WHERE m.state NOT IN ('declined','expired','unscheduled','cancelled','closed','halted')
             """;
 
@@ -70,7 +70,7 @@ public class People {
                        p.travel_mode, p.travel_minutes, p.first_message, p.photo_count, p.expected_genders_enc,
                        p.occupation, p.ai_constraints, p.ai_status, p.persona, p.wechat_enc,
                        pl.lat, pl.lng, pl.name_zh, pl.name_en, pl.city
-                FROM `user` u
+                FROM "user" u
                 JOIN profile p ON p.user_id = u.id
                 JOIN place pl ON pl.id = p.place_id
                 WHERE pl.city = ? AND u.status IN ('active','paused','suspended')
@@ -92,7 +92,7 @@ public class People {
                        p.travel_mode, p.travel_minutes, p.first_message, p.photo_count, p.expected_genders_enc,
                        p.occupation, p.ai_constraints, p.ai_status, p.persona, p.wechat_enc,
                        pl.lat, pl.lng, pl.name_zh, pl.name_en, pl.city
-                FROM `user` u
+                FROM "user" u
                 JOIN profile p ON p.user_id = u.id
                 LEFT JOIN place pl ON pl.id = p.place_id
                 WHERE u.id = ?
@@ -117,7 +117,7 @@ public class People {
                        p.travel_mode, p.travel_minutes, p.first_message, p.photo_count, p.expected_genders_enc,
                        p.occupation, p.ai_constraints, p.ai_status, p.persona, p.wechat_enc,
                        pl.lat, pl.lng, pl.name_zh, pl.name_en, pl.city
-                FROM `user` u
+                FROM "user" u
                 JOIN profile p ON p.user_id = u.id
                 LEFT JOIN place pl ON pl.id = p.place_id
                 WHERE u.id = ?
@@ -129,7 +129,7 @@ public class People {
     }
 
     public String cohortOf(long userId) {
-        List<String> rows = jdbc.query("SELECT cohort FROM `user` WHERE id = ?", (rs, n) -> rs.getString(1), userId);
+        List<String> rows = jdbc.query("SELECT cohort FROM \"user\" WHERE id = ?", (rs, n) -> rs.getString(1), userId);
         return rows.isEmpty() ? null : rows.get(0);
     }
 

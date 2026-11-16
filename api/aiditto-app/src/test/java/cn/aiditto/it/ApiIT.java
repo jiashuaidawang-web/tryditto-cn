@@ -44,7 +44,7 @@ abstract class ApiIT {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", () -> env("TEST_DB_URL",
-                "jdbc:mysql://127.0.0.1:3306/aiditto_test?sslMode=DISABLED&allowPublicKeyRetrieval=true&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=utf8"));
+                "jdbc:postgresql://127.0.0.1:5432/aiditto_test?stringtype=unspecified"));
         r.add("spring.datasource.username", () -> env("TEST_DB_USER", "root"));
         r.add("spring.datasource.password", () -> env("TEST_DB_PASSWORD", ""));
         r.add("spring.flyway.clean-disabled", () -> "false");
@@ -54,6 +54,8 @@ abstract class ApiIT {
         r.add("aiditto.admin-phones", () -> "13800000001");
         r.add("aiditto.scheduler.enabled", () -> "false");
         r.add("aiditto.synthetic.autoload", () -> "false");
+        // Step 4 画像提取在 IT 里同步执行，避免异步任务跨用例写库造成竞态
+        r.add("aiditto.taste.async-enabled", () -> "false");
         r.add("management.server.port", () -> "0");
     }
 

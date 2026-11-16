@@ -16,7 +16,9 @@ import cn.aiditto.infra.web.Times;
 import cn.aiditto.photo.PhotoService;
 import cn.aiditto.place.PlaceService;
 import cn.aiditto.profile.ProfileProjection;
+import cn.aiditto.taste.ProfileWrittenEvent;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,8 @@ import java.util.Objects;
 /**
  * Onboarding write-through (技术方案 §6.4) and profile edits (§6.5): every answer is validated like validate.ts and
  * stored at once. After completion each edit re-projects the {@code profile} row.
+ *
+ * v3 Step 4: profile 写完后发 ProfileWrittenEvent，画像提取在 AFTER_COMMIT 异步执行，不占用户请求时间。
  */
 @Service
 public class OnboardingService {
@@ -44,11 +48,12 @@ public class OnboardingService {
     private final PhotoService photos;
     private final PlaceService places;
     private final ProfileProjection projection;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public OnboardingService(AnswerStore store, QuestionCatalog catalog, AccountService accounts, UserMapper users,
                              EmailCodeService emails, PhotoService photos, PlaceService places,
-                             ProfileProjection projection, Clock clock) {
+                             ProfileProjection projection, ApplicationEventPublisher events, Clock clock) {
         this.store = store;
         this.catalog = catalog;
         this.accounts = accounts;
@@ -57,6 +62,7 @@ public class OnboardingService {
         this.photos = photos;
         this.places = places;
         this.projection = projection;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -137,6 +143,7 @@ public class OnboardingService {
         if (User.ONBOARDING.equals(u.status)) up.set("status", User.ACTIVE);
         users.update(null, up);
         projection.write(userId, answers, photos.countActive(userId, "profile"));
+        events.publishEvent(new ProfileWrittenEvent(userId, "complete"));
     }
 
     private List<String> requiredFields(long userId, Map<String, Object> answers) {
@@ -151,7 +158,9 @@ public class OnboardingService {
     }
 
     private void afterWrite(User u, long userId) {
-        if (u.onboarded()) projection.write(userId, store.load(userId), photos.countActive(userId, "profile"));
+        if (!u.onboarded()) return;
+        projection.write(userId, store.load(userId), photos.countActive(userId, "profile"));
+        events.publishEvent(new ProfileWrittenEvent(userId, "answer_edit"));
     }
 
     private AnswerValidator.Context context() {

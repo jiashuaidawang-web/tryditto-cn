@@ -10,10 +10,13 @@ class AuthIT extends ApiIT {
 
     @Test
     void schemaMigratesFromZeroAndSeedsPlaces() {
-        assertThat(jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success = 1 AND version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5");
+        // V8 = taste_input_hash（Step 4）；V9 = embedding_version 扩容（Step 5.2）；
+        // V10 = 反馈学习（Step 8：weights / learned_feedback_cnt / judge_calibration）。
+        // 新增迁移时同步更新这里，防止漏执行。
+        assertThat(jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank", String.class))
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM place WHERE kind = 'area'", Integer.class)).isEqualTo(21);
-        assertThat(jdbc.queryForObject("SELECT VERSION()", String.class)).startsWith("8.4");
+        assertThat(jdbc.queryForObject("SELECT VERSION()", String.class)).startsWith("PostgreSQL 16");
     }
 
     @Test
@@ -65,8 +68,8 @@ class AuthIT extends ApiIT {
         assertThat(r.body().get("me").get("demoMode").asBoolean()).isTrue();
         assertThat(r.body().get("me").get("id").isString()).isTrue();
 
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auth_session WHERE token_hash = UNHEX(SHA2(?, 256))", Integer.class, token)).isEqualTo(1);
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM `user` WHERE phone_enc LIKE CONCAT('%', ?, '%')", Integer.class, phone)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auth_session WHERE token_hash = sha256(convert_to(CAST(? AS TEXT), 'UTF8'))", Integer.class, token)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM \"user\" WHERE encode(phone_enc, 'escape') LIKE '%' || CAST(? AS TEXT) || '%'", Integer.class, phone)).isZero();
 
         assertThat(call("GET", "/api/me", null, token).status()).isEqualTo(200);
         assertThat(call("POST", "/api/auth/logout", null, token).status()).isEqualTo(204);

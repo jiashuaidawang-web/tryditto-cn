@@ -19,6 +19,8 @@ import cn.aiditto.domain.week.WeekStatus;
 import cn.aiditto.domain.week.WeekStep;
 import cn.aiditto.infra.json.Json;
 import cn.aiditto.infra.web.Times;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -40,16 +42,26 @@ import java.util.Set;
  * the next call resumes there. Re-running a finished step is a no-op.
  */
 @Service
+@EnableConfigurationProperties(MatchAgentProperties.class)
 public class WeekRunner {
     private final MatchDb db;
     private final People people;
     private final MatchCopyWriter copies;
+    private final AgentRerankService agent;
     private final TransactionTemplate tx;
 
+    /** 兼容旧构造（无 Agent 精排，等价关闭）。 */
     public WeekRunner(MatchDb db, People people, MatchCopyWriter copies, PlatformTransactionManager txm) {
+        this(db, people, copies, null, txm);
+    }
+
+    @Autowired
+    public WeekRunner(MatchDb db, People people, MatchCopyWriter copies,
+                      AgentRerankService agent, PlatformTransactionManager txm) {
         this.db = db;
         this.people = people;
         this.copies = copies;
+        this.agent = agent;
         this.tx = new TransactionTemplate(txm);
     }
 
@@ -186,8 +198,24 @@ public class WeekRunner {
             if (m.candidate() != null) candidates.add(m.candidate());
         }
         boolean manual = "manual".equals(week.trigger());
-        MatchingInput input = new MatchingInput(week.weekStart(), candidates, pairs(db.pastPairs()), pairs(db.reportedPairs()),
+        // Step 8：双向拒绝/举报沉淀的永久 forbidden 对与 report 一起进硬过滤，绝不复推（A04）
+        List<long[]> excluded = new ArrayList<>(db.reportedPairs());
+        excluded.addAll(db.forbiddenPairs());
+        MatchingInput input = new MatchingInput(week.weekStart(), candidates, pairs(db.pastPairs()), pairs(excluded),
                 Weights.W1, week.weekStart().toEpochDay(), manual);
+        // Step 6：先用同一份 input 建边（硬约束/门槛完全一致），只对 Top-N 跑 Agent 精排，
+        // 再把 AI 分注入 input 重新求解；开关关闭或整批降级时 input 不变，逐位等同 M2。
+        Map<String, Object> agentStats = new LinkedHashMap<>();
+        if (agent != null) {
+            AgentRerankService.Outcome o = agent.rerank(week.id(),
+                    MatchingSolver.buildEdges(input));
+            if (!o.aiScores().isEmpty()) input = input.withAiScores(o.aiScores());
+            agentStats.put("agentMode", o.mode());
+            agentStats.put("agentJudged", o.judged());
+            agentStats.put("agentSimulated", o.simulated());
+            agentStats.put("agentDegraded", o.degradedPairs());
+            agentStats.put("agentAiPairs", o.aiScores().size());
+        }
         MatchingResult result = new MatchingSolver().solve(input);
         Instant respondDue = Deadlines.respondDue(manual ? now : week.publishAt());
         List<Slot> slots = SlotRules.propose(respondDue);
@@ -215,10 +243,12 @@ public class WeekRunner {
         stats.put("buildMillis", result.stats().buildMillis());
         stats.put("solveMillis", result.stats().solveMillis());
         stats.put("belowThreshold", result.stats().belowThreshold());
+        stats.putAll(agentStats);
         db.saveWeek(week.id(), WeekMachine.succeed(week.status(), WeekStep.SOLVE), WeekStep.SOLVE, null, Json.write(stats), null, now);
     }
 
     private void copy(MatchDb.WeekRow week, Instant now, Map<Long, List<People.Member>> cache) {
+        copies.resetStats();
         Map<Long, People.Member> byId = new LinkedHashMap<>();
         for (People.Member m : pool(week, now, cache)) byId.put(m.userId(), m);
         for (long matchId : db.matchIds(week.id())) {
@@ -230,6 +260,8 @@ public class WeekRunner {
             copies.write(matchId, low, high);
         }
         db.saveWeek(week.id(), WeekMachine.succeed(week.status(), WeekStep.COPY), WeekStep.COPY, null, null, null, now);
+        // Step 7：合并写入（不覆盖 SOLVE 的 agent 统计），供「模板兜底率 ≤5%」闸门按批统计
+        db.mergeWeekStats(week.id(), Json.write(copies.stats()));
     }
 
     private void publish(MatchDb.WeekRow week, Instant now) {
@@ -265,7 +297,7 @@ public class WeekRunner {
     }
 
     private long[] pairOf(long matchId) {
-        return db.jdbc().queryForObject("SELECT user_low, user_high FROM `match` WHERE id = ?",
+        return db.jdbc().queryForObject("SELECT user_low, user_high FROM \"match\" WHERE id = ?",
                 (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)}, matchId);
     }
 

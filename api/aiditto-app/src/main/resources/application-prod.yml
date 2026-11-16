@@ -3,10 +3,11 @@
 spring:
   datasource:
     url: ${DB_URL}
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   flyway:
     clean-disabled: true
+    schemas: public,sim
 
 logging:
   file:
@@ -17,6 +18,8 @@ logging:
       max-history: 7
 
 aiditto:
+  llm:
+    mode: ${LLM_MODE:live}
   demo-login-code: ${DEMO_LOGIN_CODE}
   crypto:
     data-key: ${DATA_KEY}

@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.Instant;
 
 /** Row of {@code user} (技术方案 §4.3). Status values follow §5.5. */
-@TableName("`user`")
+@TableName("\"user\"")
 public class User {
     public static final String ONBOARDING = "onboarding";
     public static final String ACTIVE = "active";

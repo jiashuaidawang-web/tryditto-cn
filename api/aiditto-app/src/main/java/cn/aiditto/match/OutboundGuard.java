@@ -21,13 +21,13 @@ public class OutboundGuard {
 
     /** {@code false} only when the phone belongs to a synthetic account. Unknown phones may be new signups. */
     public boolean mayText(String phone) {
-        return !isSynthetic("SELECT cohort FROM `user` WHERE phone_hash = ?", crypto.hash(Pii.normalizePhone(phone)));
+        return !isSynthetic("SELECT cohort FROM \"user\" WHERE phone_hash = ?", crypto.hash(Pii.normalizePhone(phone)));
     }
 
     /** {@code false} when any verified or stored email row for this address belongs to a synthetic account. */
     public boolean mayEmail(String email) {
         return !isSynthetic(
-                "SELECT u.cohort FROM email_verification v JOIN `user` u ON u.id = v.user_id WHERE v.email_hash = ?",
+                "SELECT u.cohort FROM email_verification v JOIN \"user\" u ON u.id = v.user_id WHERE v.email_hash = ?",
                 crypto.hash(Pii.normalizeEmail(email)));
     }
 

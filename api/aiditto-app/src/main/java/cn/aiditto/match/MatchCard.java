@@ -242,7 +242,7 @@ public class MatchCard {
     }
 
     private String partnerKey(long userId) {
-        List<String> handles = db.jdbc().query("SELECT handle FROM `user` WHERE id = ?", (rs, n) -> rs.getString(1), userId);
+        List<String> handles = db.jdbc().query("SELECT handle FROM \"user\" WHERE id = ?", (rs, n) -> rs.getString(1), userId);
         if (!handles.isEmpty() && handles.get(0) != null && !handles.get(0).isBlank()) return handles.get(0);
         return "u" + userId;
     }

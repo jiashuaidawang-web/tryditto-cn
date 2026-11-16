@@ -3,6 +3,7 @@ package cn.aiditto.domain.matching;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -15,6 +16,9 @@ import java.util.Set;
  * @param reportedPairs every pair with a report in either direction
  * @param seed tie-break seed, normally derived from the week id
  * @param manualRun admin "立即匹配"; enables the open-match rule (§7.2 rule 11)
+ * @param aiScores Step 6 Agent 精排分（PairKey → 0-100）。**只影响边权与配对排序**，
+ *                 不参与 HardFilter 硬约束、风格门槛或展示分；空 Map 时求解器行为与 M2 完全一致。
+ *                 这是 Q1「AI 决定配对」与「C 端不能被模型幻觉越过硬约束」两条要求的交界点。
  */
 public record MatchingInput(
         LocalDate weekStart,
@@ -23,7 +27,8 @@ public record MatchingInput(
         Set<PairKey> reportedPairs,
         Weights weights,
         long seed,
-        boolean manualRun) {
+        boolean manualRun,
+        Map<PairKey, Integer> aiScores) {
 
     public MatchingInput {
         Objects.requireNonNull(weekStart, "weekStart");
@@ -31,10 +36,24 @@ public record MatchingInput(
         candidates = List.copyOf(candidates);
         pastPairs = Set.copyOf(pastPairs);
         reportedPairs = Set.copyOf(reportedPairs);
+        aiScores = aiScores == null ? Map.of() : Map.copyOf(aiScores);
+        for (Map.Entry<PairKey, Integer> e : aiScores.entrySet()) {
+            int v = e.getValue() == null ? -1 : e.getValue();
+            if (v < 0 || v > 100) {
+                throw new IllegalArgumentException("aiScore out of [0,100]: " + e.getKey() + "=" + e.getValue());
+            }
+        }
         Set<Long> ids = new HashSet<>();
         for (Candidate c : candidates) {
             if (!ids.add(c.id())) throw new IllegalArgumentException("duplicate candidate id " + c.id());
         }
+    }
+
+    /** 兼容 M2 及全部既有性质测试：不带 AI 分。 */
+    public MatchingInput(LocalDate weekStart, List<Candidate> candidates,
+                         Set<PairKey> pastPairs, Set<PairKey> reportedPairs,
+                         Weights weights, long seed, boolean manualRun) {
+        this(weekStart, candidates, pastPairs, reportedPairs, weights, seed, manualRun, Map.of());
     }
 
     public static MatchingInput of(LocalDate weekStart, List<Candidate> candidates, long seed) {
@@ -42,10 +61,14 @@ public record MatchingInput(
     }
 
     public MatchingInput withPastPairs(Set<PairKey> past) {
-        return new MatchingInput(weekStart, candidates, past, reportedPairs, weights, seed, manualRun);
+        return new MatchingInput(weekStart, candidates, past, reportedPairs, weights, seed, manualRun, aiScores);
     }
 
     public MatchingInput withSeed(long s) {
-        return new MatchingInput(weekStart, candidates, pastPairs, reportedPairs, weights, s, manualRun);
+        return new MatchingInput(weekStart, candidates, pastPairs, reportedPairs, weights, s, manualRun, aiScores);
+    }
+
+    public MatchingInput withAiScores(Map<PairKey, Integer> scores) {
+        return new MatchingInput(weekStart, candidates, pastPairs, reportedPairs, weights, seed, manualRun, scores);
     }
 }

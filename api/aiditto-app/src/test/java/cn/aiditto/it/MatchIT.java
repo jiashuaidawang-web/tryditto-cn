@@ -71,9 +71,9 @@ class MatchIT extends ApiIT {
         List<Map<String, Object>> pairs = jdbc.queryForList("""
                 SELECT m.id, m.user_low, m.user_high, m.week_id, a.cohort AS low_cohort, b.cohort AS high_cohort,
                        a.phone_hash AS low_phone, b.phone_hash AS high_phone
-                FROM `match` m
-                JOIN `user` a ON a.id = m.user_low
-                JOIN `user` b ON b.id = m.user_high
+                FROM "match" m
+                JOIN "user" a ON a.id = m.user_low
+                JOIN "user" b ON b.id = m.user_high
                 """);
         assertThat(pairs).isNotEmpty();
         LocalDate week = WeekCalendar.weekStartFor(now);
@@ -95,8 +95,8 @@ class MatchIT extends ApiIT {
         for (String phone : SyntheticPhones.DEMO) {
             Integer n = jdbc.queryForObject("""
                     SELECT COUNT(*) FROM match_side s
-                    JOIN `user` u ON u.id = s.user_id
-                    JOIN `match` m ON m.id = s.match_id
+                    JOIN "user" u ON u.id = s.user_id
+                    JOIN "match" m ON m.id = s.match_id
                     WHERE u.phone_hash = ? AND m.state <> 'draft'
                     """, Integer.class, crypto.hash(phone));
             assertThat(n).as("demo %s matched", phone).isPositive();
@@ -110,7 +110,7 @@ class MatchIT extends ApiIT {
         String womanPhone = randomPhone();
         onboard(manPhone, "man", List.of("women"), "real-man-" + manPhone + "@pku.edu.cn", "阿实");
         onboard(womanPhone, "woman", List.of("men"), "real-woman-" + womanPhone + "@pku.edu.cn", "阿真");
-        long answersBefore = jdbc.queryForObject("SELECT COUNT(*) FROM onboarding_answer a JOIN `user` u ON u.id = a.user_id WHERE u.cohort = 'real'", Long.class);
+        long answersBefore = jdbc.queryForObject("SELECT COUNT(*) FROM onboarding_answer a JOIN \"user\" u ON u.id = a.user_id WHERE u.cohort = 'real'", Long.class);
 
         String admin = login("13800000001");
         Resp run = call("POST", "/api/admin/match-runs", Map.of("pool", "bj", "publish", true), admin);
@@ -118,8 +118,8 @@ class MatchIT extends ApiIT {
         assertThat(run.body().get("millis").asLong()).isLessThan(10_000);
 
         Integer mixed = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM `match` m
-                JOIN `user` a ON a.id = m.user_low JOIN `user` b ON b.id = m.user_high
+                SELECT COUNT(*) FROM "match" m
+                JOIN "user" a ON a.id = m.user_low JOIN "user" b ON b.id = m.user_high
                 WHERE (a.cohort = 'real' AND b.cohort <> 'real') OR (b.cohort = 'real' AND a.cohort <> 'real')
                    OR (a.cohort = 'synthetic' AND b.cohort = 'synthetic')
                 """, Integer.class);
@@ -130,13 +130,13 @@ class MatchIT extends ApiIT {
         if (card.get("partner") != null && !card.get("partner").isNull()) {
             String handle = card.get("partner").get("id").asString();
             long asId = handle.startsWith("u") ? Long.parseLong(handle.substring(1)) : -1L;
-            String cohort = jdbc.queryForObject("SELECT cohort FROM `user` WHERE handle = ? OR id = ?", String.class, handle, asId);
+            String cohort = jdbc.queryForObject("SELECT cohort FROM \"user\" WHERE handle = ? OR id = ?", String.class, handle, asId);
             assertThat(cohort).isEqualTo("real");
         }
 
         Resp reset = call("POST", "/api/admin/demo/reset", Map.of(), admin);
         assertThat(reset.status()).isEqualTo(200);
-        long answersAfter = jdbc.queryForObject("SELECT COUNT(*) FROM onboarding_answer a JOIN `user` u ON u.id = a.user_id WHERE u.cohort = 'real'", Long.class);
+        long answersAfter = jdbc.queryForObject("SELECT COUNT(*) FROM onboarding_answer a JOIN \"user\" u ON u.id = a.user_id WHERE u.cohort = 'real'", Long.class);
         assertThat(answersAfter).isEqualTo(answersBefore);
         assertThat(call("GET", "/api/onboarding/progress", null, man).body().get("answers").get("name").asString()).isEqualTo("阿实");
     }
@@ -151,16 +151,16 @@ class MatchIT extends ApiIT {
         assertThat(card.get("match").get("stage").asString()).isEqualTo("awaitingPartner");
         long matchId = Long.parseLong(card.get("match").get("id").asString());
         long partnerId = partnerUser(matchId, userId(demo));
-        jdbc.update("UPDATE `user` SET cohort = 'real' WHERE id = ?", partnerId);
+        jdbc.update("UPDATE \"user\" SET cohort = 'real' WHERE id = ?", partnerId);
         try {
             Resp refused = call("POST", "/api/demo/match/partner-action", Map.of("action", "confirm"), demo);
             assertThat(refused.status()).isEqualTo(403);
-            assertThat(jdbc.queryForObject("SELECT state FROM `match` WHERE id = ?", String.class, matchId)).isEqualTo("published");
+            assertThat(jdbc.queryForObject("SELECT state FROM \"match\" WHERE id = ?", String.class, matchId)).isEqualTo("published");
         } finally {
-            jdbc.update("UPDATE `user` SET cohort = 'synthetic' WHERE id = ?", partnerId);
+            jdbc.update("UPDATE \"user\" SET cohort = 'synthetic' WHERE id = ?", partnerId);
         }
 
-        long weekId = jdbc.queryForObject("SELECT week_id FROM `match` WHERE id = ?", Long.class, matchId);
+        long weekId = jdbc.queryForObject("SELECT week_id FROM \"match\" WHERE id = ?", Long.class, matchId);
         int copies = jdbc.queryForObject("SELECT COUNT(*) FROM match_copy WHERE match_id = ?", Integer.class, matchId);
         assertThat(weeks.rerun(weekId, WeekStep.COPY, Instant.now()).state()).isEqualTo(WeekState.PUBLISHED);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM match_copy WHERE match_id = ?", Integer.class, matchId)).isEqualTo(copies);
@@ -174,17 +174,17 @@ class MatchIT extends ApiIT {
     @Test
     @Order(4)
     void deadlineTickIsIdempotentAndSyntheticPhonesGetNoCode() {
-        Long matchId = jdbc.queryForObject("SELECT id FROM `match` WHERE state = 'published' ORDER BY id LIMIT 1", Long.class);
+        Long matchId = jdbc.queryForObject("SELECT id FROM \"match\" WHERE state = 'published' ORDER BY id LIMIT 1", Long.class);
         assertThat(matchId).isNotNull();
-        jdbc.update("UPDATE `match` SET respond_due = ? WHERE id = ?", java.sql.Timestamp.from(Instant.now().minus(1, ChronoUnit.HOURS)), matchId);
-        long low = jdbc.queryForObject("SELECT user_low FROM `match` WHERE id = ?", Long.class, matchId);
-        int before = jdbc.queryForObject("SELECT no_response_streak FROM `user` WHERE id = ?", Integer.class, low);
+        jdbc.update("UPDATE \"match\" SET respond_due = ? WHERE id = ?", java.sql.Timestamp.from(Instant.now().minus(1, ChronoUnit.HOURS)), matchId);
+        long low = jdbc.queryForObject("SELECT user_low FROM \"match\" WHERE id = ?", Long.class, matchId);
+        int before = jdbc.queryForObject("SELECT no_response_streak FROM \"user\" WHERE id = ?", Integer.class, low);
         matches.tickDeadlines(Instant.now());
-        assertThat(jdbc.queryForObject("SELECT state FROM `match` WHERE id = ?", String.class, matchId)).isEqualTo("expired");
-        int after = jdbc.queryForObject("SELECT no_response_streak FROM `user` WHERE id = ?", Integer.class, low);
+        assertThat(jdbc.queryForObject("SELECT state FROM \"match\" WHERE id = ?", String.class, matchId)).isEqualTo("expired");
+        int after = jdbc.queryForObject("SELECT no_response_streak FROM \"user\" WHERE id = ?", Integer.class, low);
         assertThat(after).isEqualTo(before + 1);
         matches.tickDeadlines(Instant.now());
-        assertThat(jdbc.queryForObject("SELECT no_response_streak FROM `user` WHERE id = ?", Integer.class, low)).isEqualTo(after);
+        assertThat(jdbc.queryForObject("SELECT no_response_streak FROM \"user\" WHERE id = ?", Integer.class, low)).isEqualTo(after);
 
         int codes = jdbc.queryForObject("SELECT COUNT(*) FROM auth_code", Integer.class);
         Resp sent = call("POST", "/api/auth/sms/send", Map.of("phone", SyntheticPhones.fictional(0)), null);
@@ -224,7 +224,7 @@ class MatchIT extends ApiIT {
     }
 
     private long partnerUser(long matchId, long userId) {
-        Map<String, Object> row = jdbc.queryForMap("SELECT user_low, user_high FROM `match` WHERE id = ?", matchId);
+        Map<String, Object> row = jdbc.queryForMap("SELECT user_low, user_high FROM \"match\" WHERE id = ?", matchId);
         long low = ((Number) row.get("user_low")).longValue();
         long high = ((Number) row.get("user_high")).longValue();
         return low == userId ? high : low;

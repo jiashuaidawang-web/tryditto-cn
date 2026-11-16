@@ -3,7 +3,9 @@ spring:
   application:
     name: aiditto-api
   datasource:
-    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/aiditto?sslMode=PREFERRED&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=utf8}
+    # PostgreSQL 16（v3 分支）。stringtype=unspecified 让 Json.write() 产出的 String 能被 JSONB 列隐式接收；
+# 否则 PG JDBC 会把 String 声明成 varchar，写 JSONB 时报类型不匹配。MySQL 版迁移保留在 db/migration-mysql/ 供回滚对照。
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/aiditto?stringtype=unspecified}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     hikari:
@@ -11,6 +13,9 @@ spring:
       minimum-idle: 2
   flyway:
     validate-on-migrate: true
+    # V7 的仿真表在独立 sim schema；不一起纳管时 Flyway clean 只清 public，
+    # 集成测试重跑会出现 relation "sim_user" already exists。
+    schemas: public,sim
   servlet:
     multipart:
       enabled: false
@@ -65,3 +70,83 @@ aiditto:
     delay-ms: ${SCHEDULER_DELAY_MS:30000}
   synthetic:
     autoload: ${SYNTHETIC_AUTOLOAD:true}
+  match:
+    agent:
+      # Step 6 Agent 精排：默认关闭（逐位等同 M2，零回归）；灰度/仿真显式开启
+      enabled: ${MATCH_AGENT_ENABLED:false}
+      top-pairs: ${MATCH_AGENT_TOP_PAIRS:15}
+      min-total: ${MATCH_AGENT_MIN_TOTAL:72}
+      simulate-enabled: ${MATCH_AGENT_SIMULATE:true}
+    copy:
+      # Step 7 AI 文案：默认关闭（逐位等同 M2 模板，零回归）；灰度/仿真显式开启
+      # 关闭时 match_copy.source 恒为 'template'，不会调用任何 LLM
+      enabled: ${MATCH_COPY_AI_ENABLED:false}
+      # 子图级重试（网关层另有主备/重试）；覆盖"首次非法 JSON、二次修正"
+      max-attempts: ${MATCH_COPY_MAX_ATTEMPTS:2}
+      max-tokens: ${MATCH_COPY_MAX_TOKENS:1600}
+      temperature: ${MATCH_COPY_TEMPERATURE:0.6}
+      prompt-version: ${MATCH_COPY_PROMPT_VERSION:match-copy-v1}
+  learning:
+    # Step 8 反馈学习；每周每用户≤1 次由 taste_log 硬闸门保证，≥30 条反馈才启用裁判校准
+    enabled: ${LEARNING_ENABLED:true}
+    max-per-scan: ${LEARNING_MAX_PER_SCAN:500}
+    min-calibration-samples: ${LEARNING_MIN_CALIBRATION_SAMPLES:30}
+    calibration-cap: ${LEARNING_CALIBRATION_CAP:10}
+  taste:
+    # 画像提取总开关；关闭时入驻链路完全无额外开销（回滚用）
+    enabled: ${TASTE_ENABLED:true}
+    # 生产异步（AFTER_COMMIT + 专用线程池）；集成测试设 false 消除竞态
+    async-enabled: ${TASTE_ASYNC_ENABLED:true}
+  recall:
+    enabled: ${RECALL_ENABLED:true}
+    # 生产用容器名 aiditto-qdrant:6333；本机经 SSH 隧道用 127.0.0.1:16333
+    qdrant-url: ${QDRANT_URL:http://127.0.0.1:6333}
+    collection: ${QDRANT_COLLECTION:match_user_v1}
+    dimension: ${EMBEDDING_DIM:1024}
+    # hash = 确定性特征哈希（离线/仿真/无密钥）；openai = 真实语义 embedding（需配下面三项）
+    embedding-mode: ${EMBEDDING_MODE:hash}
+    embedding-version: ${EMBEDDING_VERSION:}
+    embedding-base-url: ${EMBEDDING_BASE_URL:}
+    embedding-api-key: ${EMBEDDING_API_KEY:}
+    embedding-model: ${EMBEDDING_MODEL:text-embedding-v3}
+    # 部分聚合网关的 embedding 模型不支持 dimensions 参数，设 false 后不发送
+    embedding-send-dimensions: ${EMBEDDING_SEND_DIMENSIONS:true}
+    embedding-batch-size: ${EMBEDDING_BATCH_SIZE:5}
+    # 网关单请求文本条数上限；text-embedding-v3 实测 10，超限会 400 并静默回退逐条
+    embedding-max-batch-items: ${EMBEDDING_MAX_BATCH_ITEMS:10}
+    embedding-timeout-ms: ${EMBEDDING_TIMEOUT_MS:20000}
+    taste-top-k: ${RECALL_TASTE_TOPK:200}
+    persona-top-k: ${RECALL_PERSONA_TOPK:200}
+    tag-top-k: ${RECALL_TAG_TOPK:200}
+    explore-top-k: ${RECALL_EXPLORE_TOPK:50}
+    min-candidates: ${RECALL_MIN_CANDIDATES:50}
+    coarse-top-n: ${RECALL_COARSE_TOPN:15}
+    rrf-k: ${RECALL_RRF_K:60}
+    hnsw-ef: ${RECALL_HNSW_EF:256}
+    max-hnsw-ef: ${RECALL_MAX_HNSW_EF:512}
+    # 粗排四权重（v3 规格：条件/RRF/曝光公平/反馈历史）
+    coarse-weight-condition: ${RECALL_W_CONDITION:0.40}
+    coarse-weight-rrf: ${RECALL_W_RRF:0.30}
+    coarse-weight-fairness: ${RECALL_W_FAIRNESS:0.10}
+    coarse-weight-feedback: ${RECALL_W_FEEDBACK:0.20}
+    # 本地几何等时圈（不接外部地图服务、不内置 key、不渲染地图）
+    iso-enabled: ${RECALL_ISO_ENABLED:true}
+    timeout-ms: ${RECALL_TIMEOUT_MS:30000}
+  llm:
+    # mock = 确定性实现，本机无密钥也能跑全链路；live = 真实主备模型
+    mode: ${LLM_MODE:mock}
+    primary-base-url: ${LLM_PRIMARY_BASE_URL:}
+    primary-api-key: ${LLM_PRIMARY_API_KEY:}
+    primary-model: ${LLM_PRIMARY_MODEL:LongCat-2.5}
+    # 模型级私有请求体参数（JSON 对象字符串），例如 {"thinking":{"type":"disabled"}}
+    primary-extra-body: ${LLM_PRIMARY_EXTRA_BODY:}
+    fallback-base-url: ${LLM_FALLBACK_BASE_URL:}
+    fallback-api-key: ${LLM_FALLBACK_API_KEY:}
+    # 备用出厂模型 DeepSeek-V4.1-Flash-1017；OpenAI 兼容端点 https://api.deepseek.com
+    fallback-model: ${LLM_FALLBACK_MODEL:deepseek-flash}
+    # 留空时代码对 deepseek-* 自动注入 thinking:disabled（默认开思考会挤空 content）
+    fallback-extra-body: ${LLM_FALLBACK_EXTRA_BODY:}
+    max-attempts: ${LLM_MAX_ATTEMPTS:3}
+    timeout-ms: ${LLM_TIMEOUT_MS:30000}
+    retry-delay-ms: ${LLM_RETRY_DELAY_MS:2000}
+    circuit-threshold: ${LLM_CIRCUIT_THRESHOLD:5}
