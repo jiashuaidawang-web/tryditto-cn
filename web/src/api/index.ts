@@ -20,6 +20,8 @@ import type { AvatarSpec, BlockEntry, Feedback, Match, MatchStage, Me, Partner, 
 
 export type { BlockEntry, Feedback, Match, MatchStage, Me, Partner, Reason, Slot, Venue } from './types';
 export { useDb } from './db';
+export { getVoiceProfile, startVoice, answerVoice, stopVoice } from './voice';
+export type { VoiceAnswerResult, VoiceProfile, VoiceQuestion } from './voice';
 export { ApiError } from './http';
 export { MOCK_API, syncOnce } from './session';
 export { PARTNERS, DECLINE_REASONS, REPORT_CATEGORIES, partnerById } from './mock';

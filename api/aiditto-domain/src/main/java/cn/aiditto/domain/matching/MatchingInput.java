@@ -19,6 +19,9 @@ import java.util.Set;
  * @param aiScores Step 6 Agent 精排分（PairKey → 0-100）。**只影响边权与配对排序**，
  *                 不参与 HardFilter 硬约束、风格门槛或展示分；空 Map 时求解器行为与 M2 完全一致。
  *                 这是 Q1「AI 决定配对」与「C 端不能被模型幻觉越过硬约束」两条要求的交界点。
+ * @param learnedScores Step 6/8 学习排序分（PairKey → 0-100）：由双方 {@code user_taste.weights}
+ *                 直接计算的确定性契合分，是「反馈 → 调权重 → 边权」链路的直接载体（D6 方案 A）。
+ *                 与 {@code aiScores} 同契约：只并入边权，不越过硬约束/门槛/展示分；空 Map 时零回归。
  */
 public record MatchingInput(
         LocalDate weekStart,
@@ -28,7 +31,8 @@ public record MatchingInput(
         Weights weights,
         long seed,
         boolean manualRun,
-        Map<PairKey, Integer> aiScores) {
+        Map<PairKey, Integer> aiScores,
+        Map<PairKey, Integer> learnedScores) {
 
     public MatchingInput {
         Objects.requireNonNull(weekStart, "weekStart");
@@ -43,6 +47,13 @@ public record MatchingInput(
                 throw new IllegalArgumentException("aiScore out of [0,100]: " + e.getKey() + "=" + e.getValue());
             }
         }
+        learnedScores = learnedScores == null ? Map.of() : Map.copyOf(learnedScores);
+        for (Map.Entry<PairKey, Integer> e : learnedScores.entrySet()) {
+            int v = e.getValue() == null ? -1 : e.getValue();
+            if (v < 0 || v > 100) {
+                throw new IllegalArgumentException("learnedScore out of [0,100]: " + e.getKey() + "=" + e.getValue());
+            }
+        }
         Set<Long> ids = new HashSet<>();
         for (Candidate c : candidates) {
             if (!ids.add(c.id())) throw new IllegalArgumentException("duplicate candidate id " + c.id());
@@ -53,7 +64,14 @@ public record MatchingInput(
     public MatchingInput(LocalDate weekStart, List<Candidate> candidates,
                          Set<PairKey> pastPairs, Set<PairKey> reportedPairs,
                          Weights weights, long seed, boolean manualRun) {
-        this(weekStart, candidates, pastPairs, reportedPairs, weights, seed, manualRun, Map.of());
+        this(weekStart, candidates, pastPairs, reportedPairs, weights, seed, manualRun, Map.of(), Map.of());
+    }
+
+    /** 兼容历史「带 AI 分」构造：不带学习排序分。 */
+    public MatchingInput(LocalDate weekStart, List<Candidate> candidates,
+                         Set<PairKey> pastPairs, Set<PairKey> reportedPairs,
+                         Weights weights, long seed, boolean manualRun, Map<PairKey, Integer> aiScores) {
+        this(weekStart, candidates, pastPairs, reportedPairs, weights, seed, manualRun, aiScores, Map.of());
     }
 
     public static MatchingInput of(LocalDate weekStart, List<Candidate> candidates, long seed) {
@@ -61,14 +79,18 @@ public record MatchingInput(
     }
 
     public MatchingInput withPastPairs(Set<PairKey> past) {
-        return new MatchingInput(weekStart, candidates, past, reportedPairs, weights, seed, manualRun, aiScores);
+        return new MatchingInput(weekStart, candidates, past, reportedPairs, weights, seed, manualRun, aiScores, learnedScores);
     }
 
     public MatchingInput withSeed(long s) {
-        return new MatchingInput(weekStart, candidates, pastPairs, reportedPairs, weights, s, manualRun, aiScores);
+        return new MatchingInput(weekStart, candidates, pastPairs, reportedPairs, weights, s, manualRun, aiScores, learnedScores);
     }
 
     public MatchingInput withAiScores(Map<PairKey, Integer> scores) {
-        return new MatchingInput(weekStart, candidates, pastPairs, reportedPairs, weights, seed, manualRun, scores);
+        return new MatchingInput(weekStart, candidates, pastPairs, reportedPairs, weights, seed, manualRun, scores, learnedScores);
+    }
+
+    public MatchingInput withLearnedScores(Map<PairKey, Integer> scores) {
+        return new MatchingInput(weekStart, candidates, pastPairs, reportedPairs, weights, seed, manualRun, aiScores, scores);
     }
 }

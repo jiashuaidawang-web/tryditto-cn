@@ -68,6 +68,27 @@ class TasteWeightsTest {
         assertThat(learned.twoFacedConverged()).isTrue();
     }
 
+    @Test
+    void rankAgainstIsBoundedDirectionalAndNeutralSafe() {
+        // 中性画像互相打分落在 (0,1) 内且确定
+        double nn = TasteWeights.neutral().rankAgainst(TasteWeights.neutral());
+        assertThat(nn).isBetween(0.0, 1.0);
+        assertThat(TasteWeights.neutral().rankAgainst(TasteWeights.neutral())).isEqualTo(nn);
+
+        // 偏好×属性是有向的：A 看重幽默、B 擅长表达 → A×B 高；反向低
+        TasteWeights a = TasteWeights.of(Map.of("humor", 0.9, "expressiveness", 0.1,
+                "adventure", 0.7, "calm", 0.2));
+        TasteWeights b = TasteWeights.of(Map.of("humor", 0.1, "expressiveness", 0.9,
+                "adventure", 0.2, "calm", 0.8));
+        assertThat(a.rankAgainst(b)).isGreaterThan(b.rankAgainst(a));
+        assertThat(a.rankAgainst(b)).isBetween(0.0, 1.0);
+
+        // 越贴合偏好分越高：把对方幽默拉满应抬高 A 对它的分
+        TasteWeights bMoreHumor = TasteWeights.of(Map.of("humor", 1.0, "expressiveness", 0.9,
+                "adventure", 1.0, "calm", 0.0));
+        assertThat(a.rankAgainst(bMoreHumor)).isGreaterThan(a.rankAgainst(b));
+    }
+
     /** 极简 JSON 解析（domain 层不依赖 Jackson），只用于断言 toJson 可回读。 */
     static final class Jsonish {
         static Map<String, Object> parse(String s) {

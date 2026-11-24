@@ -18,6 +18,7 @@ import java.util.Set;
  * @param venueIds candidate venue ids; the chosen one must be among them
  * @param forbiddenNames real nicknames that must never appear (placeholders only)
  * @param knownTerms every text a quoted term may come from: free-text answers, option labels, venue names
+ * @param resonance  受控的深层共鸣观察（可为 none）；present 时作为双方共享的合法引用与可用词
  */
 public record CopyContext(
         Set<String> lowFields,
@@ -25,7 +26,8 @@ public record CopyContext(
         Set<String> sharedFields,
         Set<String> venueIds,
         Set<String> forbiddenNames,
-        List<String> knownTerms) {
+        List<String> knownTerms,
+        ResonanceHint resonance) {
 
     public static final String LOCATION = "location";
 
@@ -36,10 +38,20 @@ public record CopyContext(
         venueIds = Set.copyOf(venueIds);
         forbiddenNames = Set.copyOf(forbiddenNames);
         knownTerms = List.copyOf(knownTerms);
+        resonance = resonance == null ? ResonanceHint.none() : resonance;
     }
 
     /** Builds the context for a pair; {@code otherNames} are extra nicknames to forbid (e.g. the rest of the batch). */
     public static CopyContext of(ProfileFacts low, ProfileFacts high, List<VenueOption> venues, Set<String> otherNames) {
+        return of(low, high, venues, otherNames, ResonanceHint.none());
+    }
+
+    /**
+     * 带深层共鸣观察的构造：resonance.present() 时把 {@code resonance} 作为双方共享字段
+     * 与其定性标签作为可用词，让文案模型可以写跨表面理由且通过校验。
+     */
+    public static CopyContext of(ProfileFacts low, ProfileFacts high, List<VenueOption> venues,
+                                 Set<String> otherNames, ResonanceHint resonance) {
         Objects.requireNonNull(low, "low");
         Objects.requireNonNull(high, "high");
         Set<String> names = new HashSet<>(otherNames == null ? Set.of() : otherNames);
@@ -55,7 +67,17 @@ public record CopyContext(
         }
         addTerms(low, terms);
         addTerms(high, terms);
-        return new CopyContext(fields(low), fields(high), shared(low, high), venueIds, names, terms);
+        Set<String> lowF = new HashSet<>(fields(low));
+        Set<String> highF = new HashSet<>(fields(high));
+        Set<String> sharedF = new HashSet<>(shared(low, high));
+        ResonanceHint hint = resonance == null ? ResonanceHint.none() : resonance;
+        if (hint.present()) {
+            lowF.add(ResonanceHint.CITE);
+            highF.add(ResonanceHint.CITE);
+            sharedF.add(ResonanceHint.CITE);
+            terms.addAll(hint.traits());
+        }
+        return new CopyContext(lowF, highF, sharedF, venueIds, names, terms, hint);
     }
 
     static Set<String> fields(ProfileFacts p) {

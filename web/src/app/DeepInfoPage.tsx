@@ -14,6 +14,7 @@ const C = {
   look: t("The look you're into", '你喜欢的长相'),
   lookBody: t('Drop a celeb crush or someone whose vibe you love', '放一张明星或你很喜欢的 vibe 的照片'),
   lookNote: t('Only used to match you. Nobody else sees these.', '只用于匹配，任何人都看不到。'),
+  lookWhoHint: t('Celebrity / vibe photos only here — not your own. Your own photos go on the profile page.', '这里只放明星脸或你喜欢的长相，别放本人照片。你本人的照片在「你的资料」页上传。'),
 };
 
 /**
@@ -42,6 +43,7 @@ export function DeepInfoPage() {
         <div className="app-card mx-4 px-4 py-6">
           <h2 className="text-[16px] font-normal leading-6">{pick(C.look, lang)}</h2>
           <p className="mt-[6px] text-[14px] leading-5 text-white/90">{pick(C.lookBody, lang)}</p>
+          <p className="mt-3 rounded-[12px] bg-white/10 px-3 py-2 text-[12px] leading-[17px] text-white/90">{pick(C.lookWhoHint, lang)}</p>
           <input
             ref={file}
             id="photo"

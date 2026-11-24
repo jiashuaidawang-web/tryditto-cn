@@ -726,21 +726,89 @@ Step 6–9 完成后继续打磨阶段 B，目标是查清「越匹配越准」�
 
 明显更差，已回滚到已验证基线。对照实现保留在 `TrueScore.topContributionDim/worstContributionDim` 作证据链，不参与默认回放。这次实验否定了「继续在 reason_tag 来源 / 调整方向 / 学习幅度上试错能解决」的假设。
 
-## 四、决策点 D6（阻塞项，等创始人拍板）
+## 四、决策点 D6（已决：方案 A，已实施）
 
-当前闭环是「反馈 → 调用户画像 1 个权重 → 间接影响 compatibility 边权」。固定池对照与失败实验共同证明这条链路不保证排序变准，而画像还原度与全部防过拟合闸门都过了。**这不是参数问题，是链路设计问题。**
+原闭环是「反馈 → 调用户画像 1 个权重 → 间接影响 compatibility 边权」。阶段 B 复核的固定池对照与失败实验证明这条链路不保证排序变准，而画像还原度与全部防过拟合闸门都过了——这是链路设计问题，不是参数问题。**创始人已拍板 D6 = 方案 A（learning-to-rank），并已实施。**
 
-| 选项 | 内容 | 建议 |
+| 选项 | 内容 | 结果 |
 |---|---|---|
-| **A** | 引入 learning-to-rank：`user_taste.weights` 从「偏好画像」升级为「排序权重」，直接参与 `AiJudge` 边权计算；需重构 Step 6/8 边权契约 | **推荐**，但属架构级改动，等创始人确认后动工 |
-| B | 保留现闭环，把「越匹配越准」证明推迟到真实反馈阶段 | 不建议，违背「真实用户只用于验证、不用于试错」铁律 |
+| **A（已决·已实施）** | 引入 learning-to-rank：`user_taste.weights` 从「偏好画像」升级为「排序权重」，由 `TasteWeights.rankAgainst` 直接计算确定性学习排序分，经 `MatchingInput.learnedScores` → `MatchingSolver` 边权（`ai×1e6 + learned×1e5 + objective×1e3 + tiebreak`）；`AgentRerankService` 读 weights 产出学习分，`WeekRunner.solve` 并入，LLM 降级仍生效 | 已落地，硬约束/门槛/展示分/零回归/Mock 默认全部不变 |
+| B | 保留现闭环，把「越匹配越准」证明推迟到真实反馈阶段 | 未采纳，违背「真实用户只用于验证、不用于试错」铁律 |
 
-D6 未决前只做不依赖它的验证（扩池 500/2000 + 3:7 性别比、多种子成对显著性检验），**不进灰度、不接真实用户试错**。
+实施后的复跑结论（数字以 `docs/eval/见一面-Go-No-Go-报告.md` 与 `docs/eval/阶段B-深水区复核.md` 实跑为准）：
+
+- 固定池单种子 top1/regret 净收益转正，但 **6 种子符号检验不显著（top1/regret 均 p=1.0，ρ p=0.22），单种子正收益不复现**；
+- 架构评审补测「生产 top-15 口径」（仿真默认给所有边注入学习分，生产只对精排 top-15 边注入）见深水区复核第四节；
+- **D6-A 架构链路线闭合成立，但「学习显著提升排序」尚未统计证明 → NO-GO 维持，不进灰度、不接真实用户试错。**
 
 ## 五、验收
 
 | 项 | 结果 |
 |---|---|
-| 全量 `mvn verify`（PG16） | **domain 430 + app 单测 83 + IT 32 = 545 项，0 失败，BUILD SUCCESS**（复核后复跑仍全绿） |
-| 报告 | `docs/eval/见一面-Go-No-Go-报告.md` 重签为 8 节，新增预测质量诊断、固定池对照、决策点 D6；总判定 **NO-GO** |
+| D6-A 定向验证（本轮架构评审复跑） | domain `TasteWeightsTest` 6/6、`SimulationRunTest -Dsim.deep=true` 1/1，BUILD SUCCESS；报告复跑前后 diff 仅耗时字段，指标数字完全一致（报告 100% 代码生成） |
+| 全量 `mvn verify`（PG16，2026-11-17 上帝视角审阅实测） | **domain 432 + app 单测 83 + IT 32 = 547 项，0 失败，BUILD SUCCESS**（16 项按设计跳过）。隧道重建后实跑确认，非估算。注意：全量默认跳过 6 个 AI 核心 IT，须用 `deploy/verify-ai-core.sh` 单独全开验收。 |
+| 报告 | `docs/eval/见一面-Go-No-Go-报告.md`（8 节，含数据驱动的 D6 净收益）+ `docs/eval/阶段B-深水区复核.md`（性别比 / 6 种子符号检验 / 扩池 500 / **生产 top-15 口径对照**）；总判定 **NO-GO** |
 | 密钥 / 线上 | 全仓 `sk-` 长串扫描命中 0；线上 5 容器 Up、站点 HTTP 200，MySQL 版 nginx / 旧 jar 未动 |
+
+# 十六、上帝视角审阅后的两个收尾修复（2026-11-17）
+
+## 修复 1：AI 文案的「AI 标识」端到端断链（真 bug）
+
+- **问题**：`MatchCard.copyOf()` 的 SQL 没读 `match_copy.source`，`reasons()` 把每条理由的 `ai` 标记写死为 `false`。结果数据库明明记着 `source='ai'`，前端 `reasons.some(r => r.ai !== false)` 的「AI 生成」提示却永远不显示。根因是自 M2 时代遗留，Step 7 上 AI 文案时未同步。
+- **产品决策**：本项目本就是 Agent 产品，**如实向用户展示 AI 标识是加分项，不隐藏**。
+- **改动**：`MatchCard.java` 的 `copyOf()` 增读 `source` 列 → `Copy` record 加 `source` 字段 → `reasons()` 按 `source='ai'` 透传 `ai=true`（非 ai 一律 false，兼容老数据与模板兜底）。`AiCopyIT` 加端到端断言。
+- **验收**：`AIDITTO_STEP7_IT=1` 专项实跑，日志 `reason.ai=true 透传成功 reasons=2`，AiCopyIT **2/2 通过**；模型全挂降级档仍 `source=template`（兜底文案 ai=false），周批照常 published。
+
+## 修复 2：6 个 AI 核心关卡纳入一键验收（可观测性）
+
+- **问题**：全量 `mvn verify` 的 547 项默认跳过 6 个最关键的 AI 端到端关卡，平时没人盯，改动 AI 代码后可能悄悄坏掉。
+- **改动**：新增 `deploy/verify-ai-core.sh`——自检 PG/Qdrant 隧道 → 一键打开 `AIDITTO_STEP6/7/8_IT`、`AIDITTO_QDRANT_IT`、`AIDITTO_RECALL_MATRIX` → 跑 AgentRerankIT / AiCopyIT / FeedbackLearningIT / VectorSyncIT / RecallEvalIT；支持 `SKIP_RECALL_MATRIX=1` 跳过最慢的 E1–E14 实验矩阵。密钥/连接串只从环境读、不落文件。**不改日常 verify 默认行为。**
+- **验收**：`SKIP_RECALL_MATRIX=1 bash deploy/verify-ai-core.sh` 实跑 `SCRIPT_RC=0`，6 项 0 失败 BUILD SUCCESS（VectorSyncIT/AiCopyIT/AgentRerankIT/FeedbackLearningIT/RecallEvalIT 全绿）。日志中的 `Socket accept failed` 为测试结束 Tomcat 关闭噪音，不影响判定。
+
+> 以上两个修复均不碰架构、不切流、不接真实用户；总判定 **NO-GO 不变**。
+
+# 十七、真实效果埋点 + DeepSeek 闲时 + 切 80 预览（2026-11-17，创始人拍板）
+
+## 三项诉求与落地
+
+1. **真实效果埋点 + 实验归因**（创始人：每次指标涨跌要能归因到哪次改动）
+   - V11 `week_metric`：结果指标快照 + `config_version` 版本标记；指标从事实表聚合（不重复埋点），幂等可重算。
+   - `GET /api/admin/metrics` 看板（按周 + 按版本聚合），`POST /api/admin/metrics/{weekId}/refresh` 手动刷新。
+   - 归因方法：每次改策略改 `METRICS_CONFIG_VERSION`，看板按版本对比 acceptRate/successRate/meetRate/satisfactionRate。
+2. **DeepSeek 闲时**：周批 LLM 步骤本就在周三 00:10/00:30（创始人定义空闲时段），无需改调度；生产主模型切 `deepseek-flash`、LongCat 降备。
+3. **切 80 预览**（创始人明确选 B）：`deploy/cutover-v3.sh`，公网入口 `http://124.223.220.245/`。
+
+## 关键改动文件
+
+- 新增迁移 `V11__week_metrics.sql`；AuthIT 版本期望 1-10 → 1-11。
+- 新增 `MetricsProperties` / `WeekMetricsService`；`WeekRunner` 加 metrics 注入 + drive() 末尾捕获；`AdminMatchController` 加看板接口；`application.yml` 加 metrics 配置。
+- 新增 `MetricsIT`（AIDITTO_METRICS_IT=1）、`deploy/cutover-v3.sh`；`deploy/.env.v3.example` LLM 主备对调 + 闲时说明。
+
+## 验收（全部实测）
+
+| 项 | 结果 |
+|---|---|
+| 全量 `mvn verify`（PG16） | **domain 432 + app 单测 83 + IT 33 = 548 项，0 失败，BUILD SUCCESS**（16 项按设计跳过；中途一次 WireMock 偶发 404 单测重跑 10/10 通过，非本轮改动引入） |
+| 埋点 IT | `AIDITTO_METRICS_IT=1` 实测：`captured=true, configVersion=v4-test-scheme, mutualOk=1, successRate=0.5`，幂等（同 week+version 仅 1 行） |
+| 切 80 后的 v3 | Flyway 迁移到 **v11**、Tomcat 8080/8081 UP、`Started AidittoApplication`；公网 `http://124.223.220.245/` HTTP 200、`/api/me` 401（正常鉴权） |
+| 备份 / 回滚 | `/opt/aiditto/backups/cutover-20261117-173825/`（旧容器 inspect、nginx.conf、jar 软链、PG dump、站点状态）；旧容器 `aiditto-api-old` 保留，秒级回滚 |
+| 线上零中断 | 首次切流因 env 未注入失败，旧容器自动回滚、站点全程 200；修复后二次切流成功 |
+
+## 踩坑（都已修，记此备查）
+
+`docker run` 挂 env 文件 ≠ 注入环境变量（须 `--env-file`）；env 里 `DB_URL` 用 `pg16` 但 `aiditto-db` 网络无此别名（须显式 `-e DB_URL=...aiditto-pg16...`）；env 无 `DB_USERNAME`（PG 是 trust 认证、用户 aiditto、空密码）；compose environment 段的 v3 开关不在 .env（须逐个 `-e`，否则退回基础版配不出对）。
+
+## 测试账号（给创始人看效果）
+
+入口 `http://124.223.220.245/`，验证码统一 **888888**：
+
+| 手机号 | 姓名 | 角色 |
+|---|---|---|
+| 13800000001 | 陈默 | 男视角 / 管理员 |
+| 13800000002 | 苏晴 | 女视角 |
+| 13800000003 | 江遥 | 演示 |
+| 13800000004 | 叶可 | 演示 |
+
+4 个 demo 号均有预置匹配卡（stage=revealed、有 partner/headline/blurb/3 reasons），可登录看完整效果。真实周批 pairs=0（同校硬约束 + 跨校，edges=0），演示看效果走 demo 预置配对。
+
+> 这是**效果预览环境**（创始人明确要求），不等于放开真实用户注册；核心 NO-GO 判定不变。

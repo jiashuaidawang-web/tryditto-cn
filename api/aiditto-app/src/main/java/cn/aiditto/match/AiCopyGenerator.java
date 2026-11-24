@@ -58,6 +58,8 @@ public final class AiCopyGenerator {
                    匹配度/契合度/百分比一类词。
                 5. 使用「」或《》等引号时，引号内的文字必须逐字来自输入的【可用词表】，不得自造引号内容。
                 6. reasons 的 cites 只能从【共同项清单】里选，必须是数组，每条至少 1 个。
+                   若输入含【共鸣观察】，可据此写 1 条跨表面契合的理由（聊得来/节奏合拍/想法相近），
+                   这条的 cites 填 ["resonance"]，文本只能用【共鸣观察】给的词，不得编造细节。
                 7. 不评价、不比较、不给关系建议，不用"一定""肯定""最适合"这类断言。
                 8. 地点由程序决定：不要输出 venueId、地点、评分、性别、年龄等字段。
                 结构（严格 JSON，不要 markdown 代码块）：
@@ -77,10 +79,18 @@ public final class AiCopyGenerator {
 
     /** 构造脱敏后的用户输入；ctx 只用于取共同项与词表，绝不把 forbiddenNames 送进模型。 */
     public static String user(ProfileFacts low, ProfileFacts high, CopyContext ctx, List<VenueOption> venues) {
+        String resonanceBlock = "";
+        if (ctx.resonance() != null && ctx.resonance().present()) {
+            // 只送受控定性标签，绝不送裁判原文或模拟对话
+            resonanceBlock = "\n\n【共鸣观察（双方共享的深层契合，可据此写 1 条理由）】\n"
+                    + safe(String.join("、", ctx.resonance().traits()))
+                    + "\n（只用上面这些词写，不要扩展成具体事件或对话内容）";
+        }
         return "【A 的白名单资料】\n" + safe(Json.write(facts(low)))
                 + "\n\n【B 的白名单资料】\n" + safe(Json.write(facts(high)))
                 + "\n\n【共同项清单（cites 只能从这里选）】\n" + safe(new TreeSet<>(ctx.sharedFields()).toString())
                 + "\n\n【可用词表（引号内容必须逐字来自这里）】\n" + safe(terms(ctx, venues).toString())
+                + resonanceBlock
                 + "\n\n【约会地点类型】校内咖啡馆（具体地点由程序选定，不要写进文案）"
                 + "\n\n请输出严格 JSON。A 对应 low，B 对应 high。";
     }

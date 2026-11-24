@@ -48,7 +48,9 @@ public class MatchCopyWriter {
         String place = low.placeNameZh() == null ? "见面地点" : low.placeNameZh();
         String venueId = "cafe-" + Long.toUnsignedString(matchId);
         List<VenueOption> venues = List.of(new VenueOption(venueId, place + "附近的咖啡馆", "", ""));
-        CopyContext ctx = CopyContext.of(low.facts(), high.facts(), venues, java.util.Set.of());
+        // 深层理由：读这对精排时的裁判共鸣信号（受控标签，零自由文本），让理由不止于标签重合
+        cn.aiditto.domain.copy.ResonanceHint resonance = db.resonance(low.userId(), high.userId());
+        CopyContext ctx = CopyContext.of(low.facts(), high.facts(), venues, java.util.Set.of(), resonance);
 
         MatchCopy copy = null;
         String source = "template";

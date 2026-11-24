@@ -1,6 +1,7 @@
 package cn.aiditto.match;
 
 import cn.aiditto.auth.AuthUser;
+import cn.aiditto.infra.json.Json;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,13 +30,16 @@ public class AdminMatchController {
     private final SyntheticLoader synthetic;
     private final DemoService demo;
     private final Clock clock;
+    private final WeekMetricsService metrics;
 
-    public AdminMatchController(WeekRunner weeks, MatchDb db, SyntheticLoader synthetic, DemoService demo, Clock clock) {
+    public AdminMatchController(WeekRunner weeks, MatchDb db, SyntheticLoader synthetic, DemoService demo,
+                                Clock clock, WeekMetricsService metrics) {
         this.weeks = weeks;
         this.db = db;
         this.synthetic = synthetic;
         this.demo = demo;
         this.clock = clock;
+        this.metrics = metrics;
     }
 
     record RunBody(String pool, Boolean publish, Boolean dryRun) {}
@@ -85,6 +89,25 @@ public class AdminMatchController {
     @GetMapping("/weeks")
     List<Map<String, Object>> weeks() {
         return db.weeks();
+    }
+
+    /** 效果看板：逐周结果指标（响应率/接受率/成功率/见面率/满意度），带策略版本标记。 */
+    @GetMapping("/metrics")
+    Map<String, Object> metrics(@RequestParam(defaultValue = "50") int limit) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("weeks", metrics.metrics(limit));
+        out.put("byVersion", metrics.byVersion());
+        return out;
+    }
+
+    /** 手动刷新某周的结果快照（反馈是逐步产生的，可随时重算取最新值）。 */
+    @PostMapping("/metrics/{weekId}/refresh")
+    Map<String, Object> refreshMetric(@PathVariable long weekId, @AuthenticationPrincipal AuthUser me,
+                                      HttpServletRequest req) {
+        Map<String, Object> snap = metrics.capture(weekId);
+        db.audit(me.userId(), "metrics.refresh", "week", Long.toString(weekId),
+                Json.write(snap), req.getRemoteAddr(), clock.instant());
+        return snap;
     }
 
     @GetMapping("/weeks/{id}")

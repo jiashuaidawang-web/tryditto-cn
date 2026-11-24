@@ -200,6 +200,38 @@ public class MatchDb {
         return n != null && n > 0;
     }
 
+    /**
+     * 读这对最新一次 Agent 精排的裁判共鸣信号（sim_report），转成受控 ResonanceHint。
+     * 只读结构化 dims/confidence/degraded，绝不把 reason_text / transcript 原文带出来。
+     * 没跑过精排、或报告不可用时返回 none——文案照常走，零回归。
+     */
+    public cn.aiditto.domain.copy.ResonanceHint resonance(long low, long high) {
+        String raw;
+        try {
+            raw = jdbc.queryForObject("""
+                    SELECT sim_report::text FROM recall_candidate
+                    WHERE user_id=? AND cand_id=? AND sim_report IS NOT NULL
+                    ORDER BY created_at DESC LIMIT 1
+                    """, String.class, low, high);
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            return cn.aiditto.domain.copy.ResonanceHint.none();
+        }
+        if (raw == null || raw.isBlank()) return cn.aiditto.domain.copy.ResonanceHint.none();
+        try {
+            tools.jackson.databind.JsonNode n = Json.readTree(raw);
+            boolean degraded = n.path("degraded").asBoolean(true);
+            double confidence = n.path("confidence").isNumber() ? n.path("confidence").asDouble() : 0.0;
+            java.util.Map<String, Integer> dims = new java.util.LinkedHashMap<>();
+            tools.jackson.databind.JsonNode d = n.path("dims");
+            for (String k : new String[]{"values", "chemistry", "vibe", "feasible"}) {
+                if (d.path(k).isNumber()) dims.put(k, d.path(k).asInt());
+            }
+            return cn.aiditto.domain.copy.ResonanceHint.from(dims, confidence, degraded);
+        } catch (RuntimeException e) {
+            return cn.aiditto.domain.copy.ResonanceHint.none();
+        }
+    }
+
     public int countCopies(long weekId) {
         Integer n = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM match_copy c JOIN "match" m ON m.id = c.match_id WHERE m.week_id = ?

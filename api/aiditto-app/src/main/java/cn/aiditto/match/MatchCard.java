@@ -159,11 +159,15 @@ public class MatchCard {
 
     private List<Map<String, Object>> reasons(long matchId, long viewerId, String me, String partner) {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (Map<String, Object> r : copyOf(matchId, viewerId).reasons) {
+        Copy copy = copyOf(matchId, viewerId);
+        // Step 7：文案来源由 match_copy.source 决定（'ai' = AI 生成，'template' = 模板兜底）。
+        // 前端用 ai 标记显示「由 AI 生成」提示；本项目是 Agent 产品，如实展示而非隐藏。
+        boolean ai = copy.source() != null && "ai".equalsIgnoreCase(copy.source().strip());
+        for (Map<String, Object> r : copy.reasons) {
             Map<String, Object> one = new LinkedHashMap<>();
             one.put("text", fill(String.valueOf(r.getOrDefault("text", "")), me, partner));
             one.put("basis", fill(String.valueOf(r.getOrDefault("basis", "")), me, partner));
-            one.put("ai", false);
+            one.put("ai", ai);
             out.add(one);
         }
         return out;
@@ -217,10 +221,11 @@ public class MatchCard {
     }
 
     private Copy copyOf(long matchId, long viewerId) {
-        List<Copy> rows = db.jdbc().query("SELECT headline, blurb, reasons, openers FROM match_copy WHERE match_id = ? AND viewer_id = ?",
-                (rs, n) -> new Copy(rs.getString(1), readStrings(rs.getString(2)), readMaps(rs.getString(3)), readStrings(rs.getString(4))),
+        List<Copy> rows = db.jdbc().query("SELECT headline, blurb, reasons, openers, source FROM match_copy WHERE match_id = ? AND viewer_id = ?",
+                (rs, n) -> new Copy(rs.getString(1), readStrings(rs.getString(2)), readMaps(rs.getString(3)),
+                        readStrings(rs.getString(4)), rs.getString(5)),
                 matchId, viewerId);
-        return rows.isEmpty() ? new Copy("", List.of(), List.of(), List.of()) : rows.get(0);
+        return rows.isEmpty() ? new Copy("", List.of(), List.of(), List.of(), null) : rows.get(0);
     }
 
     private Map<String, Object> sideRow(long matchId, long userId) {
@@ -324,5 +329,6 @@ public class MatchCard {
         return out;
     }
 
-    private record Copy(String headline, List<String> blurb, List<Map<String, Object>> reasons, List<String> openers) {}
+    private record Copy(String headline, List<String> blurb, List<Map<String, Object>> reasons,
+                        List<String> openers, String source) {}
 }

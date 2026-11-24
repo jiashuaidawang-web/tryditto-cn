@@ -22,6 +22,11 @@ public final class TasteWeights {
             "humor", "adventure", "expressiveness", "calm", "schedule",
             "ambition", "spending", "warmth", "height_sensitivity", "look_weight");
 
+    /** 各维度在学习排序契合函数里的权重（与 DIMS 同序，与 TrueScore 同构）。 */
+    static final double[] RANK_W = {1.2, 1.1, 1.2, 0.8, 0.7, 0.8, 0.7, 1.0, 0.5, 0.5};
+    /** 互补型维度：「一个爱说、一个爱听」比「两人都爱说」更合拍。 */
+    static final List<String> RANK_COMPLEMENTARY = List.of("expressiveness", "calm", "schedule");
+
     /** 单次反馈允许的最大权重变化幅度（A01 / v3 §6.7 防过拟合）。 */
     public static final double MAX_DELTA = 0.15;
     /** 隐性体验维度（口是心非组真正看重的）与显性条件维度。 */
@@ -147,6 +152,41 @@ public final class TasteWeights {
         double s = 0;
         for (double x : a) s += x;
         return s / a.length;
+    }
+
+    /**
+     * 学习排序得分：把自身 10 维权重作为排序系数，对另一方画像权重（近似其特质强度）打分，0-1。
+     * 契约：{@code 0.6×base + 0.4×interaction}，与 {@code TrueScore.compatibility} 同构——
+     * 偏好×属性，不是「两份画像长得多像」。这是 Step 6 直接并入边权的学习信号，
+     * 闭合「反馈→调权重→边权」链路，避免只经 LLM 人格画像间接影响。
+     *
+     * @param other 另一方的学习画像权重（近似其在各维度上的特质强度）
+     * @return 0-1，越高越合拍；自身或对方为中性时退回基准
+     */
+    public double rankAgainst(TasteWeights other) {
+        return 0.6 * baseAgainst(other) + 0.4 * interactionAgainst(other);
+    }
+
+    private double baseAgainst(TasteWeights other) {
+        double sum = 0.0, wsum = 0.0;
+        for (int i = 0; i < DIMS.size(); i++) {
+            String d = DIMS.get(i);
+            double x = get(d); // 自身对维度 d 的偏好程度（排序系数）
+            double y = other.get(d); // 对方在 d 上的特质强度（以对方学习画像权重近似）
+            double f = RANK_COMPLEMENTARY.contains(d)
+                    ? 1.0 - Math.abs(x - (1.0 - y))
+                    : x * y;
+            sum += RANK_W[i] * f;
+            wsum += RANK_W[i];
+        }
+        return wsum > 0 ? sum / wsum : 0.0;
+    }
+
+    private double interactionAgainst(TasteWeights other) {
+        double s = get("humor") * other.get("expressiveness")
+                + get("adventure") * other.get("adventure")
+                + get("calm") * other.get("calm");
+        return s / 3.0;
     }
 
     private static double clamp(double x) {

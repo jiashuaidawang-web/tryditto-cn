@@ -30,6 +30,11 @@ public final class Json {
         return json == null ? List.of() : MAPPER.readValue(json, new TypeReference<List<String>>() {});
     }
 
+    /** JSON array → List&lt;Map&gt;（对象数组，如情景题选项）。 */
+    public static List<Map<String, Object>> readList(String json) {
+        return json == null ? List.of() : MAPPER.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
+    }
+
     public static Map<String, Object> readMap(String json) {
         return MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
     }

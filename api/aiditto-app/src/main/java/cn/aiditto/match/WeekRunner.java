@@ -49,19 +49,27 @@ public class WeekRunner {
     private final MatchCopyWriter copies;
     private final AgentRerankService agent;
     private final TransactionTemplate tx;
+    private final WeekMetricsService metrics;
 
-    /** 兼容旧构造（无 Agent 精排，等价关闭）。 */
+    /** 兼容旧构造（无 Agent 精排、无埋点，等价关闭）。 */
     public WeekRunner(MatchDb db, People people, MatchCopyWriter copies, PlatformTransactionManager txm) {
-        this(db, people, copies, null, txm);
+        this(db, people, copies, null, null, txm);
+    }
+
+    /** 兼容 5 参构造（有 Agent、无埋点）。 */
+    public WeekRunner(MatchDb db, People people, MatchCopyWriter copies,
+                      AgentRerankService agent, PlatformTransactionManager txm) {
+        this(db, people, copies, agent, null, txm);
     }
 
     @Autowired
     public WeekRunner(MatchDb db, People people, MatchCopyWriter copies,
-                      AgentRerankService agent, PlatformTransactionManager txm) {
+                      AgentRerankService agent, WeekMetricsService metrics, PlatformTransactionManager txm) {
         this.db = db;
         this.people = people;
         this.copies = copies;
         this.agent = agent;
+        this.metrics = metrics;
         this.tx = new TransactionTemplate(txm);
     }
 
@@ -154,6 +162,15 @@ public class WeekRunner {
                 throw e;
             }
         }
+        // 效果埋点：步骤全部提交后拍一次结果快照。埋点失败绝不影响配对主流程。
+        if (metrics != null) {
+            try {
+                metrics.capture(weekId);
+            } catch (RuntimeException e) {
+                org.slf4j.LoggerFactory.getLogger(WeekRunner.class)
+                        .warn("week metric capture failed week={} err={}", weekId, e.getClass().getSimpleName());
+            }
+        }
     }
 
     private void runStep(long weekId, WeekStep step, Instant now, Map<Long, List<People.Member>> members) {
@@ -210,11 +227,14 @@ public class WeekRunner {
             AgentRerankService.Outcome o = agent.rerank(week.id(),
                     MatchingSolver.buildEdges(input));
             if (!o.aiScores().isEmpty()) input = input.withAiScores(o.aiScores());
+            // D6 方案 A：学习排序分（user_taste.weights 直接算的确定性契合分）并入边权。
+            if (!o.learnedScores().isEmpty()) input = input.withLearnedScores(o.learnedScores());
             agentStats.put("agentMode", o.mode());
             agentStats.put("agentJudged", o.judged());
             agentStats.put("agentSimulated", o.simulated());
             agentStats.put("agentDegraded", o.degradedPairs());
             agentStats.put("agentAiPairs", o.aiScores().size());
+            agentStats.put("agentLearnedPairs", o.learnedScores().size());
         }
         MatchingResult result = new MatchingSolver().solve(input);
         Instant respondDue = Deadlines.respondDue(manual ? now : week.publishAt());

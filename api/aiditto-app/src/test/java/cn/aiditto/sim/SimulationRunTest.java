@@ -104,6 +104,11 @@ class SimulationRunTest {
         Files.createDirectories(out.getParent());
         Files.writeString(out, report, StandardCharsets.UTF_8);
         System.out.println("[STEP9] report=" + out.toAbsolutePath() + " GO=" + go);
+        if (Boolean.getBoolean("sim.deep")) {
+            Path deepOut = root.resolve("docs/eval/阶段B-深水区复核.md");
+            Files.writeString(deepOut, renderDeepEvidence(), StandardCharsets.UTF_8);
+            System.out.println("[STEP9] deep report=" + deepOut.toAbsolutePath());
+        }
         for (Gate g : gates) {
             System.out.printf("[STEP9] %-38s %-10s actual=%.4f %s%n",
                     g.name(), g.threshold(), g.actual(), g.pass() ? "PASS" : "FAIL");
@@ -257,12 +262,12 @@ class SimulationRunTest {
                 .append("并不等于「配对排序更准了」；两者必须分别用 pred-true ρ 与 top1_hit 验证。")
                 .append("当前 ρ 变化 ").append(f(corrGain)).append("，末周期相对不学习组净收益 ")
                 .append(f(corrNetBenefit)).append("。\n")
-                .append("4. **固定池对照给出决定性判读**：学习组末周期 top1 ").append(f(fLast.top1Hit()))
+                .append("4. **固定池对照判读**：学习组末周期 top1 ").append(f(fLast.top1Hit()))
                 .append(" vs 不学习 ").append(f(ffLast.top1Hit()))
                 .append("，regret ").append(f(fLast.regret())).append(" vs ").append(f(ffLast.regret()))
                 .append("，ρ ").append(f(fLast.predTrueCorr())).append(" vs ").append(f(ffLast.predTrueCorr()))
-                .append(" —— 三项全部为负。因此**不是匹配结构问题**，而是反馈学习信号没有对准排序目标：")
-                .append("画像的维度序更像真值了，却没有转化成更好的候选排序。这是架构级问题，不是调参能解决的。\n")
+                .append("。")
+                .append(fixedNetConclusion(fLast, ffLast)).append("\n")
                 .append("5. **一次失败实验（已回滚）**：按 §4.1 字面把 reason_tag 改成「这对真值贡献最大/最小维度」、")
                 .append("并把 bad:<隐性维度> 改为提升，12 周期实测 taste_recovery 0.907→0.775、")
                 .append("pred-true ρ 0.814→0.671、固定池净收益 −0.135，明显更差。")
@@ -299,28 +304,36 @@ class SimulationRunTest {
                 .append("- 首周期→末周期变化：学习组 ").append(f(fixedTop1Gain))
                 .append("，不学习组 ").append(f(fixedFrozenTop1Gain)).append("\n")
                 .append("- 判读：固定池下 net > 0 说明学习本身有效，主回放未达标主要是")
-                .append("往期配对累积 + 一人一位全局匹配的结构性压制；net ≤ 0 说明学习信号本身仍有问题。\n\n");
+                .append("往期配对累积 + 一人一位全局匹配的结构性压制；net ≤ 0 说明学习信号本身仍有问题。")
+                .append("**注意：以上为默认种子单次点估计；多种子复核见 `docs/eval/阶段B-深水区复核.md`，")
+                .append("top1/regret 净收益未在多种子下统计显著，勿以单种子正收益放行。**\n\n");
 
-        sb.append("## 七、需要创始人拍板的架构决策与阶段 B 剩余工作\n\n")
-                .append("### 决策点 D6：反馈学习如何真正优化「排序目标」（阻塞项）\n\n")
-                .append("当前闭环是「反馈 → 调用户画像 1 个权重 → 间接影响 compatibility 边权」。")
-                .append("固定池对照证明这条链路**不保证排序变准**（top1/regret/ρ 三项净收益全负），")
-                .append("而画像还原度（0.907）和防过拟合闸门都过了。继续在 reason_tag 来源、")
-                .append("调整方向、学习幅度上试错已被一次完整失败实验证伪（见第五节第 5 条），")
-                .append("这不是参数问题，是链路设计问题。两个选项：\n\n")
-                .append("- **A（推荐）**：引入 learning-to-rank——让反馈直接校准/训练排序目标，")
-                .append("`user_taste.weights` 从「偏好画像」升级为「排序权重」，进入 `AiJudge` 边权计算；")
-                .append("需要重构 Step 6/8 的边权契约，属于架构级改动，等创始人确认后动工。\n")
-                .append("- **B（不建议）**：保留现闭环，把「越匹配越准」的证明推迟到真实反馈阶段——")
-                .append("违背「真实用户只用于验证、不用于试错」铁律，不推荐。\n\n")
-                .append("未得到决策前，阶段 B 只做不依赖该决策的验证工作：\n\n")
+        sb.append("## 七、架构决策 D6 与阶段 B 剩余工作\n\n")
+                .append("### 决策点 D6：反馈学习如何真正优化「排序目标」（已决：方案 A，已实施）\n\n")
+                .append("创始人已拍板 **D6 = 方案 A（learning-to-rank）**，本轮已完成 Step 6/8 边权契约重构：\n\n")
+                .append("- `user_taste.weights` 从「偏好画像」升级为「排序权重」，由 `TasteWeights.rankAgainst`")
+                .append("  直接计算确定性学习排序分，经 `MatchingInput.learnedScores` → `MatchingSolver` 边权；")
+                .append("  `AgentRerankService` 读 `user_taste.weights` 产出学习分，`WeekRunner.solve` 并入求解；")
+                .append("  LLM 降级时学习信号仍生效，不再只经 LLM 人格画像间接影响。\n\n")
+                .append("本轮复跑证据：固定池对照 top1 净收益 ").append(pct(fLast.top1Hit() - ffLast.top1Hit()))
+                .append("、regret 净变化 ").append(pct(fLast.regret() - ffLast.regret()))
+                .append("、ρ 净收益 ").append(pct(fLast.predTrueCorr() - ffLast.predTrueCorr()))
+                .append("（均由本轮实跑计算，非写死）。")
+                .append("说明「反馈→调权重→边权」链路对匹配结果的作用方向见第五节判读；")
+                .append("pred-true ρ 的变化量同时列出，「预测分 vs 真值」的排序校准仍是残余缺口，")
+                .append("下一步校准 `rankAgainst` 或引入带监督的 ranker。\n\n")
+                .append("**但多种子成对复核（`-Dsim.deep=true`，见 `docs/eval/阶段B-深水区复核.md`）给出更严格的判读：")
+                .append("上述单种子的 top1/regret 净收益并未在多种子下稳定复现（符号检验不显著），只有 ρ 呈弱正趋势。")
+                .append("结论：D6-A 架构已正确落地，但「学习显著提升排序」尚未在统计上证明，因此 NO-GO 维持，")
+                .append("需要更大池 / 更长周期 / 改进学习目标，而不是靠单种子点估计放行。**\n\n")
+                .append("阶段 B 剩余工作（D6 已决，继续打磨至达标再重签 GO）：\n\n")
                 .append("1. **扩池**到 500 / 2000 并补 3:7 性别比组，量化全局最大权匹配的结构性压制上限；")
                 .append("候选池属性已由问卷观测投影（不再是全默认占位符），门槛真正生效。\n")
                 .append("2. 多种子重复回放 + 成对显著性检验，把单次点估计变成置信区间。\n")
-                .append("3. 固定候选池评估已实现（第四节），后续作为每轮回放的标准对照。\n")
-                .append("4. D6 决策落地并重跑，直到 `regret 单调下降 ≥8/12`、`learning_slope < 0`、")
+                .append("3. 校准 `rankAgainst` 使 pred-true ρ 随学习上升（当前残余缺口）。\n")
+                .append("4. 直到 `regret 单调下降 ≥8/12`、`learning_slope < 0`、")
                 .append("`周期12 top1_hit ≥0.60` 全部达标，再重新签发本报告。")
-                .append("**在此之前不进灰度、不接真实用户试错。**\n\n");
+                .append("在达标前不进灰度、不接真实用户试错。**NO-GO 结论不变。**\n\n");
 
         sb.append("## 八、结论\n\n");
         if (go) {
@@ -330,6 +343,192 @@ class SimulationRunTest {
                     .append("真实用户只用于验证、不用于试错。\n");
         }
         return sb.toString();
+    }
+
+    /** 深水区复核（-Dsim.deep）：性别比、扩池、多种子成对显著性。不参与主闸门，只提供稳健性证据。 */
+    private static String renderDeepEvidence() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("# 「见一面」阶段 B 深水区复核（稳健性证据）\n\n")
+                .append("> 生成方式：`SimulationRunTest`（`-Dsim.deep=true`）实跑生成，同一批生产组件。")
+                .append("本文件**不参与主 NO-GO 判定**，只回答「结论是否依赖单一随机种子 / 性别比 / 池规模」。\n\n");
+
+        SimDriver.CycleMetric baseL = lastOf(SimDriver.run(SimDriver.Config.fixedPool()));
+        SimDriver.CycleMetric baseF = lastOf(SimDriver.run(SimDriver.Config.fixedPoolFrozen()));
+
+        // 一、性别比 3:7 对照（固定池末周期）
+        SimDriver.CycleMetric gL = lastOf(SimDriver.run(SimDriver.Config.fixedPool().withWomenShare(0.3)));
+        SimDriver.CycleMetric gF = lastOf(SimDriver.run(SimDriver.Config.fixedPoolFrozen().withWomenShare(0.3)));
+        sb.append("## 一、性别比 1:1 vs 3:7（固定池末周期）\n\n")
+                .append("| 性别比 | 学习 top1 | 学习 regret | 学习 ρ | 不学习 top1 | 不学习 regret | 不学习 ρ | top1 净收益 |\n")
+                .append("|---|---|---|---|---|---|---|---|\n")
+                .append(deepRow("1:1", baseL, baseF))
+                .append(deepRow("3:7", gL, gF))
+                .append("\n> 说明：合成池**未启用性别偏好硬过滤**（避免偏斜池被排空），故 3:7 与 1:1 在本仿真中结果完全相同——")
+                .append("性别比本身不改变匹配。真实性别偏好的公平性必须在 Stage C 用真实数据验证；此处只能证明学习链路与性别比无关。\n\n");
+
+        // 二、多种子成对显著性（固定池末周期，逐种子算学习−不学习净收益）
+        long seed0 = SimDriver.Config.defaults().seed();
+        int nSeeds = 6;
+        double[] top1Net = new double[nSeeds], regretNet = new double[nSeeds], rhoNet = new double[nSeeds];
+        int top1Wins = 0, regretWins = 0, rhoWins = 0;
+        sb.append("## 二、多种子成对显著性（").append(nSeeds).append(" 种子，固定池末周期）\n\n")
+                .append("| 种子 | top1 净收益 | regret 净变化 | ρ 净收益 |\n|---|---|---|---|\n");
+        for (int s = 0; s < nSeeds; s++) {
+            long seed = seed0 + s;
+            SimDriver.CycleMetric l = lastOf(SimDriver.run(SimDriver.Config.fixedPool().withSeed(seed)));
+            SimDriver.CycleMetric f = lastOf(SimDriver.run(SimDriver.Config.fixedPoolFrozen().withSeed(seed)));
+            top1Net[s] = l.top1Hit() - f.top1Hit();
+            regretNet[s] = l.regret() - f.regret(); // <0 学习更优
+            rhoNet[s] = l.predTrueCorr() - f.predTrueCorr();
+            if (top1Net[s] > 1e-9) top1Wins++;
+            if (regretNet[s] < -1e-9) regretWins++;
+            if (rhoNet[s] > 1e-9) rhoWins++;
+            sb.append("| ").append(seed).append(" | ").append(pct(top1Net[s]))
+                    .append(" | ").append(pct(regretNet[s])).append(" | ").append(pct(rhoNet[s])).append(" |\n");
+        }
+        sb.append("\n| 指标 | 均值 | 标准差 | 学习占优 | 符号检验 p（双侧） |\n|---|---|---|---|---|\n")
+                .append("| top1 净收益 | ").append(pct(mean(top1Net))).append(" | ").append(pct(std(top1Net)))
+                .append(" | ").append(top1Wins).append("/").append(nSeeds)
+                .append(" | ").append(pfmt(signTestP(top1Wins, nSeeds))).append(" |\n")
+                .append("| regret 净变化（负更优） | ").append(pct(mean(regretNet))).append(" | ").append(pct(std(regretNet)))
+                .append(" | ").append(regretWins).append("/").append(nSeeds)
+                .append(" | ").append(pfmt(signTestP(regretWins, nSeeds))).append(" |\n")
+                .append("| ρ 净收益 | ").append(pct(mean(rhoNet))).append(" | ").append(pct(std(rhoNet)))
+                .append(" | ").append(rhoWins).append("/").append(nSeeds)
+                .append(" | ").append(pfmt(signTestP(rhoWins, nSeeds))).append(" |\n")
+                .append("\n> 判读（α=0.05）：top1 学习占优 ").append(top1Wins).append("/").append(nSeeds)
+                .append("、regret ").append(regretWins).append("/").append(nSeeds)
+                .append("、ρ ").append(rhoWins).append("/").append(nSeeds).append("。")
+                .append(signTestP(top1Wins, nSeeds) < 0.05 || signTestP(regretWins, nSeeds) < 0.05
+                        || signTestP(rhoWins, nSeeds) < 0.05
+                        ? "存在达到统计显著的收益项。"
+                        : "**没有任何指标的收益达到统计显著——单种子净收益未复现，学习收益尚未被证明，NO-GO 维持。**")
+                .append("\n\n");
+
+        // 三、扩池到 500（固定池末周期；2000 因 O(n²) 回放过慢，建议离线批跑）
+        SimDriver.CycleMetric sL = lastOf(SimDriver.run(SimDriver.Config.fixedPool().withUsers(500)));
+        SimDriver.CycleMetric sF = lastOf(SimDriver.run(SimDriver.Config.fixedPoolFrozen().withUsers(500)));
+        sb.append("## 三、扩池到 500（固定池末周期）\n\n")
+                .append("| 池规模 | 学习 top1 | 学习 regret | 学习 ρ | 不学习 top1 | 不学习 regret | 不学习 ρ | top1 净收益 |\n")
+                .append("|---|---|---|---|---|---|---|---|\n")
+                .append(deepRow("200（基准）", baseL, baseF))
+                .append(deepRow("500", sL, sF))
+                .append("\n> 判读：扩池后学习净收益若保持为正且不缩水，说明结构不是靠小池偶然撑起来的。")
+                .append("池=2000 的 O(n²) 回放在单元测试里过慢，建议用离线批跑复现同一口径。\n\n");
+
+        // 四、生产 top-15 口径对照（架构评审发现：仿真给所有边算学习分，生产只对精排 topPairs 算）
+        int prodTopN = 15; // 与 MatchAgentProperties.topPairs 默认值一致
+        SimDriver.CycleMetric pL = lastOf(SimDriver.run(SimDriver.Config.fixedPool().withLearnedScoreTopN(prodTopN)));
+        SimDriver.CycleMetric pF = lastOf(SimDriver.run(SimDriver.Config.fixedPoolFrozen().withLearnedScoreTopN(prodTopN)));
+        double histTop1Net = baseL.top1Hit() - baseF.top1Hit();
+        double prodTop1Net = pL.top1Hit() - pF.top1Hit();
+        double histRegretNet = baseL.regret() - baseF.regret();
+        double prodRegretNet = pL.regret() - pF.regret();
+        sb.append("## 四、生产 top-15 口径对照（架构评审补测）\n\n")
+                .append("> 背景：仿真默认给**所有边**注入学习分，但生产 `AgentRerankService.rerank` 只按规则边权取")
+                .append(" `topPairs`（默认 15）精排边算学习分。本节用 `withLearnedScoreTopN(15)` 复现生产口径，")
+                .append("检验「全边注入」是否虚高了学习净收益。\n\n")
+                .append("| 注入口径 | 学习 top1 | 学习 regret | 不学习 top1 | 不学习 regret | top1 净收益 | regret 净变化 |\n")
+                .append("|---|---|---|---|---|---|---|\n")
+                .append("| 全边（仿真默认） | ").append(f(baseL.top1Hit())).append(" | ").append(f(baseL.regret()))
+                .append(" | ").append(f(baseF.top1Hit())).append(" | ").append(f(baseF.regret()))
+                .append(" | ").append(pct(histTop1Net)).append(" | ").append(pct(histRegretNet)).append(" |\n")
+                .append("| 生产 top-15 | ").append(f(pL.top1Hit())).append(" | ").append(f(pL.regret()))
+                .append(" | ").append(f(pF.top1Hit())).append(" | ").append(f(pF.regret()))
+                .append(" | ").append(pct(prodTop1Net)).append(" | ").append(pct(prodRegretNet)).append(" |\n")
+                .append("\n> 判读：生产口径 top1 净收益 ").append(pct(prodTop1Net))
+                .append("，全边口径 ").append(pct(histTop1Net))
+                .append("；regret 净变化生产 ").append(pct(prodRegretNet))
+                .append(" vs 全边 ").append(pct(histRegretNet)).append("。")
+                .append(productionScopeConclusion(histTop1Net, prodTop1Net, histRegretNet, prodRegretNet))
+                .append("\n");
+        return sb.toString();
+    }
+
+    private static SimDriver.CycleMetric lastOf(SimDriver.Run r) {
+        return r.cycles().get(r.cycles().size() - 1);
+    }
+
+    private static String deepRow(String label, SimDriver.CycleMetric learned, SimDriver.CycleMetric frozen) {
+        return "| " + label + " | " + f(learned.top1Hit()) + " | " + f(learned.regret()) + " | "
+                + f(learned.predTrueCorr()) + " | " + f(frozen.top1Hit()) + " | " + f(frozen.regret()) + " | "
+                + f(frozen.predTrueCorr()) + " | " + pct(learned.top1Hit() - frozen.top1Hit()) + " |\n";
+    }
+
+    private static double mean(double[] xs) {
+        double s = 0;
+        for (double x : xs) s += x;
+        return xs.length == 0 ? 0 : s / xs.length;
+    }
+
+    private static double std(double[] xs) {
+        if (xs.length < 2) return 0;
+        double m = mean(xs), s = 0;
+        for (double x : xs) s += (x - m) * (x - m);
+        return Math.sqrt(s / (xs.length - 1));
+    }
+
+    /** 双侧精确符号检验 p 值：k 次占优 / n 次试验。 */
+    private static double signTestP(int wins, int n) {
+        int k = Math.min(wins, n - wins);
+        double tail = 0;
+        for (int i = 0; i <= k; i++) tail += binom(n, i);
+        return Math.min(1.0, 2 * tail / Math.pow(2, n));
+    }
+
+    private static double binom(int n, int k) {
+        double r = 1;
+        for (int i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+        return r;
+    }
+
+    private static String pct(double v) {
+        return String.format(java.util.Locale.ROOT, "%+.4f", v);
+    }
+
+    private static String pfmt(double p) {
+        return String.format(java.util.Locale.ROOT, "%.4f", p);
+    }
+
+    /** 固定池对照的签署结论：按实际数值判定，避免报告结论写死与数字脱节。 */
+    private static String fixedNetConclusion(SimDriver.CycleMetric learned, SimDriver.CycleMetric frozen) {
+        boolean top1Win = learned.top1Hit() > frozen.top1Hit() + 1e-9;
+        boolean regretWin = learned.regret() < frozen.regret() - 1e-9;   // 学习组 regret 更低更好
+        boolean rhoWin = learned.predTrueCorr() > frozen.predTrueCorr() + 1e-9;
+        int wins = (top1Win ? 1 : 0) + (regretWin ? 1 : 0) + (rhoWin ? 1 : 0);
+        String per = "（top1 " + side(top1Win, learned.top1Hit(), frozen.top1Hit())
+                + "、regret " + side(regretWin, learned.regret(), frozen.regret())
+                + "、ρ " + side(rhoWin, learned.predTrueCorr(), frozen.predTrueCorr()) + "）";
+        if (wins == 3) {
+            return "三项全为正：**学习信号已对准排序目标**，反馈→调权重→边权链路成立" + per + "。";
+        }
+        if (wins == 0) {
+            return "三项全为负：**不是匹配结构问题**，而是反馈学习信号没有对准排序目标，属架构级问题" + per + "。";
+        }
+        return "混合结果：" + wins + "/3 项学习更优，学习已改善部分排序维度，"
+                + "但「预测分 vs 真值」的校准仍有缺口" + per + "。";
+    }
+
+    private static String side(boolean win, double learned, double frozen) {
+        if (win) return "优";
+        return Math.abs(learned - frozen) <= 1e-9 ? "平" : "劣";
+    }
+
+    /** 生产 top-15 口径对照的自动判读：全边注入是否虚高了学习净收益。 */
+    private static String productionScopeConclusion(double histTop1, double prodTop1,
+                                                    double histRegret, double prodRegret) {
+        boolean sameSign = (histTop1 > 0) == (prodTop1 > 0);
+        if (!sameSign || prodTop1 <= 0) {
+            return "**生产口径净收益转负或反号——「学习有效」依赖了生产不存在的全边注入，"
+                    + "须按生产口径重新判读，且强化 NO-GO。**";
+        }
+        double shrink = histTop1 <= 0 ? 0 : 1.0 - prodTop1 / histTop1;
+        if (shrink > 0.30) {
+            return "两者同号但生产口径净收益缩水 " + String.format(java.util.Locale.ROOT, "%.0f%%", shrink * 100)
+                    + "，说明**全边注入确实高估了收益，绝对量须按生产口径 +"
+                    + String.format(java.util.Locale.ROOT, "%.4f", prodTop1) + " 判读**；方向稳健但幅度下调。";
+        }
+        return "两者同号且量级接近，结论对学习分作用范围不敏感，可按全边口径近似判读。";
     }
 
     private static String f(double v) {

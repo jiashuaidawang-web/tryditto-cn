@@ -52,12 +52,31 @@ public final class SimDriver {
 
     public record Config(int users, int cycles, long seed, double twoFacedRatio,
                          double longTailRatio, int candidateTopK, boolean learningEnabled,
-                         boolean excludePastPairs) {
+                         boolean excludePastPairs, double womenShare, int learnedScoreTopN) {
         public Config {
             users = Math.max(20, users);
             cycles = Math.max(2, cycles);
             candidateTopK = Math.max(5, candidateTopK);
+            womenShare = Math.max(0.0, Math.min(1.0, womenShare));
+            learnedScoreTopN = Math.max(0, learnedScoreTopN);
         }
+
+        /** 兼容旧 8 参构造：默认男女 1:1、学习分对所有边生效（沿用历史口径）。 */
+        public Config(int users, int cycles, long seed, double twoFacedRatio,
+                      double longTailRatio, int candidateTopK, boolean learningEnabled,
+                      boolean excludePastPairs) {
+            this(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
+                    learningEnabled, excludePastPairs, 0.5, 0);
+        }
+
+        /** 兼容 9 参构造：默认学习分对所有边生效。 */
+        public Config(int users, int cycles, long seed, double twoFacedRatio,
+                      double longTailRatio, int candidateTopK, boolean learningEnabled,
+                      boolean excludePastPairs, double womenShare) {
+            this(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
+                    learningEnabled, excludePastPairs, womenShare, 0);
+        }
+
         public static Config defaults() {
             return new Config(200, 12, 20261118L, 0.20, 0.20, 20, true, true);
         }
@@ -71,6 +90,33 @@ public final class SimDriver {
         }
         public static Config fixedPoolFrozen() {
             return new Config(200, 12, 20261118L, 0.20, 0.20, 20, false, false);
+        }
+
+        /** 深水区：改性别比（如 0.7 表示 7:3 女:男），其余保持不变。 */
+        public Config withWomenShare(double share) {
+            return new Config(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
+                    learningEnabled, excludePastPairs, share, learnedScoreTopN);
+        }
+
+        /** 深水区：扩池到指定人数。 */
+        public Config withUsers(int n) {
+            return new Config(n, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
+                    learningEnabled, excludePastPairs, womenShare, learnedScoreTopN);
+        }
+
+        /** 深水区：换随机种子做多种子显著性检验。 */
+        public Config withSeed(long s) {
+            return new Config(users, cycles, s, twoFacedRatio, longTailRatio, candidateTopK,
+                    learningEnabled, excludePastPairs, womenShare, learnedScoreTopN);
+        }
+
+        /**
+         * 生产口径对照：学习分只注入「规则边权 top-N」边，模拟 AgentRerankService 只对精排
+         * topPairs（生产默认 15）算学习分的行为。0 = 历史口径（对所有边注入），保持不变。
+         */
+        public Config withLearnedScoreTopN(int n) {
+            return new Config(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
+                    learningEnabled, excludePastPairs, womenShare, n);
         }
     }
 
@@ -149,7 +195,7 @@ public final class SimDriver {
             // 关键建模：**Candidate 必须由问卷观测画像投影出来**，不能用全默认占位符。
             // 全默认会让所有人的规则分相同且远超最严门槛（65），于是 200 人每周全配 100 对；
             // 生产 Step 6 IT 里 130 人只配 3 对。规则门槛被绕过 → top1_hit/regret 失真。
-            candidates.add(projectCandidate(i + 1, observed, lt, rnd));
+            candidates.add(projectCandidate(i + 1, observed, lt, cfg.womenShare(), rnd));
         }
 
         // ── 12 周期回放 ───────────────────────────────────────────────────────
@@ -181,24 +227,44 @@ public final class SimDriver {
             double exclusiveShare = exclusiveShare(cfg, candidates, learned, seed);
 
             Map<PairKey, Integer> aiScores = new HashMap<>();
+            // D6 方案 A：学习排序分——直接由双方 learned 画像经 TasteWeights.rankAgainst 计算，
+            // 走生产 MatchingInput.withLearnedScores → MatchingSolver 边权，闭合「反馈→调权重→边权」。
+            Map<PairKey, Integer> learnedScores = new HashMap<>();
+            // 生产口径对照：AgentRerankService.rerank 只按规则边权取 topPairs（默认 15）精排，
+            // 学习分也只注入这些边。learnedScoreTopN=0 时沿用历史口径（所有边注入）。
+            Set<PairKey> learnedScope = null;
+            if (cfg.learnedScoreTopN() > 0) {
+                learnedScope = edges.stream()
+                        .sorted(Comparator.comparingLong(Edge::weight).reversed())
+                        .limit(cfg.learnedScoreTopN())
+                        .map(Edge::key)
+                        .collect(java.util.stream.Collectors.toSet());
+            }
             // 诊断样本：被精排的边上「系统预测分 vs 隐藏真值」的配对，用于算秩相关
             List<Double> predSamples = new ArrayList<>(), trueSamples = new ArrayList<>();
             for (Edge e : edges) {
+                int a = (int) e.low() - 1, b = (int) e.high() - 1;
+                // 学习排序分对所有边都可算（不依赖召回），是 weights 直接进入边权的载体；
+                // 生产口径下只给 top-N 精排边注入。
+                if (learnedScope == null || learnedScope.contains(e.key())) {
+                    int lr = (int) Math.round(learned.get(a).rankAgainst(learned.get(b)) * 100);
+                    learnedScores.put(e.key(), Math.max(0, Math.min(100, lr)));
+                }
                 Double r = recalled.get(e.key());
                 if (r == null) {
-                    aiScores.put(e.key(), 0); // 未召回 → 不进精排（Blossom 会优先选高分召回边）
+                    aiScores.put(e.key(), 0); // 未召回 → 不进 LLM 精排（Blossom 会优先选高分召回边）
                     continue;
                 }
-                int a = (int) e.low() - 1, b = (int) e.high() - 1;
-                // 精排与真值函数同构；双方都只能用学到的画像，看不到 hidden_taste
-                double pred = clamp(TrueScore.compatibility(learned.get(a), learned.get(b)) * TrueScore.SCALE);
+                // 诊断用「生产学习排序分」本身（TasteWeights.rankAgainst，0-1 不截断），
+                // 与匹配边权用的是同一个函数；不再用 clamp(compat*SCALE) 的饱和代理，避免 ρ 被截断虚低。
+                double pred = learned.get(a).rankAgainst(learned.get(b));
                 predSamples.add(pred);
                 trueSamples.add(TrueScore.of(truths.get(a), truths.get(b), truthSeed) / 100.0);
                 int score = (int) Math.round(50 + 50 * clamp(0.90 * pred + 0.10 * r));
                 aiScores.put(e.key(), Math.max(0, Math.min(100, score)));
             }
             double predTrueCorr = SimMetrics.rankCorrelation(predSamples, trueSamples);
-            input = input.withAiScores(aiScores);
+            input = input.withAiScores(aiScores).withLearnedScores(learnedScores);
             MatchingResult result = new MatchingSolver().solve(input);
 
             // 可行候选真值（按用户分组），用于 top1_hit@decile 与 regret
@@ -270,6 +336,13 @@ public final class SimDriver {
         return new Run(cfg, metrics, cases, twoFacedCount, longTailCount, System.currentTimeMillis() - start);
     }
 
+    /** 稳定性别分配：1:1 时保持 id 奇偶（与原 1:1 行为逐位一致），其余按女性占比每 10 人取整分配。 */
+    private static Gender genderFor(int id, double womenShare) {
+        if (Math.abs(womenShare - 0.5) < 1e-9) return id % 2 == 0 ? Gender.WOMAN : Gender.MAN;
+        int womenPerTen = (int) Math.round(womenShare * 10);
+        return (id % 10) < womenPerTen ? Gender.WOMAN : Gender.MAN;
+    }
+
     /**
      * 把「系统能看到的问卷观测画像」投影成生产 Candidate。
      * 只允许读 observed（Step 4 的 TasteFacts 白名单产物），绝不读 HiddenTruth 的权重——
@@ -278,7 +351,8 @@ public final class SimDriver {
      * 属性分化后 Scorer 的规则分有差异、pairThreshold 真正生效，
      * 每周只有一部分人配对成功，top1_hit@decile / regret 才有判别力。
      */
-    private static Candidate projectCandidate(int id, TasteWeights observed, boolean longTail, Random rnd) {
+    private static Candidate projectCandidate(int id, TasteWeights observed, boolean longTail,
+                                              double womenShare, Random rnd) {
         double adv = observed.get("adventure"), calm = observed.get("calm"), humor = observed.get("humor");
         double warmth = observed.get("warmth"), ambition = observed.get("ambition");
         double spending = observed.get("spending"), schedule = observed.get("schedule");
@@ -316,7 +390,7 @@ public final class SimDriver {
                 15 + ((int) (schedule * 30) % 45));
 
         return Candidate.builder(id)
-                .gender(id % 2 == 0 ? Gender.WOMAN : Gender.MAN)
+                .gender(genderFor(id, womenShare))
                 .cohort(Cohort.REAL) // 仿真池扮演真实学生；SYNTHETIC 按生产规则只能与 DEMO 配
                 .schoolYear(year)
                 .style(style)

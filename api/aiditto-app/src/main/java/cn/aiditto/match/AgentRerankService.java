@@ -5,6 +5,7 @@ import cn.aiditto.ai.LlmRequest;
 import cn.aiditto.ai.LlmResult;
 import cn.aiditto.domain.matching.Edge;
 import cn.aiditto.domain.matching.PairKey;
+import cn.aiditto.domain.taste.TasteWeights;
 import cn.aiditto.infra.json.Json;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import org.slf4j.Logger;
@@ -41,9 +42,15 @@ public class AgentRerankService {
     private static final Logger log = LoggerFactory.getLogger(AgentRerankService.class);
 
     private static final String TASTE_SQL = """
-            SELECT t.user_id, t.persona_text, t.taste_text, p.ai_constraints::text AS ai_constraints
+            SELECT t.user_id, t.persona_text, t.taste_text, t.weights, p.ai_constraints::text AS ai_constraints
             FROM user_taste t
             LEFT JOIN profile p ON p.user_id = t.user_id
+            WHERE t.is_active AND t.user_id = ANY (?)
+            """;
+
+    private static final String TASTE_WEIGHTS_SQL = """
+            SELECT t.user_id, t.weights
+            FROM user_taste t
             WHERE t.is_active AND t.user_id = ANY (?)
             """;
 
@@ -53,19 +60,29 @@ public class AgentRerankService {
     private final IdentifierGenerator ids;
     private final Clock clock;
     private final JudgeCalibrationService calibration;
+    private final cn.aiditto.voice.VoiceAssetService voiceAssets;
 
+    /** 兼容旧构造（无语气资产，等价关闭——分身行为与以前完全一致）。 */
     public AgentRerankService(LlmGateway llm, JdbcTemplate jdbc, MatchAgentProperties props,
                               IdentifierGenerator ids, Clock clock, JudgeCalibrationService calibration) {
+        this(llm, jdbc, props, ids, clock, calibration, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AgentRerankService(LlmGateway llm, JdbcTemplate jdbc, MatchAgentProperties props,
+                              IdentifierGenerator ids, Clock clock, JudgeCalibrationService calibration,
+                              cn.aiditto.voice.VoiceAssetService voiceAssets) {
         this.llm = llm;
         this.jdbc = jdbc;
         this.props = props;
         this.ids = ids;
         this.clock = clock;
         this.calibration = calibration;
+        this.voiceAssets = voiceAssets;
     }
 
-    public record Outcome(Map<PairKey, Integer> aiScores, int judged, int degradedPairs,
-                          int simulated, String mode) {}
+    public record Outcome(Map<PairKey, Integer> aiScores, Map<PairKey, Integer> learnedScores,
+                          int judged, int degradedPairs, int simulated, String mode) {}
 
     /**
      * 给通过硬约束与门槛的边打分。返回空 Map = 完全回落 M2（安全）。
@@ -73,7 +90,7 @@ public class AgentRerankService {
      */
     public Outcome rerank(long weekId, List<Edge> edges) {
         if (!Boolean.TRUE.equals(props.enabled()) || edges == null || edges.isEmpty()) {
-            return new Outcome(Map.of(), 0, 0, 0, "disabled");
+            return new Outcome(Map.of(), Map.of(), 0, 0, 0, "disabled");
         }
         calibration.refresh(); // 恢复/同步已生效的裁判校准偏置（未达标时为 0）
         List<Edge> top = new ArrayList<>(edges);
@@ -82,9 +99,18 @@ public class AgentRerankService {
         top = top.subList(0, limit);
 
         Map<Long, String[]> personas = loadPersonas(top);
+        // D6 方案 A：直接读 user_taste.weights，计算确定性学习排序分并入边权，
+        // 闭合「反馈→调权重→边权」链路；即使 LLM 降级，学习信号仍然生效。
+        Map<Long, TasteWeights> weights = loadTasteWeights(top);
         Map<PairKey, Integer> scores = new LinkedHashMap<>();
+        Map<PairKey, Integer> learnedScores = new LinkedHashMap<>();
         int judged = 0, degraded = 0, simulated = 0;
         for (Edge e : top) {
+            TasteWeights wa = weights.get(e.low()), wb = weights.get(e.high());
+            if (wa != null && wb != null) {
+                int learned = (int) Math.round(wa.rankAgainst(wb) * 100);
+                learnedScores.put(e.key(), Math.max(0, Math.min(100, learned)));
+            }
             String[] a = personas.getOrDefault(e.low(), new String[]{"", "", ""});
             String[] b = personas.getOrDefault(e.high(), new String[]{"", "", ""});
             java.util.Set<String> declared = declaredTags(a, b);
@@ -130,9 +156,9 @@ public class AgentRerankService {
             persist(weekId, e, AiJudge.report(v, transcript), v.degraded() ? "low-confidence" : "ok");
         }
         String mode = judged == 0 ? "fully-degraded" : (degraded > 0 ? "partial" : "full");
-        log.info("agent rerank week={} top={} judged={} simulated={} degraded={} mode={}",
-                weekId, limit, judged, simulated, degraded, mode);
-        return new Outcome(scores, judged, degraded, simulated, mode);
+        log.info("agent rerank week={} top={} judged={} simulated={} degraded={} mode={} learnedPairs={}",
+                weekId, limit, judged, simulated, degraded, mode, learnedScores.size());
+        return new Outcome(scores, learnedScores, judged, degraded, simulated, mode);
     }
 
     /** 画像只读脱敏产物；再叠加 PII 正则，防止历史脏数据进入提示词。 */
@@ -152,14 +178,50 @@ public class AgentRerankService {
                         String persona = scrub(rs.getString("persona_text"));
                         String taste = scrub(rs.getString("taste_text"));
                         java.util.Set<String> tags = ConstraintTags.from(rs.getString("ai_constraints"));
-                        // [0] 脱敏画像；[1] 给裁判的**标签 id 清单**（不是红线原文）；[2] 服务端 declared 集合
-                        out.put(id, new String[]{persona.isBlank() ? taste : persona,
+                        // 治本：叠加语气资产（人格推断 + 本人原话），让分身用接近本人的语气说话/提问。
+                        // 无资产时 voiceHint 返回空串，persona 与以前逐字相同（零回归）。
+                        String base = persona.isBlank() ? taste : persona;
+                        String voice = voiceAssets == null ? "" : voiceAssets.voiceHint(id);
+                        String withVoice = voice.isBlank() ? base : base + "。【语气参考】" + voice;
+                        // [0] 脱敏画像(+语气)；[1] 给裁判的**标签 id 清单**（不是红线原文）；[2] 服务端 declared 集合
+                        out.put(id, new String[]{withVoice,
                                 ConstraintTags.describe(tags), String.join(",", tags)});
                     });
         } catch (RuntimeException e) {
             log.warn("load personas failed -> fully degraded: {}", e.getClass().getSimpleName());
         }
         return out;
+    }
+
+    /** 读取各用户当前生效的口味权重（JSONB），供学习排序直接并入边权。 */
+    private Map<Long, TasteWeights> loadTasteWeights(List<Edge> top) {
+        List<Long> userIds = new ArrayList<>();
+        for (Edge e : top) {
+            userIds.add(e.low());
+            userIds.add(e.high());
+        }
+        Map<Long, TasteWeights> out = new LinkedHashMap<>();
+        try {
+            jdbc.query(TASTE_WEIGHTS_SQL,
+                    ps -> ps.setArray(1, ps.getConnection().createArrayOf("bigint",
+                            userIds.stream().distinct().toArray())),
+                    rs -> {
+                        long id = rs.getLong("user_id");
+                        out.put(id, readWeights(rs.getString("weights")));
+                    });
+        } catch (RuntimeException e) {
+            log.warn("load taste weights failed -> learned scores degraded: {}", e.getClass().getSimpleName());
+        }
+        return out;
+    }
+
+    private static TasteWeights readWeights(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return TasteWeights.of(Json.readMap(raw));
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** 双方声明过的结构化红线标签合集；只有命中这些标签才允许裁判强制 total=0。 */

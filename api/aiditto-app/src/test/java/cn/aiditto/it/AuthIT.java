@@ -12,9 +12,11 @@ class AuthIT extends ApiIT {
     void schemaMigratesFromZeroAndSeedsPlaces() {
         // V8 = taste_input_hash（Step 4）；V9 = embedding_version 扩容（Step 5.2）；
         // V10 = 反馈学习（Step 8：weights / learned_feedback_cnt / judge_calibration）。
+        // V11 = 真实效果埋点（week_metric）。
+        // V12 = 自适应情景采集引擎（voice_session / voice_question / voice_answer / voice_sample / voice_profile）。
         // 新增迁移时同步更新这里，防止漏执行。
         assertThat(jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM place WHERE kind = 'area'", Integer.class)).isEqualTo(21);
         assertThat(jdbc.queryForObject("SELECT VERSION()", String.class)).startsWith("PostgreSQL 16");
     }

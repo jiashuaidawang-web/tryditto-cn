@@ -13,9 +13,10 @@ const C = {
   about: t('Tell Ditto about yourself', '告诉见一面你是谁'),
   type: t('Tell Ditto your type', '告诉见一面你的类型'),
   pics: t('Pics of your vibe', '能代表你 vibe 的照片'),
-  yourPhotos: t('Your photos', '你的照片'),
+  yourPhotos: t('Your photos', '你的照片（本人）'),
   editPhotos: t('Edit photos', '编辑照片'),
   minPhotos: t('Keep at least 2 photos so we can match you.', '至少保留 2 张照片，才能帮你匹配。'),
+  photosSelfHint: t('These must be photos of YOU. Put celebrity / look-you-like photos on the separate "The look you’re into" page.', '这里只放你本人的照片。明星脸、你喜欢的长相请到「你喜欢的长相」那一页上传，别混在这里。'),
 };
 
 export function SectionTitle({ children }: { children: string }) {
@@ -77,6 +78,7 @@ export function EditProfilePage() {
             </div>
             {editingPhotos ? (
               <>
+                <p className="mb-3 rounded-[12px] bg-white/10 px-3 py-2 text-[12px] leading-[17px] text-white/90">{pick(C.photosSelfHint, lang)}</p>
                 <PhotoGrid variant="plain" urls={photos} onChange={(urls) => void setPhotos(urls)} onAddFiles={(files) => void uploadPhotos(files)} />
                 {photos.length < 2 && <p className="mt-3 text-[13px] leading-[18px] text-[#ffd0e8]">{pick(C.minPhotos, lang)}</p>}
               </>

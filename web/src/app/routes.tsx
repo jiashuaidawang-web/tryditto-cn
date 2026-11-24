@@ -15,6 +15,7 @@ import { DatePage } from './match/DatePage';
 import { FeedbackPage } from './match/FeedbackPage';
 import { RevealPage } from './match/RevealPage';
 import { useIsDemo } from './ui';
+import { VoicePage } from './VoicePage';
 import { WherePage } from './WherePage';
 import { YouPage } from './YouPage';
 import './app.css';
@@ -56,6 +57,7 @@ const guarded: [string, ReactNode][] = [
   ['/deep-info', <DeepInfoPage />],
   ['/blocklist', <BlocklistPage />],
   ['/account', <AccountPage />],
+  ['/voice', <VoicePage />],
   ['/reveal/:matchId', <RevealPage />],
   ['/match/:matchId/date', <DatePage />],
   ['/match/:matchId/feedback', <FeedbackPage />],

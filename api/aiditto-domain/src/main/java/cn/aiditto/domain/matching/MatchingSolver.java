@@ -28,6 +28,8 @@ import java.util.concurrent.TimeoutException;
 public final class MatchingSolver {
     public static final String ALGO_VERSION = "blossom-v5+greedy/1";
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
+    /** 学习排序分（0-100）在边权里的位权：AI 分 1 分 = 学习分 10 分 = 规则 objective 100 分；AI 主导、学习次之、规则再次。 */
+    private static final long LEARNED_SCALE = 100_000L;
 
     private final WeightedMatcher primary;
     private final WeightedMatcher fallback;
@@ -122,7 +124,8 @@ public final class MatchingSolver {
                     continue;
                 }
                 edges.add(new Edge(a.id(), b.id(), s,
-                        weight(s, in.seed(), a.id(), b.id(), aiScore(in, a.id(), b.id()))));
+                        weight(s, in.seed(), a.id(), b.id(),
+                                aiScore(in, a.id(), b.id()), learnedScore(in, a.id(), b.id()))));
             }
         }
         return edges;
@@ -130,25 +133,36 @@ public final class MatchingSolver {
 
     /** M2 原逻辑，保留供既有性质测试与无 AI 分场景逐位一致使用。 */
     static long weight(ScoreBreakdown s, long seed, long low, long high) {
-        return s.objective() * 1000L + tiebreak(seed, low, high);
+        return weight(s, seed, low, high, null, null);
     }
 
     /**
-     * Step 6 边权：AI 分主导配对排序（Q1），规则分作次级、公平分与确定性 tiebreak 保留。
+     * Step 6 边权：AI 分主导配对排序（Q1），学习排序分次之、规则分再次、公平分与确定性 tiebreak 保留。
      * <ul>
-     *   <li>{@code ai == null}：完全走 M2 原公式，零回归。</li>
-     *   <li>有 AI 分：{@code ai(0-100) * 1_000_000 + 规则 objective * 1000 + tiebreak}，
-     *       即 AI 分差 1 分 ≈ 规则分差 1000 分，AI 主导但同分时规则/公平仍能定序。</li>
+     *   <li>{@code ai == null && learned == null}：完全走 M2 原公式，零回归。</li>
+     *   <li>有 AI 分：{@code ai * 1_000_000 + 规则 objective * 1000 + tiebreak}，AI 分差 1 分
+     *       ≈ 规则分差 1000 分，AI 主导但同分时规则/公平仍能定序。</li>
+     *   <li>有学习分：额外 {@code learned * 100_000}（{@link #LEARNED_SCALE}），位于 AI 分与规则分之间，
+     *       由 {@code user_taste.weights} 直接计算，闭合「反馈→调权重→边权」学习链路（D6 方案 A）。</li>
      * </ul>
      * 展示分 {@code ScoreBreakdown.score()}、硬约束、门槛一律不变。
      */
     static long weight(ScoreBreakdown s, long seed, long low, long high, Integer ai) {
-        if (ai == null) return weight(s, seed, low, high);
-        return ai.longValue() * 1_000_000L + s.objective() * 1000L + tiebreak(seed, low, high);
+        return weight(s, seed, low, high, ai, null);
+    }
+
+    static long weight(ScoreBreakdown s, long seed, long low, long high, Integer ai, Integer learned) {
+        long aiPart = ai == null ? 0L : ai.longValue() * 1_000_000L;
+        long learnedPart = learned == null ? 0L : learned.longValue() * LEARNED_SCALE;
+        return aiPart + learnedPart + s.objective() * 1000L + tiebreak(seed, low, high);
     }
 
     private static Integer aiScore(MatchingInput in, long a, long b) {
         return in.aiScores().get(PairKey.of(a, b));
+    }
+
+    private static Integer learnedScore(MatchingInput in, long a, long b) {
+        return in.learnedScores().get(PairKey.of(a, b));
     }
 
     /** {@code hash(seed, low, high) mod 1000}, SplitMix64 finaliser. */

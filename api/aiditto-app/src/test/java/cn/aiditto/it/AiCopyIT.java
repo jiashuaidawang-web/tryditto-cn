@@ -3,6 +3,7 @@ package cn.aiditto.it;
 import cn.aiditto.ai.LlmModel;
 import cn.aiditto.ai.MockLlmModel;
 import cn.aiditto.domain.copy.BannedWords;
+import cn.aiditto.match.MatchCard;
 import cn.aiditto.match.SyntheticLoader;
 import cn.aiditto.match.WeekRunner;
 import org.junit.jupiter.api.MethodOrderer;
@@ -63,6 +64,7 @@ class AiCopyIT extends ApiIT {
     @Autowired WeekRunner weeks;
     @Autowired JdbcTemplate jdbc;
     @Autowired SyntheticLoader loader;
+    @Autowired MatchCard matchCard;
     @Autowired @Qualifier("primaryLlmModel") LlmModel primary;
 
     private MockLlmModel mock() {
@@ -120,6 +122,20 @@ class AiCopyIT extends ApiIT {
         System.out.println("[STEP7-IT] stats=" + stats);
         assertThat(stats).contains("\"pairs\"", "copyTemplateRate", "\"copyAi\"");
         assertThat(stats).doesNotContain("\"copyTemplateRate\": 1.0");
+
+        // AI 标识端到端：match_copy.source='ai' 必须透到 MatchCard.reasons[].ai=true，
+        // 前端据此显示「AI 生成」提示（本项目是 Agent 产品，如实展示而非隐藏）。
+        Long aiUserId = jdbc.queryForObject("""
+                SELECT c.viewer_id FROM match_copy c JOIN "match" m ON m.id=c.match_id
+                WHERE m.week_id=? AND c.source='ai' ORDER BY c.viewer_id LIMIT 1
+                """, Long.class, weekId);
+        assertThat(aiUserId).isNotNull();
+        Map<String, Object> card = matchCard.current(aiUserId, Instant.now());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> reasons = (List<Map<String, Object>>) card.get("reasons");
+        assertThat(reasons).isNotEmpty();
+        assertThat(reasons).allSatisfy(r -> assertThat(r.get("ai")).isEqualTo(true));
+        System.out.println("[STEP7-IT] reason.ai=true 透传成功 user=" + aiUserId + " reasons=" + reasons.size());
     }
 
     @Test

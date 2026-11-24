@@ -92,6 +92,19 @@ aiditto:
     max-per-scan: ${LEARNING_MAX_PER_SCAN:500}
     min-calibration-samples: ${LEARNING_MIN_CALIBRATION_SAMPLES:30}
     calibration-cap: ${LEARNING_CALIBRATION_CAP:10}
+  # 真实效果埋点：每周拍结果指标快照并打策略版本标记，用于「改了方案从多少提升到多少」归因。
+  # 每次改召回/精排/学习方案，改 METRICS_CONFIG_VERSION 即可在按版本聚合里对比。
+  metrics:
+    enabled: ${METRICS_ENABLED:true}
+    config-version: ${METRICS_CONFIG_VERSION:v3-baseline}
+  # 视觉审美编码（明星/vibe 照片 → 2048 维审美向量，tryDitto 核心能力）。
+  # 密钥只从环境变量读；未配 VISION_ENABLED=true 或未给 key 时 live()=false，零调用、零开销。
+  vision:
+    enabled: ${VISION_ENABLED:false}
+    base-url: ${VISION_BASE_URL:${EMBEDDING_BASE_URL:}}
+    api-key: ${VISION_API_KEY:}
+    model: ${VISION_MODEL:doubao-embedding-vision-251215}
+    timeout-ms: ${VISION_TIMEOUT_MS:30000}
   taste:
     # 画像提取总开关；关闭时入驻链路完全无额外开销（回滚用）
     enabled: ${TASTE_ENABLED:true}

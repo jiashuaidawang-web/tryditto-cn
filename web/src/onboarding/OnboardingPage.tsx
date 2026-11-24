@@ -112,7 +112,7 @@ export function OnboardingPage() {
           await completeOnboarding();
           setFinishing(true);
           await new Promise((r) => setTimeout(r, 1900));
-          navigate(`/home${suffix}`, { replace: true });
+          navigate(`/voice${suffix}`, { replace: true });
           return;
         }
         const furthest = indexOf(list, fresh.furthestId);

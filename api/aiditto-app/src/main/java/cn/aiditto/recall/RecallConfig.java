@@ -6,8 +6,14 @@ import org.springframework.context.annotation.Configuration;
 
 /** 召回层装配。构造期不连 Qdrant / embedding 服务，线上容器无这些依赖也能正常启动。 */
 @Configuration
-@EnableConfigurationProperties(RecallProperties.class)
+@EnableConfigurationProperties({RecallProperties.class, VisionProperties.class})
 public class RecallConfig {
+
+    /** 视觉审美编码：未配置 key 时仍注册 bean（live()=false），构造期不连网，线上无 key 也能启动。 */
+    @Bean
+    VisionEmbeddingService visionEmbeddingService(VisionProperties p) {
+        return new VisionEmbeddingService(p.version(), p.baseUrl(), p.apiKey(), p.model(), p.timeoutMs());
+    }
 
     @Bean
     EmbeddingService embeddingService(RecallProperties p) {
