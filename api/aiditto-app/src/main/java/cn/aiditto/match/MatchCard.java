@@ -43,12 +43,20 @@ public class MatchCard {
     private final People people;
     private final AccountService accounts;
     private final Crypto crypto;
+    private final PublishGuard guard;
 
-    public MatchCard(MatchDb db, People people, AccountService accounts, Crypto crypto) {
+    public MatchCard(MatchDb db, People people, AccountService accounts, Crypto crypto, PublishGuard guard) {
         this.db = db;
         this.people = people;
         this.accounts = accounts;
         this.crypto = crypto;
+        this.guard = guard;
+    }
+
+    /** A draft, an unpublished hold, or a system hold must not reveal the other person. */
+    private static boolean hidden(MatchSnapshot snap) {
+        if (snap.state() == MatchState.DRAFT || snap.publishedAt() == null) return true;
+        return snap.state() == MatchState.CANCELLED && snap.cancelledBy() == null && snap.reporterId() == null;
     }
 
     public Map<String, Object> current(long userId, Instant now) {
@@ -56,7 +64,7 @@ public class MatchCard {
         if (!me.onboarded()) throw new DomainException(ErrorCode.ONBOARDING_REQUIRED);
         MatchDb.LoadedMatch match = db.latestFor(userId);
         MatchDb.WeekRow week = match == null ? null : db.weekOf(match.weekId());
-        if (match != null && match.snapshot().state() == MatchState.DRAFT) {
+        if (match != null && hidden(match.snapshot())) {
             match = null;
         }
         if (week == null) {
@@ -88,6 +96,7 @@ public class MatchCard {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("wechat", null);
         if (!StageProjector.contactVisible(stage)) return body;
+        if (!guard.contactAllowed(match.id(), now)) return body;
         long partnerId = match.snapshot().partnerOf(userId).userId();
         List<byte[]> rows = db.jdbc().query("SELECT wechat_enc FROM profile WHERE user_id = ?", (rs, n) -> rs.getBytes(1), partnerId);
         if (!rows.isEmpty() && rows.get(0) != null) body.put("wechat", crypto.decrypt(rows.get(0)));

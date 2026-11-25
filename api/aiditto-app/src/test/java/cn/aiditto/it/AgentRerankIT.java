@@ -48,6 +48,7 @@ class AgentRerankIT extends ApiIT {
     @Test
     void batchCompletesWithAgentRerankEnabledAndDegradesSafely() {
         loader.load();
+        TestConsents.grantAll(jdbc);
         // 合成用户直接插库、不走入驻事件，必须先有画像，否则精排空转。
         // live 模式下不能调 refreshMissing：它会对 200 用户逐个打真实画像模型（10+ 分钟），
         // 与本 IT 要验证的"裁判/配对"无关。改为插入确定性最小画像。

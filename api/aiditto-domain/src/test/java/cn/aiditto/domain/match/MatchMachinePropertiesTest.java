@@ -30,6 +30,7 @@ class MatchMachinePropertiesTest {
                 .as((m, a, safe) -> new FeedbackAnswer(m, null, m == Met.MET ? a : null, safe));
         Arbitrary<MatchEvent> event = Arbitraries.oneOf(
                 Arbitraries.just(new MatchEvent.Publish(MatchFixtures.RESPOND_DUE)),
+                Arbitraries.just(new MatchEvent.Hold()),
                 user.map(MatchEvent.Decline::new),
                 Combinators.combine(user, slots).as(MatchEvent.SubmitSlots::new),
                 Combinators.combine(user, slots).as(MatchEvent.SubmitSlots::new),

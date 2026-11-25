@@ -17,6 +17,7 @@ import cn.aiditto.domain.match.MatchEvent.CheckIn;
 import cn.aiditto.domain.match.MatchEvent.DateEnded;
 import cn.aiditto.domain.match.MatchEvent.Decline;
 import cn.aiditto.domain.match.MatchEvent.FeedbackDeadline;
+import cn.aiditto.domain.match.MatchEvent.Hold;
 import cn.aiditto.domain.match.MatchEvent.Publish;
 import cn.aiditto.domain.match.MatchEvent.Report;
 import cn.aiditto.domain.match.MatchEvent.ReselectDeadline;
@@ -146,6 +147,7 @@ public final class MatchMachine {
         MatchSnapshot m = c.m();
         MatchEvent e = c.e();
         if (e instanceof Publish) return m.publishedAt() != null;
+        if (e instanceof Hold) return m.state().isTerminal();
         if (e instanceof Decline) return c.me().response() == Response.DECLINE;
         if (e instanceof SubmitSlots s) {
             return c.me().response() == Response.ACCEPT && c.me().slotIds().equals(s.slotIds());
@@ -183,6 +185,12 @@ public final class MatchMachine {
 
         t.add(new Rule("publish", DRAFT, Publish.class, PUBLISHED, ALWAYS,
                 c -> step(c.m().published(c.now(), ((Publish) c.e()).respondDue()).withState(PUBLISHED))));
+
+        // Safety hold: cancel without a penalty, a report, or a user to blame.
+        for (MatchState s : List.of(DRAFT, PUBLISHED, NO_OVERLAP, CONFIRMED, FEEDBACK_OPEN)) {
+            t.add(new Rule("hold", s, Hold.class, CANCELLED, ALWAYS,
+                    c -> step(c.m().withState(CANCELLED).closing(c.now(), Outcome.CANCELLED))));
+        }
 
         // published
         t.add(new Rule("decline", PUBLISHED, Decline.class, DECLINED,

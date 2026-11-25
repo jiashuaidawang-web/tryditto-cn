@@ -54,7 +54,8 @@ public class People {
     /** One onboarded person in a city, whether or not they pass {@link PoolGate}. */
     public record Member(long userId, int profileVersion, PoolGate.ExcludeReason excluded, Candidate candidate,
                          ProfileFacts facts, String handle, String cohort, String personaJson, byte[] wechatEnc,
-                         String placeNameZh, String placeNameEn, String occupation, int heightCm, List<String> hobbies) {}
+                         String placeNameZh, String placeNameEn, String occupation, int heightCm, List<String> hobbies,
+                         PoolGate.Applicant applicant) {}
 
     public List<Member> city(String pool, LocalDate week, Instant now) {
         Set<Long> open = new HashSet<>(jdbc.query(OPEN, (rs, n) -> rs.getLong(1)));
@@ -128,6 +129,35 @@ public class People {
         return found.isEmpty() ? null : found.get(0).candidate();
     }
 
+    /**
+     * Profile, pool facts and block hashes for a republish check. Open matches other than
+     * {@code exceptMatchId} still count; that draft must not exclude itself.
+     */
+    public Member snapshot(long userId, LocalDate week, Instant now, long exceptMatchId) {
+        Map<Long, Set<String>> blocks = hashes("SELECT user_id, value_hash FROM block_contact");
+        Map<Long, Set<String>> emails = hashes("SELECT user_id, email_hash FROM email_verification");
+        Set<Long> open = openExcept(exceptMatchId);
+        List<Member> found = new ArrayList<>();
+        jdbc.query("""
+                SELECT u.id, u.cohort, u.status, u.handle, u.empty_week_streak, u.suspended_until, u.phone_hash,
+                       u.onboarding_completed_at, u.photo_issue, u.is_synthetic,
+                       p.version, p.name, p.gender, p.birthday, p.age_min, p.age_max, p.height_cm, p.height_any,
+                       p.height_min, p.height_max, p.is_student, p.school_year, p.education_level, p.education_importance,
+                       p.budget, p.matching_style, p.relationship_looking, p.hobbies, p.hobby_details, p.place_id,
+                       p.travel_mode, p.travel_minutes, p.first_message, p.photo_count, p.expected_genders_enc,
+                       p.occupation, p.ai_constraints, p.ai_status, p.persona, p.wechat_enc,
+                       pl.lat, pl.lng, pl.name_zh, pl.name_en, pl.city
+                FROM "user" u
+                JOIN profile p ON p.user_id = u.id
+                LEFT JOIN place pl ON pl.id = p.place_id
+                WHERE u.id = ?
+                """, rs -> {
+            if (rs.next()) found.add(member(rs, week, now, open, blocks, emails, false));
+            return null;
+        }, userId);
+        return found.isEmpty() ? null : found.get(0);
+    }
+
     public String cohortOf(long userId) {
         List<String> rows = jdbc.query("SELECT cohort FROM \"user\" WHERE id = ?", (rs, n) -> rs.getString(1), userId);
         return rows.isEmpty() ? null : rows.get(0);
@@ -136,6 +166,10 @@ public class People {
     public String nameOf(long userId) {
         List<String> rows = jdbc.query("SELECT name FROM profile WHERE user_id = ?", (rs, n) -> rs.getString(1), userId);
         return rows.isEmpty() || rows.get(0) == null ? "" : rows.get(0);
+    }
+
+    private Set<Long> openExcept(long matchId) {
+        return new HashSet<>(jdbc.query(OPEN + " AND m.id <> ?", (rs, n) -> rs.getLong(1), matchId));
     }
 
     private Member member(ResultSet rs, LocalDate week, Instant now, Set<Long> open,
@@ -169,14 +203,15 @@ public class People {
         Double lng = number(rs.getObject("lng"));
         Candidate candidate = null;
         if ((why == null || !gate) && gender != null && birthday != null && lat != null && lng != null) {
-            candidate = candidate(rs, id, cohort, birthday, gate && open.contains(id), blocks, emails);
+            candidate = candidate(rs, id, cohort, birthday, open.contains(id), blocks, emails);
         } else if (why == null) {
             why = PoolGate.ExcludeReason.INCOMPLETE;
         }
         return new Member(id, rs.getInt("version"), why, candidate, facts(rs, id), rs.getString("handle"),
                 cohort == null ? "real" : cohort, rs.getString("persona"), rs.getBytes("wechat_enc"),
                 rs.getString("name_zh"), rs.getString("name_en"), rs.getString("occupation"),
-                rs.getObject("height_cm") == null ? 0 : rs.getInt("height_cm"), stringList(rs.getString("hobbies")));
+                rs.getObject("height_cm") == null ? 0 : rs.getInt("height_cm"), stringList(rs.getString("hobbies")),
+                applicant);
     }
 
     private Candidate candidate(ResultSet rs, long id, String cohort, LocalDate birthday, boolean open,

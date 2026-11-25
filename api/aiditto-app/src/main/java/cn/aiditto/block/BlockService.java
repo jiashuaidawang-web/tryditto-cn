@@ -33,12 +33,15 @@ public class BlockService {
     private final UserLock userLock;
     private final Crypto crypto;
     private final Clock clock;
+    private final cn.aiditto.match.PublishGuard publishGuard;
 
-    public BlockService(BlockMapper blocks, UserLock userLock, Crypto crypto, Clock clock) {
+    public BlockService(BlockMapper blocks, UserLock userLock, Crypto crypto, Clock clock,
+                        cn.aiditto.match.PublishGuard publishGuard) {
         this.blocks = blocks;
         this.userLock = userLock;
         this.crypto = crypto;
         this.clock = clock;
+        this.publishGuard = publishGuard;
     }
 
     public List<BlockView> list(long userId) {
@@ -66,6 +69,7 @@ public class BlockService {
         blocks.insert(b);
         for (String e : emails) blocks.insertContact(b.id, userId, "email", crypto.hash(e));
         for (String p : phones) blocks.insertContact(b.id, userId, "phone", crypto.hash(p));
+        publishGuard.releaseUser(userId, clock.instant());
         return view(b);
     }
 

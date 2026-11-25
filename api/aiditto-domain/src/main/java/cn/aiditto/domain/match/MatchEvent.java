@@ -22,6 +22,12 @@ public sealed interface MatchEvent {
         }
     }
 
+    /**
+     * System safety hold. Not a user action and not a deadline, so it records no penalty and no report.
+     * From a non-terminal state it cancels the match; on a terminal state it is a replay.
+     */
+    record Hold() implements MatchEvent {}
+
     record Decline(long userId) implements ByUser {}
 
     /** "Go + these slots" in {@code published}, or the one allowed reselect in {@code no_overlap}. */

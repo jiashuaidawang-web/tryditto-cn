@@ -77,6 +77,7 @@ class AiCopyIT extends ApiIT {
     void aiSourceIsWrittenAndEveryLinePassesContentSafety() {
         mock().clearScripts().respond("match_copy", VALID_AI_JSON);
         loader.load();
+        TestConsents.grantAll(jdbc);
         Map<String, Object> out = weeks.runManual("bj", Instant.now(), true);
         System.out.println("[STEP7-IT] summary=" + out);
 
@@ -149,6 +150,7 @@ class AiCopyIT extends ApiIT {
             jdbc.update("DELETE FROM " + table);
         }
         loader.load();
+        TestConsents.grantAll(jdbc);
         Map<String, Object> out = weeks.runManual("bj", Instant.now(), true);
         System.out.println("[STEP7-IT-DEGRADED] summary=" + out);
 

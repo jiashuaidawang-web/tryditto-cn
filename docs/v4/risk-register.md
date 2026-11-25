@@ -190,3 +190,16 @@
 6. P1-1、P2-1 在精排真正开启前改完提示词，并先做消融再让对话影响边权。
 
 本轮之后应停在审计。深度画像和双向引擎的实现以 P0-3 的数据模型为准，不要在现有单向量 `weights` 上继续加系数。
+
+## V4-S01 状态（2026-11-25）
+
+P0-4 的代码已经落到 `master_agent_v4`，但还不能销项。
+
+- 发布前会重读同意、账户、拉黑和硬约束。`publishDrafts` 会抛错。
+- V4 合规模式改为 fail-closed：只有 GRANTED 可以发布。UNKNOWN 和 REVOKED 都不可以。历史用户不回填。
+- `MATCH_CONSENT_LEGACY_ALLOW_UNKNOWN` 只放行 UNKNOWN，默认关闭，不属于合规验收。REVOKED 不能被它放行。生产打开它之前要人工审批。本轮没有改生产配置，没有部署。
+- 领域测试 463 通过，合成 200 人仍是 83 对、0 条硬约束违规。
+- `PublishSafetyIT`、`ConsentLegacyIT`、`MatchIT` 在本机 NOT_RUN。Docker Desktop 不存在，5432 和 55432 都没有 PostgreSQL，Homebrew 的 formula 拉取超时。没有真实数据库结果，就不能说 P0-4 已经验收。
+- P0-1、P0-2、P0-3 以及下面的 P1/P2 都没有在本轮改。不要开始 V4-P01。
+
+真实用户效果没有评估。领域测试、数据库测试、线上效果是三件不同的事。

@@ -27,13 +27,18 @@ public class AccountService {
     private final Crypto crypto;
     private final AppProperties props;
     private final Clock clock;
+    private final UserLock userLock;
+    private final cn.aiditto.match.PublishGuard publishGuard;
 
-    public AccountService(UserMapper users, SessionService sessions, Crypto crypto, AppProperties props, Clock clock) {
+    public AccountService(UserMapper users, SessionService sessions, Crypto crypto, AppProperties props, Clock clock,
+                          UserLock userLock, cn.aiditto.match.PublishGuard publishGuard) {
         this.users = users;
         this.sessions = sessions;
         this.crypto = crypto;
         this.props = props;
         this.clock = clock;
+        this.userLock = userLock;
+        this.publishGuard = publishGuard;
     }
 
     public User require(long userId) {
@@ -117,10 +122,12 @@ public class AccountService {
 
     @Transactional
     public void deactivate(long userId) {
+        userLock.lock(userId);
         Instant now = Times.millis(clock.instant());
         users.update(null, new UpdateWrapper<User>().eq("id", userId).in("status", User.ACTIVE, User.ONBOARDING, "paused")
                 .set("status", User.DEACTIVATED).set("deactivated_at", now).set("updated_at", now));
         sessions.revokeAll(userId);
+        publishGuard.releaseUser(userId, now);
     }
 
     @Transactional
@@ -135,9 +142,11 @@ public class AccountService {
     /** Closes the account now; PurgeJob (M4) deletes personal data at {@code purge_at}. */
     @Transactional
     public void requestDelete(long userId) {
+        userLock.lock(userId);
         Instant now = Times.millis(clock.instant());
         users.update(null, new UpdateWrapper<User>().eq("id", userId)
                 .set("status", User.DELETING).set("delete_requested_at", now).set("purge_at", now.plus(PURGE_AFTER)).set("updated_at", now));
         sessions.revokeAll(userId);
+        publishGuard.releaseUser(userId, now);
     }
 }

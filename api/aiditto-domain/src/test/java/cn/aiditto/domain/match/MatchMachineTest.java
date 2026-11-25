@@ -16,6 +16,7 @@ import cn.aiditto.domain.match.MatchEvent.CheckIn;
 import cn.aiditto.domain.match.MatchEvent.DateEnded;
 import cn.aiditto.domain.match.MatchEvent.Decline;
 import cn.aiditto.domain.match.MatchEvent.FeedbackDeadline;
+import cn.aiditto.domain.match.MatchEvent.Hold;
 import cn.aiditto.domain.match.MatchEvent.Publish;
 import cn.aiditto.domain.match.MatchEvent.Report;
 import cn.aiditto.domain.match.MatchEvent.ReselectDeadline;
@@ -79,6 +80,8 @@ class MatchMachineTest {
             cases.add(c("report.halt", () -> MatchFixtures.inState(s), new Report(B, ReportCategory.HARASSMENT),
                     () -> MatchFixtures.calmTime(MatchFixtures.inState(s)), MatchState.HALTED,
                     List.of(Effect.CreateReport.class, Effect.SuspendPendingReview.class)));
+            cases.add(c("hold", () -> MatchFixtures.inState(s), new Hold(),
+                    () -> MatchFixtures.calmTime(MatchFixtures.inState(s)), MatchState.CANCELLED, List.of()));
         }
         return cases;
     }
@@ -124,7 +127,8 @@ class MatchMachineTest {
                 new RespondDeadline(),
                 new ReselectDeadline(),
                 new DateEnded(),
-                new FeedbackDeadline());
+                new FeedbackDeadline(),
+                new Hold());
     }
 
     private static final Set<String> DEADLINE_REPLAYS = Set.of(
@@ -140,7 +144,7 @@ class MatchMachineTest {
                 if (MatchMachine.allowedEvents(s).contains(e.getClass())) continue;
                 String key = s + "/" + e.getClass().getSimpleName();
                 tests.add(DynamicTest.dynamicTest(key, () -> {
-                    if (DEADLINE_REPLAYS.contains(key)) {
+                    if (DEADLINE_REPLAYS.contains(key) || (e instanceof Hold && s.isTerminal())) {
                         assertThat(MatchMachine.apply(m, e, now).changed()).isFalse();
                     } else {
                         assertThatThrownBy(() -> MatchMachine.apply(m, e, now))
@@ -154,19 +158,39 @@ class MatchMachineTest {
 
     @Test
     void allowedEventSetsMatchTheSpecTable() {
-        assertThat(MatchMachine.allowedEvents(MatchState.DRAFT)).containsExactlyInAnyOrder(Publish.class, Report.class);
+        assertThat(MatchMachine.allowedEvents(MatchState.DRAFT)).containsExactlyInAnyOrder(Publish.class, Report.class, Hold.class);
         assertThat(MatchMachine.allowedEvents(MatchState.PUBLISHED))
-                .containsExactlyInAnyOrder(Decline.class, SubmitSlots.class, RespondDeadline.class, Report.class);
+                .containsExactlyInAnyOrder(Decline.class, SubmitSlots.class, RespondDeadline.class, Report.class, Hold.class);
         assertThat(MatchMachine.allowedEvents(MatchState.NO_OVERLAP))
-                .containsExactlyInAnyOrder(SubmitSlots.class, ReselectDeadline.class, Report.class);
+                .containsExactlyInAnyOrder(SubmitSlots.class, ReselectDeadline.class, Report.class, Hold.class);
         assertThat(MatchMachine.allowedEvents(MatchState.CONFIRMED))
-                .containsExactlyInAnyOrder(CheckIn.class, Cancel.class, DateEnded.class, Report.class);
+                .containsExactlyInAnyOrder(CheckIn.class, Cancel.class, DateEnded.class, Report.class, Hold.class);
         assertThat(MatchMachine.allowedEvents(MatchState.FEEDBACK_OPEN))
-                .containsExactlyInAnyOrder(SubmitFeedback.class, FeedbackDeadline.class, Report.class);
+                .containsExactlyInAnyOrder(SubmitFeedback.class, FeedbackDeadline.class, Report.class, Hold.class);
         assertThat(MatchMachine.allowedEvents(MatchState.CLOSED)).containsExactly(Report.class);
         for (MatchState s : EnumSet.of(MatchState.DECLINED, MatchState.EXPIRED, MatchState.UNSCHEDULED, MatchState.CANCELLED, MatchState.HALTED)) {
             assertThat(MatchMachine.allowedEvents(s)).as(s.name()).isEmpty();
         }
+    }
+
+    @Test
+    void holdCancelsADraftWithoutPublishingOrEffectsAndASecondHoldIsAReplay() {
+        Transition held = MatchMachine.apply(MatchFixtures.draft(), new Hold(), MatchFixtures.PUBLISH_AT);
+        assertThat(held.changed()).isTrue();
+        assertThat(held.after().state()).isEqualTo(MatchState.CANCELLED);
+        assertThat(held.after().publishedAt()).isNull();
+        assertThat(held.after().outcome()).isEqualTo(Outcome.CANCELLED);
+        assertThat(held.after().cancelledBy()).isNull();
+        assertThat(held.effects()).isEmpty();
+        assertThat(MatchMachine.apply(held.after(), new Hold(), MatchFixtures.PUBLISH_AT).changed()).isFalse();
+    }
+
+    @Test
+    void publishingTwiceIsAReplay() {
+        Transition once = MatchMachine.apply(MatchFixtures.draft(), new Publish(RESPOND_DUE), MatchFixtures.PUBLISH_AT);
+        Transition twice = MatchMachine.apply(once.after(), new Publish(RESPOND_DUE), MatchFixtures.PUBLISH_AT.plusSeconds(60));
+        assertThat(twice.changed()).isFalse();
+        assertThat(twice.after()).isEqualTo(once.after());
     }
 
     @Test

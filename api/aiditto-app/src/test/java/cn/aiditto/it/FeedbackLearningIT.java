@@ -54,6 +54,7 @@ class FeedbackLearningIT extends ApiIT {
         // TasteRewriter 必须走规则改写而不是空转。
         ((MockLlmModel) primary).clearScripts();
         loader.load();
+        TestConsents.grantAll(jdbc);
         int generated = tastes.refreshMissing(1000);
         assertThat(generated).isGreaterThan(0);
         weeks.runManual("bj", Instant.now(), true);

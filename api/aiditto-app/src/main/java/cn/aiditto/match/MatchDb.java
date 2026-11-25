@@ -146,6 +146,53 @@ public class MatchDb {
         return jdbc.query("SELECT user_low, user_high FROM \"match\"", (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)});
     }
 
+    /** Every match except the draft being rechecked. That row is not a previous pairing. */
+    public List<long[]> pastPairsExcept(long matchId) {
+        return jdbc.query("SELECT user_low, user_high FROM \"match\" WHERE id <> ?",
+                (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)}, matchId);
+    }
+
+    /** Same row lock as {@link cn.aiditto.account.UserLock}, so publish and consent share one order. */
+    public void lockUser(long userId) {
+        jdbc.query("SELECT id FROM \"user\" WHERE id = ? FOR UPDATE", (rs, n) -> rs.getLong(1), userId);
+    }
+
+    public long[] pairUsers(long matchId) {
+        List<long[]> rows = jdbc.query("SELECT user_low, user_high FROM \"match\" WHERE id = ?",
+                (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)}, matchId);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public List<Long> openMatchIds(long userId) {
+        return jdbc.query("""
+                SELECT id FROM "match"
+                WHERE (user_low = ? OR user_high = ?)
+                  AND state NOT IN ('declined','expired','unscheduled','cancelled','closed','halted')
+                ORDER BY id
+                """, (rs, n) -> rs.getLong(1), userId, userId);
+    }
+
+    public boolean reportedEitherWay(long a, long b) {
+        Integer n = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM report
+                WHERE (reporter_id = ? AND reported_id = ?) OR (reporter_id = ? AND reported_id = ?)
+                """, Integer.class, a, b, b, a);
+        return n != null && n > 0;
+    }
+
+    public boolean forbidden(long a, long b) {
+        long low = Math.min(a, b);
+        long high = Math.max(a, b);
+        Integer n = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM ai_pair_memory WHERE user_lo = ? AND user_hi = ? AND forbidden",
+                Integer.class, low, high);
+        return n != null && n > 0;
+    }
+
+    public void setHoldReason(long matchId, String reason) {
+        jdbc.update("UPDATE \"match\" SET hold_reason = ? WHERE id = ?", reason, matchId);
+    }
+
     public List<long[]> reportedPairs() {
         return jdbc.query("SELECT reporter_id, reported_id FROM report", (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)});
     }
@@ -328,12 +375,12 @@ public class MatchDb {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    /** Publish every draft in the week. Same columns {@code MatchMachine} sets on {@code Publish}, and no effects. */
+    /**
+     * Bulk publish skips the eligibility gate. The method stays so a rollback cannot quietly turn it
+     * back into the publish path: callers go through {@link PublishGuard} one draft at a time.
+     */
     public int publishDrafts(long weekId, Instant respondDue, Instant now) {
-        return jdbc.update("""
-                UPDATE "match" SET state = 'published', published_at = ?, respond_due = ?,
-                version = version + 1, updated_at = ? WHERE week_id = ? AND state = 'draft'
-                """, ts(now), ts(respondDue), ts(now), weekId);
+        throw new IllegalStateException("bulk publish is disabled; use PublishGuard");
     }
 
     public void saveSnapshot(long matchId, MatchSnapshot s, Instant now) {

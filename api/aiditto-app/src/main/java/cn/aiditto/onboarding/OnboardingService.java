@@ -2,6 +2,7 @@ package cn.aiditto.onboarding;
 
 import cn.aiditto.account.AccountService;
 import cn.aiditto.account.User;
+import cn.aiditto.account.UserLock;
 import cn.aiditto.account.UserMapper;
 import cn.aiditto.auth.EmailCodeService;
 import cn.aiditto.domain.common.DomainException;
@@ -50,10 +51,13 @@ public class OnboardingService {
     private final ProfileProjection projection;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final UserLock userLock;
+    private final cn.aiditto.match.PublishGuard publishGuard;
 
     public OnboardingService(AnswerStore store, QuestionCatalog catalog, AccountService accounts, UserMapper users,
                              EmailCodeService emails, PhotoService photos, PlaceService places,
-                             ProfileProjection projection, ApplicationEventPublisher events, Clock clock) {
+                             ProfileProjection projection, ApplicationEventPublisher events, Clock clock,
+                             UserLock userLock, cn.aiditto.match.PublishGuard publishGuard) {
         this.store = store;
         this.catalog = catalog;
         this.accounts = accounts;
@@ -64,11 +68,14 @@ public class OnboardingService {
         this.projection = projection;
         this.events = events;
         this.clock = clock;
+        this.userLock = userLock;
+        this.publishGuard = publishGuard;
     }
 
     /** {@code value == null} removes the answer (stale hobby branches, cleared optional fields). */
     @Transactional
     public void writeAnswer(long userId, String questionId, Object value) {
+        userLock.lock(userId);
         User u = accounts.require(userId);
         Map<String, Object> answers = store.load(userId);
 
@@ -131,6 +138,7 @@ public class OnboardingService {
 
     @Transactional
     public void complete(long userId) {
+        userLock.lock(userId);
         User u = accounts.require(userId);
         Map<String, Object> answers = store.load(userId);
         List<String> missing = requiredFields(userId, answers);
@@ -144,6 +152,7 @@ public class OnboardingService {
         users.update(null, up);
         projection.write(userId, answers, photos.countActive(userId, "profile"));
         events.publishEvent(new ProfileWrittenEvent(userId, "complete"));
+        publishGuard.releaseUser(userId, now);
     }
 
     private List<String> requiredFields(long userId, Map<String, Object> answers) {
@@ -161,6 +170,7 @@ public class OnboardingService {
         if (!u.onboarded()) return;
         projection.write(userId, store.load(userId), photos.countActive(userId, "profile"));
         events.publishEvent(new ProfileWrittenEvent(userId, "answer_edit"));
+        publishGuard.releaseUser(userId, clock.instant());
     }
 
     private AnswerValidator.Context context() {

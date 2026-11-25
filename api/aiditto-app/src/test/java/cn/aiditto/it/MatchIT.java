@@ -42,6 +42,7 @@ class MatchIT extends ApiIT {
         Map<String, Integer> loaded = loader.load();
         assertThat(loaded.get("loaded")).isEqualTo(200);
         assertThat(loader.load().get("loaded")).isZero();
+        TestConsents.grantAll(jdbc);
 
         Instant now = Instant.now();
         long t0 = System.nanoTime();

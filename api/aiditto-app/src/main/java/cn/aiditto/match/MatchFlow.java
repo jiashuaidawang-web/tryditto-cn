@@ -2,6 +2,7 @@ package cn.aiditto.match;
 
 import cn.aiditto.account.AccountService;
 import cn.aiditto.account.User;
+import cn.aiditto.account.UserLock;
 import cn.aiditto.domain.common.DomainException;
 import cn.aiditto.domain.common.ErrorCode;
 import cn.aiditto.domain.match.Effect;
@@ -38,28 +39,33 @@ public class MatchFlow {
     private final AccountService accounts;
     private final Crypto crypto;
     private final TransactionTemplate tx;
+    private final UserLock userLock;
+    private final PublishGuard guard;
 
-    public MatchFlow(MatchDb db, AccountService accounts, Crypto crypto, PlatformTransactionManager txm) {
+    public MatchFlow(MatchDb db, AccountService accounts, Crypto crypto, UserLock userLock, PublishGuard guard,
+                     PlatformTransactionManager txm) {
         this.db = db;
         this.accounts = accounts;
         this.crypto = crypto;
+        this.userLock = userLock;
+        this.guard = guard;
         this.tx = new TransactionTemplate(txm);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void accept(long userId, long matchId, Instant now) {
         requireOnboarded(userId);
         requireMine(userId, matchId);
         db.markAccepted(matchId, userId, now);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void confirmSlots(long userId, long matchId, List<String> slotIds, Instant now) {
         requireOnboarded(userId);
         apply(userId, matchId, new MatchEvent.SubmitSlots(userId, new LinkedHashSet<>(slotIds == null ? List.of() : slotIds)), now, null);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void decline(long userId, long matchId, List<String> reasons, String note, Instant now) {
         requireOnboarded(userId);
         if (reasons == null || reasons.isEmpty()) throw new DomainException(ErrorCode.REASON_UNKNOWN, "至少选一个理由");
@@ -71,7 +77,7 @@ public class MatchFlow {
         apply(userId, matchId, new MatchEvent.Decline(userId), now, null);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void flag(long userId, long matchId, int index) {
         requireOnboarded(userId);
         requireMine(userId, matchId);
@@ -84,19 +90,19 @@ public class MatchFlow {
         db.saveFlags(matchId, userId, Json.write(flags));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void checkIn(long userId, long matchId, Instant now) {
         requireOnboarded(userId);
         apply(userId, matchId, new MatchEvent.CheckIn(userId), now, null);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void cancel(long userId, long matchId, Instant now) {
         requireOnboarded(userId);
         apply(userId, matchId, new MatchEvent.Cancel(userId), now, null);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void feedback(long userId, long matchId, FeedbackAnswer answer, String comment, Instant now) {
         requireOnboarded(userId);
         apply(userId, matchId, new MatchEvent.SubmitFeedback(userId, answer), now, null);
@@ -108,7 +114,7 @@ public class MatchFlow {
         }
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void report(long userId, long matchId, String category, String note, Instant now) {
         requireOnboarded(userId);
         ReportCategory cat;
@@ -121,10 +127,27 @@ public class MatchFlow {
     }
 
     /** Demo and the deadline ticker call this with an event the viewer did not type. */
-    @Transactional
+    @Transactional(noRollbackFor = EligibilityWithheld.class)
     public void apply(long actorId, long matchId, MatchEvent event, Instant now, String note) {
+        if (event instanceof MatchEvent.Publish) {
+            PublishGuard.Outcome outcome = guard.publishDraft(matchId, now);
+            if (!outcome.published()) throw PublishGuard.withheld();
+            return;
+        }
+        long[] pair = db.pairUsers(matchId);
+        if (pair == null) throw new DomainException(ErrorCode.MATCH_NOT_FOUND);
+        userLock.lock(Math.min(pair[0], pair[1]));
+        userLock.lock(Math.max(pair[0], pair[1]));
         MatchDb.LoadedMatch loaded = db.lockMatch(matchId);
         if (loaded == null) throw new DomainException(ErrorCode.MATCH_NOT_FOUND);
+        if (!loaded.snapshot().state().isTerminal()) {
+            var result = guard.evaluateLocked(loaded, now);
+            if (!result.eligible()) {
+                guard.holdLocked(loaded, result, now);
+                if (event instanceof MatchEvent.ByUser) throw PublishGuard.withheld();
+                return;
+            }
+        }
         Transition t;
         try {
             t = MatchMachine.apply(loaded.snapshot(), event, Times.millis(now));
@@ -158,7 +181,13 @@ public class MatchFlow {
         int n = 0;
         for (long id : db.due(column, state, now)) {
             try {
-                tx.executeWithoutResult(s -> apply(0, id, event, now, null));
+                tx.executeWithoutResult(s -> {
+                    try {
+                        apply(0, id, event, now, null);
+                    } catch (EligibilityWithheld ignored) {
+                        // the hold is the result; committing it must not roll back with the signal
+                    }
+                });
                 n++;
             } catch (RuntimeException ignored) {
                 // one stuck match must not stop the others; the next tick retries it
@@ -204,7 +233,18 @@ public class MatchFlow {
     }
 
     private void requireMine(long userId, long matchId) {
+        long[] pair = db.pairUsers(matchId);
+        if (pair == null || (pair[0] != userId && pair[1] != userId)) throw new DomainException(ErrorCode.MATCH_NOT_FOUND);
+        userLock.lock(Math.min(pair[0], pair[1]));
+        userLock.lock(Math.max(pair[0], pair[1]));
         MatchDb.LoadedMatch loaded = db.lockMatch(matchId);
         if (loaded == null || !loaded.snapshot().involves(userId)) throw new DomainException(ErrorCode.MATCH_NOT_FOUND);
+        if (!loaded.snapshot().state().isTerminal()) {
+            var result = guard.evaluateLocked(loaded, java.time.Instant.now());
+            if (!result.eligible()) {
+                guard.holdLocked(loaded, result, java.time.Instant.now());
+                throw PublishGuard.withheld();
+            }
+        }
     }
 }

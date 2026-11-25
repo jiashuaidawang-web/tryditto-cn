@@ -1,5 +1,6 @@
 package cn.aiditto.match;
 
+import cn.aiditto.consent.MatchingConsentService;
 import cn.aiditto.domain.common.DomainException;
 import cn.aiditto.domain.common.ErrorCode;
 import cn.aiditto.domain.matching.Candidate;
@@ -50,26 +51,31 @@ public class WeekRunner {
     private final AgentRerankService agent;
     private final TransactionTemplate tx;
     private final WeekMetricsService metrics;
+    private final PublishGuard guard;
+    private final MatchingConsentService consent;
 
     /** 兼容旧构造（无 Agent 精排、无埋点，等价关闭）。 */
     public WeekRunner(MatchDb db, People people, MatchCopyWriter copies, PlatformTransactionManager txm) {
-        this(db, people, copies, null, null, txm);
+        this(db, people, copies, null, null, null, null, txm);
     }
 
     /** 兼容 5 参构造（有 Agent、无埋点）。 */
     public WeekRunner(MatchDb db, People people, MatchCopyWriter copies,
                       AgentRerankService agent, PlatformTransactionManager txm) {
-        this(db, people, copies, agent, null, txm);
+        this(db, people, copies, agent, null, null, null, txm);
     }
 
     @Autowired
     public WeekRunner(MatchDb db, People people, MatchCopyWriter copies,
-                      AgentRerankService agent, WeekMetricsService metrics, PlatformTransactionManager txm) {
+                      AgentRerankService agent, WeekMetricsService metrics,
+                      PublishGuard guard, MatchingConsentService consent, PlatformTransactionManager txm) {
         this.db = db;
         this.people = people;
         this.copies = copies;
         this.agent = agent;
         this.metrics = metrics;
+        this.guard = guard;
+        this.consent = consent;
         this.tx = new TransactionTemplate(txm);
     }
 
@@ -195,9 +201,12 @@ public class WeekRunner {
         List<Long> in = new ArrayList<>();
         List<Object[]> rows = new ArrayList<>(members.size());
         for (People.Member m : members) {
-            rows.add(new Object[] {m.userId(), m.profileVersion(), m.candidate() != null,
-                    m.excluded() == null ? null : m.excluded().name().toLowerCase()});
-            if (m.candidate() != null) in.add(m.candidate().id());
+            boolean inPool = admitted(m);
+            String reason = m.excluded() == null
+                    ? (m.candidate() != null && !inPool ? "consent" : null)
+                    : m.excluded().name().toLowerCase();
+            rows.add(new Object[] {m.userId(), m.profileVersion(), inPool, reason});
+            if (inPool) in.add(m.candidate().id());
         }
         db.insertParticipants(week.id(), rows);
         in.sort(Long::compare);
@@ -212,7 +221,7 @@ public class WeekRunner {
         }
         List<Candidate> candidates = new ArrayList<>();
         for (People.Member m : pool(week, now, cache)) {
-            if (m.candidate() != null) candidates.add(m.candidate());
+            if (admitted(m)) candidates.add(m.candidate());
         }
         boolean manual = "manual".equals(week.trigger());
         // Step 8：双向拒绝/举报沉淀的永久 forbidden 对与 report 一起进硬过滤，绝不复推（A04）
@@ -285,10 +294,39 @@ public class WeekRunner {
     }
 
     private void publish(MatchDb.WeekRow week, Instant now) {
-        // Every row is still a draft, which is the only state MatchMachine publishes, and publish has no effects.
-        // One update is the same transition; a retry touches only the rows that are still drafts.
-        db.publishDrafts(week.id(), Deadlines.respondDue(now), now);
+        if (guard == null) throw new IllegalStateException("publish requires PublishGuard");
+        List<Long> drafts = db.draftIds(week.id());
+        // Every user in this batch, ascending, before any match row. A later pair must not lock a
+        // lower user id after a higher one, or it deadlocks with another batch.
+        List<Long> users = new ArrayList<>();
+        for (long matchId : drafts) {
+            long[] pair = db.pairUsers(matchId);
+            if (pair == null) continue;
+            users.add(pair[0]);
+            users.add(pair[1]);
+        }
+        users.sort(Long::compare);
+        Long previous = null;
+        for (Long userId : users) {
+            if (userId.equals(previous)) continue;
+            db.lockUser(userId);
+            previous = userId;
+        }
+        int ok = 0;
+        int held = 0;
+        for (long matchId : drafts) {
+            PublishGuard.Outcome outcome = guard.publishDraft(matchId, now);
+            if (outcome.published()) ok++;
+            else held++;
+        }
+        db.mergeWeekStats(week.id(), Json.write(Map.of("publishOk", ok, "publishHeld", held)));
         db.saveWeek(week.id(), WeekMachine.succeed(week.status(), WeekStep.PUBLISH), WeekStep.PUBLISH, null, null, null, now);
+    }
+
+    /** Pool entry uses the same consent rule as publish. Hard filters stay inside the solver. */
+    private boolean admitted(People.Member member) {
+        if (member.candidate() == null) return false;
+        return consent == null || consent.allowsPool(member.userId());
     }
 
     private void close(MatchDb.WeekRow week, Instant now) {

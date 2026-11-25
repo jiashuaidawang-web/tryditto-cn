@@ -71,6 +71,12 @@ aiditto:
   synthetic:
     autoload: ${SYNTHETIC_AUTOLOAD:true}
   match:
+    consent:
+      # V4 合规模式：只有 GRANTED 能进池和正式发布。UNKNOWN 与 REVOKED 都不行。
+      # 历史用户没有记录，不会被自动写成 GRANTED，需要本人重新确认。
+      # legacy-allow-unknown 只放行 UNKNOWN，是迁移逃生口，不属于 V4 合规验收。
+      # REVOKED 在任何开关下都拒绝。生产打开这个逃生口前必须单独人工审批。本文件默认关闭。
+      legacy-allow-unknown: ${MATCH_CONSENT_LEGACY_ALLOW_UNKNOWN:false}
     agent:
       # Step 6 Agent 精排：默认关闭（逐位等同 M2，零回归）；灰度/仿真显式开启
       enabled: ${MATCH_AGENT_ENABLED:false}
