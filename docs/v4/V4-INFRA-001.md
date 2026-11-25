@@ -72,6 +72,23 @@ Surefire 不跑 `*IT`。`mvn test` 不会走到 clean。
 
 Job Summary 写入每个类的执行数、通过失败错误跳过、失败方法、断言摘要、源码行、commit 和 run URL。跳过或缺少方法时验收失败。
 
+## 夹具改造后的运行
+
+提交 `c6072290200411241302e5274281f71745f9beb6`：
+
+https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45591470398
+
+总结论 success。总时长 2 分 18 秒。`domain-tests` 45 秒，success。`integration-tests` 2 分 6 秒，success。验收步骤「Reject a run that did not execute the IT scenarios」success。这一步会在缺少方法、有跳过、有失败或有错误时退出 1，所以下面这些方法都执行了，而且没有失败、错误或跳过：
+
+- `TestDatabaseGuardTest`：类里 3 个测试，门槛要求 `tests > 0` 且无失败、无跳过。
+- `PublishSafetyIT`：14 个独立方法，含 6 个并发或锁顺序场景。
+- `ConsentLegacyIT`：1 个方法。
+- `MatchIT`：4 个方法。
+
+`SELECT version()` 仍由成功的记录步骤写入 artifact。未登录不能下载，所以这次没有重读版本字符串。同一 `postgres:16` 镜像在前两次运行里是 `PostgreSQL 16.16 (Debian 16.16-1.pgdg13+1)`。
+
+`WeekRunner` 方法通过，只说明真实求解产出了草稿，并且重复发布没有改变数量和 version。日志里的具体草稿数要登录才能看。前两次、在没有这些夹具用户时，北京是 3 对。
+
 ## 不在本轮
 
 Qdrant、真实模型、生产凭证。召回和算法质量仍是 NO-GO。

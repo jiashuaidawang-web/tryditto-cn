@@ -91,11 +91,11 @@ Docker 可用时，应先起一个只给测试用的 PostgreSQL 16，映射到 5
 
 | 标准 | 状态 |
 | --- | --- |
-| 只有 GRANTED 能正式发布 | 领域测试通过。前两次 CI 的发布场景没有跑到，夹具在 `>= 8` 处失败 |
-| UNKNOWN、REVOKED 不能正式发布 | 领域测试通过。`unknownCannotPublishAndAdminOrDemoCannotBypass` 在前两次 CI 通过。`ConsentLegacyIT` 通过 |
+| 只有 GRANTED 能正式发布 | `grantedDraftPublishes` 在 run 45591470398 通过 |
+| UNKNOWN、REVOKED 不能正式发布 | 领域测试通过。UNKNOWN 绕过检查和 `ConsentLegacyIT` 通过。撤回先提交、发布后再撤回也通过 |
 | 历史用户不自动授权 | V13 无回填。代码路径如此。没有拿历史库演练 |
-| 普通、管理、手动、演示发布不能绕过 | `unknownCannotPublishAndAdminOrDemoCannotBypass` 在前两次 CI 通过 |
-| 并发与回滚 | 前两次没有执行到。不能记为通过 |
+| 普通、管理、手动、演示发布不能绕过 | `unknownCannotPublishAndAdminOrDemoCannotBypass` 通过 |
+| 并发与回滚 | 回滚、四类并发、重复发布、共用用户锁顺序都在 run 45591470398 通过 |
 | V3 基线 83 对、0 违规 | 领域测试通过 |
 | 生产配置 | 未改，未部署 |
 
@@ -120,6 +120,8 @@ PostgreSQL `16.16 (Debian 16.16-1.pgdg13+1)`。领域 job 成功。`TestDatabase
 
 本地那次三个 IT 仍然是 NOT_RUN。真实用户效果仍未评估。
 
+夹具拆开之后的运行：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45591470398 ，提交 `c6072290200411241302e5274281f71745f9beb6`，总结论 success。验收步骤通过，因此 14 个发布安全方法、`ConsentLegacyIT` 和 `MatchIT` 的 4 个方法都执行了，没有失败、错误或跳过。领域 job 也成功。这次提交没有改领域测试；上一轮数到的是 463 通过、0 失败、0 错误、0 跳过。这次 Surefire XML 没有重新下载。
+
 ## 建议
 
-S01 保持 NO-GO。算法质量保持 NO-GO。不启动 V4-P01。拆开的场景要在新的 PostgreSQL 运行里全部执行并通过，才能再谈 GO。不删断言，不跳过测试。
+发布安全这一组数据库测试已经在 PostgreSQL 上通过。结束 S01 仍要等架构验收。算法质量保持 NO-GO。不启动 V4-P01。真实用户效果仍未评估。
