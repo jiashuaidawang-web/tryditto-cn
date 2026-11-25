@@ -203,3 +203,9 @@ P0-4 的代码已经落到 `master_agent_v4`，但还不能销项。
 - P0-1、P0-2、P0-3 以及下面的 P1/P2 都没有在本轮改。不要开始 V4-P01。
 
 真实用户效果没有评估。领域测试、数据库测试、线上效果是三件不同的事。
+
+## V4-INFRA-001（2026-11-25）
+
+本地不再安装 PostgreSQL。集成测试改到 GitHub Actions：`.github/workflows/v4-ci.yml`，一次性 PostgreSQL 16，库名只能是 `aiditto_s01_test`。`TestDatabaseGuard` 在 `flyway.clean()` 之前拒绝其它库名、其它主机，以及缺少 `TEST_DB_URL` 的情况。没有生产凭证，没有 LLM API Key。
+
+P0-4 仍然不能只凭工作流文件销项。要等 `PublishSafetyIT`、`ConsentLegacyIT`、`MatchIT` 在该运行里实际执行并通过。P0-1、P0-2、P0-3 未改。不开始 V4-P01。

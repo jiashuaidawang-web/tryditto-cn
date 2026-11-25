@@ -4,7 +4,7 @@
 
 三类结果分开记。领域测试跑过。真实数据库测试没有跑。真实用户效果没有评估。
 
-算法质量仍是 NO-GO。发布闸门的最终验收也是 NO-GO：fail-closed 已写进代码和领域测试，但 PostgreSQL 上的发布与并发用例没有执行，不能报通过。
+算法质量仍是 NO-GO。本地没有 PostgreSQL，当时的发布闸门验收是 NO-GO。V4-INFRA-001 把同一套 IT 放到 GitHub Actions 的 PostgreSQL 16 上跑。下面「本地」和「CI」分开记。CI 数字以该提交触发的 workflow 为准；写这份说明时运行尚未结束的，不把 YAML 存在当成测试通过。
 
 ## 领域测试：已执行
 
@@ -99,6 +99,14 @@ Docker 可用时，应先起一个只给测试用的 PostgreSQL 16，映射到 5
 | V3 基线 83 对、0 违规 | 领域测试通过 |
 | 生产配置 | 未改，未部署 |
 
+## CI：V4-INFRA-001
+
+工作流 `.github/workflows/v4-ci.yml`。Runner 是 GitHub-hosted Ubuntu，Java 17，PostgreSQL 16，库名 `aiditto_s01_test`。细节见 `docs/v4/V4-INFRA-001.md`。
+
+本地那次 `PublishSafetyIT`、`ConsentLegacyIT`、`MatchIT` 仍然是 NOT_RUN。CI 是否执行成功，要看这次 push 的 Actions 运行，而不是看工作流文件。没有发现测试、测试被跳过、或断言失败，工作流都不会算验收通过。
+
+真实用户效果仍未评估。
+
 ## 建议
 
-NO-GO。代码和领域测试可以留给下一轮验收，但不能在 PostgreSQL 未跑的情况下宣布闸门通过。不启动 V4-P01。
+在 CI 运行结果写回本文件之前，不把 S01 从 NO-GO 改成 GO。算法质量保持 NO-GO。不启动 V4-P01。

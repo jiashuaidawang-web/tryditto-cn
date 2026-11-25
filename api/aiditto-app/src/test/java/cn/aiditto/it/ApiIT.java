@@ -8,6 +8,9 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.JdbcUtils;
+import org.springframework.jdbc.support.MetaDataAccessException;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.JsonNode;
@@ -16,6 +19,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.sql.DatabaseMetaData;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -32,10 +36,12 @@ import javax.imageio.ImageIO;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests against a real MySQL 8.4 (no Docker here, so no Testcontainers). The schema is dropped and
- * migrated from V1 once per JVM. Override the database with TEST_DB_URL / TEST_DB_USER / TEST_DB_PASSWORD.
+ * Integration tests against an explicit disposable PostgreSQL database. {@code TEST_DB_URL} and
+ * {@code TEST_DB_USER} are required. {@link TestDatabaseGuard} rejects every other database before clean.
+ * Each class closes its context so the next class cleans a database nobody else is using.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = {AidittoApplication.class, ApiIT.FromZero.class})
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 abstract class ApiIT {
     static final String DEMO_CODE = "888888";
     static final JsonMapper JSON = JsonMapper.builder().build();
@@ -43,9 +49,13 @@ abstract class ApiIT {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry r) {
-        r.add("spring.datasource.url", () -> env("TEST_DB_URL",
-                "jdbc:postgresql://127.0.0.1:5432/aiditto_test?stringtype=unspecified"));
-        r.add("spring.datasource.username", () -> env("TEST_DB_USER", "root"));
+        String url = TestDatabaseGuard.requireUrl(System.getenv("TEST_DB_URL"));
+        String user = System.getenv("TEST_DB_USER");
+        if (user == null || user.isBlank()) {
+            throw new IllegalStateException("TEST_DB_USER is required");
+        }
+        r.add("spring.datasource.url", () -> url);
+        r.add("spring.datasource.username", () -> user);
         r.add("spring.datasource.password", () -> env("TEST_DB_PASSWORD", ""));
         r.add("spring.flyway.clean-disabled", () -> "false");
         r.add("aiditto.demo-mode", () -> "true");
@@ -64,6 +74,14 @@ abstract class ApiIT {
         @Bean
         FlywayMigrationStrategy cleanThenMigrate() {
             return flyway -> {
+                String configured;
+                try {
+                    configured = JdbcUtils.extractDatabaseMetaData(
+                            flyway.getConfiguration().getDataSource(), DatabaseMetaData::getURL);
+                } catch (MetaDataAccessException e) {
+                    throw new IllegalStateException("Refusing to clean because the database URL could not be read", e);
+                }
+                TestDatabaseGuard.requireUrl(configured);
                 flyway.clean();
                 flyway.migrate();
             };

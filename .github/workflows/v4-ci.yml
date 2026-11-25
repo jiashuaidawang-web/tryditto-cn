@@ -1,0 +1,198 @@
+# V4 quality gates. PostgreSQL exists only for this run. No production credentials.
+name: V4 CI
+
+on:
+  push:
+    branches: [master_agent_v4]
+  pull_request:
+    branches: [master_agent_v4]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v4-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  domain-tests:
+    name: domain-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Run domain tests
+        working-directory: api
+        run: mvn -B -pl aiditto-domain test
+      - name: Upload Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domain-surefire
+          if-no-files-found: warn
+          path: |
+            api/aiditto-domain/target/surefire-reports/**
+
+  integration-tests:
+    name: integration-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: write
+    env:
+      TEST_DB_URL: jdbc:postgresql://127.0.0.1:5432/aiditto_s01_test?stringtype=unspecified
+      TEST_DB_USER: aiditto_ci
+      TEST_DB_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aiditto_ci
+          POSTGRES_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+          POSTGRES_DB: aiditto_s01_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aiditto_ci -d aiditto_s01_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Mask the ephemeral database password
+        run: echo "::add-mask::${{ github.run_id }}-${{ github.run_attempt }}"
+      - name: Record the runner database
+        run: |
+          set -eu
+          mkdir -p ci-meta
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+          export PGPASSWORD="$TEST_DB_PASSWORD"
+          psql -h 127.0.0.1 -U aiditto_ci -d aiditto_s01_test -tAc 'SELECT version()' | tee ci-meta/postgres-version.txt
+          unset PGPASSWORD
+          {
+            echo "commit=${GITHUB_SHA}"
+            echo "ref=${GITHUB_REF}"
+            echo "runner=${RUNNER_NAME}"
+            echo "os=${RUNNER_OS} ${RUNNER_ARCH}"
+            echo "database=aiditto_s01_test"
+            echo "host=127.0.0.1"
+            echo "user=aiditto_ci"
+            java -version 2>&1 | head -n 1
+            mvn -version | head -n 1
+          } > ci-meta/environment.txt
+          test -s ci-meta/postgres-version.txt
+      - name: Run the guard and the publish-safety integration tests
+        working-directory: api
+        run: |
+          set -eu
+          mvn -B -pl aiditto-app -am verify \
+            -Dtest=TestDatabaseGuardTest \
+            -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT \
+            -Dfailsafe.failIfNoSpecifiedTests=true \
+            -DforkCount=1 \
+            -DreuseForks=false
+      - name: Reject a run that did not execute the three IT classes
+        if: always()
+        working-directory: api
+        run: |
+          python3 - <<'PY'
+          import pathlib, sys, xml.etree.ElementTree as ET
+          required = ["PublishSafetyIT", "ConsentLegacyIT", "MatchIT"]
+          reports = pathlib.Path("aiditto-app/target/failsafe-reports")
+          guard = list(pathlib.Path("aiditto-app/target/surefire-reports").glob("TEST-*TestDatabaseGuardTest.xml"))
+          out = pathlib.Path("../ci-meta")
+          out.mkdir(parents=True, exist_ok=True)
+          lines = []
+          blocked = []
+          if not guard:
+              blocked.append("TestDatabaseGuardTest report missing")
+              lines.append("TestDatabaseGuardTest MISSING")
+          else:
+              groot = ET.parse(guard[0]).getroot()
+              gtests = int(groot.attrib.get("tests", "0"))
+              gfail = int(groot.attrib.get("failures", "0")) + int(groot.attrib.get("errors", "0"))
+              lines.append(f"TestDatabaseGuardTest tests={gtests} failures={gfail}")
+              if gtests <= 0 or gfail:
+                  blocked.append("TestDatabaseGuardTest")
+          for name in required:
+              files = sorted(reports.glob(f"TEST-*{name}.xml"))
+              if not files:
+                  blocked.append(name + " report missing")
+                  lines.append(name + " MISSING")
+                  continue
+              root = ET.parse(files[0]).getroot()
+              tests = int(root.attrib.get("tests", "0"))
+              skipped = int(root.attrib.get("skipped", "0"))
+              failures = int(root.attrib.get("failures", "0"))
+              errors = int(root.attrib.get("errors", "0"))
+              lines.append(f"{name} tests={tests} failures={failures} errors={errors} skipped={skipped}")
+              if tests <= 0 or skipped > 0 or failures > 0 or errors > 0:
+                  blocked.append(name)
+          text = "\n".join(lines)
+          (out / "it-summary.txt").write_text(text + "\n", encoding="utf-8")
+          print(text)
+          if blocked:
+              print("ACCEPTANCE_BLOCKED " + ", ".join(blocked))
+              sys.exit(1)
+          PY
+      - name: Upload integration reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-reports
+          if-no-files-found: warn
+          path: |
+            api/aiditto-app/target/failsafe-reports/**
+            api/aiditto-app/target/surefire-reports/**
+            ci-meta/**
+
+  test-reports:
+    name: test-reports
+    needs: [domain-tests, integration-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: collected-reports
+      - name: Write the run index
+        run: |
+          set -eu
+          mkdir -p collected-reports
+          {
+            echo "commit=${GITHUB_SHA}"
+            echo "ref=${GITHUB_REF}"
+            echo "run=${GITHUB_RUN_ID}"
+            echo "attempt=${GITHUB_RUN_ATTEMPT}"
+            echo "domain=${{ needs.domain-tests.result }}"
+            echo "integration=${{ needs.integration-tests.result }}"
+          } > collected-reports/run.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-ci-reports
+          if-no-files-found: warn
+          path: collected-reports/**
