@@ -91,11 +91,11 @@ Docker 可用时，应先起一个只给测试用的 PostgreSQL 16，映射到 5
 
 | 标准 | 状态 |
 | --- | --- |
-| 只有 GRANTED 能正式发布 | 领域测试通过。数据库 IT 未读到通过记录 |
-| UNKNOWN、REVOKED 不能正式发布 | 领域测试通过。REVOKED 不能被逃生口放行也有领域测试。数据库 IT 未读到通过记录 |
+| 只有 GRANTED 能正式发布 | 领域测试通过。前两次 CI 的发布场景没有跑到，夹具在 `>= 8` 处失败 |
+| UNKNOWN、REVOKED 不能正式发布 | 领域测试通过。`unknownCannotPublishAndAdminOrDemoCannotBypass` 在前两次 CI 通过。`ConsentLegacyIT` 通过 |
 | 历史用户不自动授权 | V13 无回填。代码路径如此。没有拿历史库演练 |
-| 普通、管理、手动、演示发布不能绕过 | 代码都进 `PublishGuard`。数据库 IT 未读到通过记录 |
-| 并发与回滚 | 用例已写。真实 PostgreSQL 上的通过数未读到 |
+| 普通、管理、手动、演示发布不能绕过 | `unknownCannotPublishAndAdminOrDemoCannotBypass` 在前两次 CI 通过 |
+| 并发与回滚 | 前两次没有执行到。不能记为通过 |
 | V3 基线 83 对、0 违规 | 领域测试通过 |
 | 生产配置 | 未改，未部署 |
 
@@ -103,21 +103,23 @@ Docker 可用时，应先起一个只给测试用的 PostgreSQL 16，映射到 5
 
 工作流 `.github/workflows/v4-ci.yml`。Runner 是 GitHub-hosted Ubuntu，Java 17，服务镜像 `postgres:16`，库名 `aiditto_s01_test`。细节见 `docs/v4/V4-INFRA-001.md`。
 
-已完成的运行：
+架构侧读到的前两次完整日志：
 
-- 提交：`725b85df18f6d9e5c12b492c5861e568839a2d94`
-- 运行：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45586978463
-- 总结论：failure。状态 completed，不是还在排队。
-- `domain-tests`：success。步骤「Run domain tests」成功。本提交没有改领域测试。上一轮本机同一命令是 463 通过、0 失败、0 错误、0 跳过。这次运行的 Surefire XML 在 artifact `domain-surefire`（15009735808）里，未登录下载返回 401，所以没有从这次 XML 重数通过条数。
-- `integration-tests`：failure。PostgreSQL 容器初始化和 `psql` 记录步骤都成功，说明 Runner 已经能连上 `aiditto_s01_test`。`SELECT version()` 写在 `ci-meta/postgres-version.txt`，该文件在 artifact `integration-reports`（15009151489）里，同样 401，实际版本字符串没有读到。镜像标签是 `postgres:16`。
-- Maven 步骤「Run the guard and the publish-safety integration tests」从 2026-11-25T09:37:24Z 到 09:38:14Z，退出码 1。下一步验收脚本同一秒退出码 1。公开注解只有 “Process completed with exit code 1.”，没有测试名、断言或堆栈。
-- 日志接口未登录返回 403。任务页面显示 “Sign in to view logs”。因此 `PublishSafetyIT`、`ConsentLegacyIT`、`MatchIT` 各自的通过数、失败原因和并发用例结果都还不能填写。不能把这次标成三个类已通过。
-- `test-reports`：success。失败报告已上传，没有被成功 job 盖掉。另有 Node.js 20 与 `setup-java@v4` 的弃用警告，领域 job 在同样警告下仍然成功，警告不是这次失败原因。
+- https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45586978463/job/139110954907
+- https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45588478771/job/139116095886
 
-本地那次三个 IT 仍然是 NOT_RUN。CI 这次是失败，但失败明细被 GitHub 登录挡住。
+PostgreSQL `16.16 (Debian 16.16-1.pgdg13+1)`。领域 job 成功。`TestDatabaseGuardTest` 3 通过。`PublishSafetyIT` 2 项，1 通过 1 失败。`ConsentLegacyIT` 1 通过。`MatchIT` 4 通过。合计 7 项，6 通过，1 失败，0 errors，0 skipped。
 
-真实用户效果仍未评估。
+失败方法 `grantedDraftsPublishAndUnsafeRacesDoNot`，`PublishSafetyIT.java:122`。实际草稿数 3，断言 `>= 8`。异常是 `AssertionError`。后面的回滚、撤回、拉黑、注销、改硬约束、重复发布和锁顺序都没有跑到。
+
+3 对的来源：北京池 130 人里只有 3 个 demo 账号。synthetic 不能和 synthetic 配对，所以求解最多 3 对，这次正好 3 对。领域测试的 83 对没有带上这个 cohort 规则。不改算法。
+
+本轮把那一个方法拆成独立场景，每个场景用自己的 demo 成年用户和 draft。`WeekRunner` 仍单独跑真实周匹配，只检查有草稿、发布后硬约束为空、再发布一次数量和 version 不变。
+
+上面的数字来自架构侧读到的完整日志。未登录时日志是 403、artifact 是 401，所以早先写过的「版本未读到、三个类结果未知」以这次日志为准。
+
+本地那次三个 IT 仍然是 NOT_RUN。真实用户效果仍未评估。
 
 ## 建议
 
-S01 保持 NO-GO。算法质量保持 NO-GO。不启动 V4-P01。要改成 GO，需要另一次运行里三个 IT 的 Failsafe XML 显示已执行、无跳过、无失败，并且并发用例在这份 PostgreSQL 上通过。在读到堆栈之前，不删断言，也不把超时放宽。
+S01 保持 NO-GO。算法质量保持 NO-GO。不启动 V4-P01。拆开的场景要在新的 PostgreSQL 运行里全部执行并通过，才能再谈 GO。不删断言，不跳过测试。

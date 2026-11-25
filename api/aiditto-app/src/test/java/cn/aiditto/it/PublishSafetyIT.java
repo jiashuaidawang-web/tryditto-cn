@@ -14,8 +14,8 @@ import cn.aiditto.match.MatchDb;
 import cn.aiditto.match.People;
 import cn.aiditto.match.PublishGuard;
 import cn.aiditto.match.SyntheticLoader;
-import cn.aiditto.match.SyntheticPhones;
 import cn.aiditto.match.WeekRunner;
+import cn.aiditto.profile.ProfileProjection;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,6 @@ import java.sql.Statement;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +59,16 @@ class PublishSafetyIT extends ApiIT {
     @Autowired UserLock userLock;
     @Autowired PlatformTransactionManager txm;
     @Autowired DataSource dataSource;
+    @Autowired ProfileProjection profiles;
+
+    private PublishSafetyFixtures fixtures;
+
+    private PublishSafetyFixtures fixtures() {
+        if (fixtures == null) {
+            fixtures = new PublishSafetyFixtures(jdbc, accounts, profiles, consents, db, people);
+        }
+        return fixtures;
+    }
 
     @Test
     @Order(1)
@@ -113,87 +122,213 @@ class PublishSafetyIT extends ApiIT {
 
     @Test
     @Order(2)
-    void grantedDraftsPublishAndUnsafeRacesDoNot() throws Exception {
-        TestConsents.grantAll(jdbc);
+    void grantedDraftPublishes() throws Exception {
         assertDistinctConnections();
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            committed(() -> {
+                PublishGuard.Outcome outcome = guard.publishDraft(scene.matchId(), Instant.now());
+                assertThat(outcome.published()).isTrue();
+                assertThat(outcome.reasonCodes()).isEmpty();
+            });
+            assertThat(stateOf(scene.matchId())).isEqualTo("published");
+            assertThat(versionOf(scene.matchId())).isEqualTo(1);
+            assertThat(publishedAt(scene.matchId())).isNotNull();
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(3)
+    void publishRollsBackWithTheTransaction() {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            int before = reports(scene.matchId());
+            rollbackAfterPublish(scene.matchId());
+            assertThat(stateOf(scene.matchId())).isEqualTo("draft");
+            assertThat(publishedAt(scene.matchId())).isNull();
+            assertThat(versionOf(scene.matchId())).isZero();
+            assertThat(reports(scene.matchId())).isEqualTo(before);
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(4)
+    void revokeBeforePublishHoldsTheDraft() {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            committed(() -> consents.revoke(scene.low()));
+            committed(() -> guard.publishDraft(scene.matchId(), Instant.now()));
+            assertDraftHeld(scene.matchId(), "CONSENT_REVOKED");
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(5)
+    void revokeAfterPublishHoldsWithoutPenalty() {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            committed(() -> assertThat(guard.publishDraft(scene.matchId(), Instant.now()).published()).isTrue());
+            int beforeReport = reports(scene.matchId());
+            int beforeLow = streak(scene.low());
+            int beforeHigh = streak(scene.high());
+            committed(() -> consents.revoke(scene.low()));
+            assertThat(stateOf(scene.matchId())).isEqualTo("cancelled");
+            assertThat(holdReason(scene.matchId())).contains("CONSENT_REVOKED");
+            assertThat(reports(scene.matchId())).isEqualTo(beforeReport);
+            assertThat(streak(scene.low())).isEqualTo(beforeLow);
+            assertThat(streak(scene.high())).isEqualTo(beforeHigh);
+            assertNoNotificationTable();
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(6)
+    void revokedMatchHidesContact() {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            committed(() -> assertThat(guard.publishDraft(scene.matchId(), Instant.now()).published()).isTrue());
+            committed(() -> consents.revoke(scene.low()));
+            assertHidden(scene.matchId(), scene.lowPhone());
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(7)
+    void revokeRacesPublishAndDoesNotPublish() throws Exception {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            race(() -> consents.revoke(scene.low()),
+                    () -> guard.publishDraft(scene.matchId(), Instant.now()));
+            assertThat(stateOf(scene.matchId())).isNotEqualTo("published");
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(8)
+    void blockRacesPublishAndDoesNotPublish() throws Exception {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            race(() -> blocks.add(scene.low(), new BlockService.NewBlock("n", List.of(), List.of(scene.highPhone()), "")),
+                    () -> guard.publishDraft(scene.matchId(), Instant.now()));
+            assertThat(stateOf(scene.matchId())).isNotEqualTo("published");
+        } finally {
+            jdbc.update("DELETE FROM block_contact WHERE user_id = ?", scene.low());
+            jdbc.update("DELETE FROM \"block\" WHERE user_id = ?", scene.low());
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(9)
+    void deleteRacesPublishAndDoesNotPublish() throws Exception {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            race(() -> accounts.requestDelete(scene.low()),
+                    () -> guard.publishDraft(scene.matchId(), Instant.now()));
+            assertThat(stateOf(scene.matchId())).isNotEqualTo("published");
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(10)
+    void hardConstraintRacesPublishAndDoesNotPublish() throws Exception {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        int ageMin = jdbc.queryForObject("SELECT age_min FROM profile WHERE user_id = ?", Integer.class, scene.low());
+        int ageMax = jdbc.queryForObject("SELECT age_max FROM profile WHERE user_id = ?", Integer.class, scene.low());
+        try {
+            race(() -> committed(() -> {
+                        userLock.lock(scene.low());
+                        jdbc.update("UPDATE profile SET age_min = 40, age_max = 50 WHERE user_id = ?", scene.low());
+                        guard.releaseUser(scene.low(), Instant.now());
+                    }),
+                    () -> guard.publishDraft(scene.matchId(), Instant.now()));
+            assertThat(stateOf(scene.matchId())).isNotEqualTo("published");
+        } finally {
+            jdbc.update("UPDATE profile SET age_min = ?, age_max = ? WHERE user_id = ?", ageMin, ageMax, scene.low());
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(11)
+    void duplicatePublishIsIdempotent() throws Exception {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            race(() -> guard.publishDraft(scene.matchId(), Instant.now()),
+                    () -> guard.publishDraft(scene.matchId(), Instant.now()));
+            assertThat(stateOf(scene.matchId())).isEqualTo("published");
+            assertThat(versionOf(scene.matchId())).isEqualTo(1);
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(12)
+    void sharedUsersLockInUserIdOrder() throws Exception {
+        List<PublishSafetyFixtures.Adult> adults = fixtures().threeAdults();
+        long a = adults.get(0).id();
+        long b = adults.get(1).id();
+        long c = adults.get(2).id();
+        LocalDate week = WeekCalendar.weekStartFor(Instant.now());
+        long leftWeek = insertOpenWeek("bj", db.nextManualRun("bj", week));
+        long rightWeek = insertOpenWeek("bj", db.nextManualRun("bj", week));
+        try {
+            long left = insertDraft(leftWeek, a, b);
+            long right = insertDraft(rightWeek, b, c);
+            race(() -> guard.publishDraft(left, Instant.now()), () -> guard.publishDraft(right, Instant.now()));
+            assertThat(stateOf(left)).isIn("published", "cancelled");
+            assertThat(stateOf(right)).isIn("published", "cancelled");
+        } finally {
+            closeWeek(leftWeek);
+            closeWeek(rightWeek);
+        }
+    }
+
+    @Test
+    @Order(13)
+    void holdDoesNotAddReportOrStreak() {
+        PublishSafetyFixtures.Scene scene = fixtures().grantedDraft();
+        try {
+            committed(() -> assertThat(guard.publishDraft(scene.matchId(), Instant.now()).published()).isTrue());
+            int beforeReport = reports(scene.matchId());
+            int beforeLow = streak(scene.low());
+            int beforeHigh = streak(scene.high());
+            committed(() -> consents.revoke(scene.low()));
+            assertThat(stateOf(scene.matchId())).isEqualTo("cancelled");
+            assertThat(reports(scene.matchId())).isEqualTo(beforeReport);
+            assertThat(streak(scene.low())).isEqualTo(beforeLow);
+            assertThat(streak(scene.high())).isEqualTo(beforeHigh);
+        } finally {
+            fixtures().close(scene.weekId());
+        }
+    }
+
+    @Test
+    @Order(14)
+    void weekRunnerPublishesAndRepeatIsIdempotent() {
+        Map<String, Integer> census = loader.load();
+        assertThat(census.get("loaded") + census.get("skipped")).isEqualTo(200);
+        TestConsents.grantAll(jdbc);
         long weekId = copiedWeek("bj");
         try {
-            List<Draft> drafts = drafts(weekId);
-            assertThat(drafts.size()).isGreaterThanOrEqualTo(8);
-
-            Draft rolled = drafts.get(0);
-            int reports = reports(rolled.matchId());
-            int streak = streak(rolled.low());
-            rollbackAfterPublish(rolled.matchId());
-            assertThat(stateOf(rolled.matchId())).isEqualTo("draft");
-            assertThat(publishedAt(rolled.matchId())).isNull();
-            assertThat(versionOf(rolled.matchId())).isZero();
-            assertThat(reports(rolled.matchId())).isEqualTo(reports);
-
-            Draft revokeFirst = drafts.get(1);
-            committed(() -> consents.revoke(revokeFirst.low()));
-            committed(() -> guard.publishDraft(revokeFirst.matchId(), Instant.now()));
-            assertDraftHeld(revokeFirst.matchId(), "CONSENT_REVOKED");
-
-            Draft publishFirst = drafts.get(2);
-            committed(() -> {
-                PublishGuard.Outcome outcome = guard.publishDraft(publishFirst.matchId(), Instant.now());
-                assertThat(outcome.published()).isTrue();
-            });
-            assertThat(stateOf(publishFirst.matchId())).isEqualTo("published");
-            int beforeReport = reports(publishFirst.matchId());
-            int beforeLow = streak(publishFirst.low());
-            int beforeHigh = streak(publishFirst.high());
-            committed(() -> consents.revoke(publishFirst.low()));
-            assertThat(stateOf(publishFirst.matchId())).isEqualTo("cancelled");
-            assertThat(holdReason(publishFirst.matchId())).contains("CONSENT_REVOKED");
-            assertThat(reports(publishFirst.matchId())).isEqualTo(beforeReport);
-            assertThat(streak(publishFirst.low())).isEqualTo(beforeLow);
-            assertThat(streak(publishFirst.high())).isEqualTo(beforeHigh);
-            assertNoNotificationTable();
-            assertHidden(publishFirst);
-
-            race(() -> consents.revoke(drafts.get(3).low()),
-                    () -> guard.publishDraft(drafts.get(3).matchId(), Instant.now()));
-            assertThat(stateOf(drafts.get(3).matchId())).isNotEqualTo("published");
-
-            Draft blocked = drafts.get(4);
-            String partnerPhone = phoneOf(blocked.high());
-            race(() -> blocks.add(blocked.low(), new BlockService.NewBlock("n", List.of(), List.of(partnerPhone), "")),
-                    () -> guard.publishDraft(blocked.matchId(), Instant.now()));
-            assertThat(stateOf(blocked.matchId())).isNotEqualTo("published");
-            jdbc.update("DELETE FROM block_contact WHERE user_id = ?", blocked.low());
-            jdbc.update("DELETE FROM \"block\" WHERE user_id = ?", blocked.low());
-
-            Draft deleted = drafts.get(5);
-            race(() -> accounts.requestDelete(deleted.low()),
-                    () -> guard.publishDraft(deleted.matchId(), Instant.now()));
-            assertThat(stateOf(deleted.matchId())).isNotEqualTo("published");
-            jdbc.update("""
-                    UPDATE "user" SET status = 'active', delete_requested_at = NULL, purge_at = NULL
-                    WHERE id = ?
-                    """, deleted.low());
-
-            Draft aged = drafts.get(6);
-            int ageMin = jdbc.queryForObject("SELECT age_min FROM profile WHERE user_id = ?", Integer.class, aged.low());
-            int ageMax = jdbc.queryForObject("SELECT age_max FROM profile WHERE user_id = ?", Integer.class, aged.low());
-            race(() -> committed(() -> {
-                        userLock.lock(aged.low());
-                        jdbc.update("UPDATE profile SET age_min = 40, age_max = 50 WHERE user_id = ?", aged.low());
-                        guard.releaseUser(aged.low(), Instant.now());
-                    }),
-                    () -> guard.publishDraft(aged.matchId(), Instant.now()));
-            assertThat(stateOf(aged.matchId())).isNotEqualTo("published");
-            jdbc.update("UPDATE profile SET age_min = ?, age_max = ? WHERE user_id = ?", ageMin, ageMax, aged.low());
-
-            Draft twice = drafts.get(7);
-            race(() -> guard.publishDraft(twice.matchId(), Instant.now()),
-                    () -> guard.publishDraft(twice.matchId(), Instant.now()));
-            assertThat(stateOf(twice.matchId())).isEqualTo("published");
-            assertThat(versionOf(twice.matchId())).isEqualTo(1);
-
-            lockOrderDoesNotDeadlock();
-            TestConsents.grantAll(jdbc);
+            int drafts = drafts(weekId).size();
+            System.out.println("bj solver drafts " + drafts);
+            assertThat(drafts).as("real solver produced drafts").isPositive();
             weeks.rerun(weekId, WeekStep.PUBLISH, Instant.now());
             Integer published = publishedCount(weekId);
             assertThat(published).isPositive();
@@ -210,40 +345,13 @@ class PublishSafetyIT extends ApiIT {
         }
     }
 
-    private void lockOrderDoesNotDeadlock() throws Exception {
-        List<Long> users = jdbc.queryForList("""
-                SELECT u.id FROM "user" u
-                JOIN profile p ON p.user_id = u.id
-                JOIN place pl ON pl.id = p.place_id
-                WHERE u.status = 'active' AND pl.city = 'bj'
-                ORDER BY u.id
-                LIMIT 3
-                """, Long.class);
-        assertThat(users).hasSize(3);
-        long a = users.get(0);
-        long b = users.get(1);
-        long c = users.get(2);
-        long leftWeek = insertOpenWeek("bj", 970);
-        long rightWeek = insertOpenWeek("bj", 971);
-        try {
-            long left = insertDraft(leftWeek, a, b);
-            long right = insertDraft(rightWeek, b, c);
-            race(() -> guard.publishDraft(left, Instant.now()), () -> guard.publishDraft(right, Instant.now()));
-            assertThat(stateOf(left)).isIn("published", "cancelled");
-            assertThat(stateOf(right)).isIn("published", "cancelled");
-        } finally {
-            closeWeek(leftWeek);
-            closeWeek(rightWeek);
-        }
-    }
-
-    private void assertHidden(Draft draft) {
-        String token = login(phoneOf(draft.low()));
+    private void assertHidden(long matchId, String phone) {
+        String token = login(phone);
         Resp card = call("GET", "/api/matches/current", null, token);
         assertThat(card.status()).isEqualTo(200);
         assertThat(card.body().get("partner").isNull()).isTrue();
         assertNoPrivateLeak(card.body().toString());
-        Resp contact = call("GET", "/api/matches/" + draft.matchId() + "/contact", null, token);
+        Resp contact = call("GET", "/api/matches/" + matchId + "/contact", null, token);
         if (contact.status() == 200 && contact.body() != null && contact.body().get("wechat") != null) {
             assertThat(contact.body().get("wechat").isNull()).isTrue();
         }
@@ -420,18 +528,6 @@ class PublishSafetyIT extends ApiIT {
             assertThat(cb).isNotNull();
             assertThat(HardFilter.violations(ca, cb, input)).isEmpty();
         }
-    }
-
-    private String phoneOf(long userId) {
-        byte[] hash = jdbc.queryForObject("SELECT phone_hash FROM \"user\" WHERE id = ?", byte[].class, userId);
-        for (int i = 0; i < 200; i++) {
-            String phone = SyntheticPhones.fictional(i);
-            if (Arrays.equals(hash, crypto.hash(phone))) return phone;
-        }
-        for (String phone : SyntheticPhones.DEMO) {
-            if (Arrays.equals(hash, crypto.hash(phone))) return phone;
-        }
-        throw new AssertionError("no phone for " + userId);
     }
 
     private static void assertNoPrivateLeak(String body) {

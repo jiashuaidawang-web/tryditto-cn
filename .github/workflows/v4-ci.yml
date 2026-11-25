@@ -35,6 +35,46 @@ jobs:
       - name: Run domain tests
         working-directory: api
         run: mvn -B -pl aiditto-domain test
+      - name: Write the domain summary
+        if: always()
+        working-directory: api
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, xml.etree.ElementTree as ET
+          reports = list(pathlib.Path("aiditto-domain/target/surefire-reports").glob("TEST-*.xml"))
+          tests = failures = errors = skipped = 0
+          failed = []
+          for path in reports:
+              root = ET.parse(path).getroot()
+              tests += int(root.attrib.get("tests", "0"))
+              failures += int(root.attrib.get("failures", "0"))
+              errors += int(root.attrib.get("errors", "0"))
+              skipped += int(root.attrib.get("skipped", "0"))
+              for case in root.findall("testcase"):
+                  bad = case.find("failure")
+                  if bad is None:
+                      bad = case.find("error")
+                  if bad is None:
+                      continue
+                  failed.append(case.attrib.get("classname", "").rsplit(".", 1)[-1] + "." + case.attrib.get("name", ""))
+          lines = [
+              "## V4 CI domain",
+              "",
+              f"- commit: `{os.environ.get('GITHUB_SHA', '')}`",
+              f"- run: {os.environ.get('GITHUB_SERVER_URL', '')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}",
+              f"- domain tests={tests} failures={failures} errors={errors} skipped={skipped}",
+          ]
+          if failed:
+              lines.append("")
+              lines.append("Failed methods:")
+              lines.extend(f"- `{name}`" for name in failed[:30])
+          text = "\n".join(lines) + "\n"
+          print(text)
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as out:
+                  out.write(text)
+          PY
       - name: Upload Surefire reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -112,19 +152,65 @@ jobs:
             -Dfailsafe.failIfNoSpecifiedTests=true \
             -DforkCount=1 \
             -DreuseForks=false
-      - name: Reject a run that did not execute the three IT classes
+      - name: Reject a run that did not execute the IT scenarios
         if: always()
         working-directory: api
         run: |
           python3 - <<'PY'
-          import pathlib, sys, xml.etree.ElementTree as ET
-          required = ["PublishSafetyIT", "ConsentLegacyIT", "MatchIT"]
+          import os, pathlib, sys, xml.etree.ElementTree as ET
+          required = {
+              "PublishSafetyIT": [
+                  "unknownCannotPublishAndAdminOrDemoCannotBypass",
+                  "grantedDraftPublishes",
+                  "publishRollsBackWithTheTransaction",
+                  "revokeBeforePublishHoldsTheDraft",
+                  "revokeAfterPublishHoldsWithoutPenalty",
+                  "revokedMatchHidesContact",
+                  "revokeRacesPublishAndDoesNotPublish",
+                  "blockRacesPublishAndDoesNotPublish",
+                  "deleteRacesPublishAndDoesNotPublish",
+                  "hardConstraintRacesPublishAndDoesNotPublish",
+                  "duplicatePublishIsIdempotent",
+                  "sharedUsersLockInUserIdOrder",
+                  "holdDoesNotAddReportOrStreak",
+                  "weekRunnerPublishesAndRepeatIsIdempotent",
+              ],
+              "ConsentLegacyIT": ["revokedStillCannotPublishWhenUnknownIsAllowed"],
+              "MatchIT": [
+                  "matchNowIsFastAndClean",
+                  "realUsersAreNotPairedWithSyntheticOnesAndResetLeavesThemAlone",
+                  "partnerActionRefusesARealPartnerAndStepsResume",
+                  "deadlineTickIsIdempotentAndSyntheticPhonesGetNoCode",
+              ],
+          }
           reports = pathlib.Path("aiditto-app/target/failsafe-reports")
           guard = list(pathlib.Path("aiditto-app/target/surefire-reports").glob("TEST-*TestDatabaseGuardTest.xml"))
           out = pathlib.Path("../ci-meta")
           out.mkdir(parents=True, exist_ok=True)
           lines = []
           blocked = []
+          failures = []
+
+          def clean(text):
+              text = " ".join((text or "").split())
+              lowered = text.lower()
+              if any(word in lowered for word in ("password", "jdbc:", "api-key", "api_key", "bearer ")):
+                  return "(redacted)"
+              return text[:240]
+
+          def note_failure(class_name, case):
+              bad = case.find("failure")
+              if bad is None:
+                  bad = case.find("error")
+              if bad is None:
+                  return
+              where = ""
+              for line in (bad.text or "").splitlines():
+                  if ".java:" in line and "at " in line:
+                      where = line.strip()
+                      break
+              failures.append(f"{class_name}.{case.attrib.get('name', '')} {clean(bad.attrib.get('message', ''))} {clean(where)}")
+
           if not guard:
               blocked.append("TestDatabaseGuardTest report missing")
               lines.append("TestDatabaseGuardTest MISSING")
@@ -132,10 +218,13 @@ jobs:
               groot = ET.parse(guard[0]).getroot()
               gtests = int(groot.attrib.get("tests", "0"))
               gfail = int(groot.attrib.get("failures", "0")) + int(groot.attrib.get("errors", "0"))
-              lines.append(f"TestDatabaseGuardTest tests={gtests} failures={gfail}")
-              if gtests <= 0 or gfail:
+              gskip = int(groot.attrib.get("skipped", "0"))
+              lines.append(f"TestDatabaseGuardTest tests={gtests} failures={gfail} errors=0 skipped={gskip}")
+              if gtests <= 0 or gfail or gskip:
                   blocked.append("TestDatabaseGuardTest")
-          for name in required:
+              for case in groot.findall("testcase"):
+                  note_failure("TestDatabaseGuardTest", case)
+          for name, methods in required.items():
               files = sorted(reports.glob(f"TEST-*{name}.xml"))
               if not files:
                   blocked.append(name + " report missing")
@@ -144,14 +233,48 @@ jobs:
               root = ET.parse(files[0]).getroot()
               tests = int(root.attrib.get("tests", "0"))
               skipped = int(root.attrib.get("skipped", "0"))
-              failures = int(root.attrib.get("failures", "0"))
-              errors = int(root.attrib.get("errors", "0"))
-              lines.append(f"{name} tests={tests} failures={failures} errors={errors} skipped={skipped}")
-              if tests <= 0 or skipped > 0 or failures > 0 or errors > 0:
+              fail_n = int(root.attrib.get("failures", "0"))
+              err_n = int(root.attrib.get("errors", "0"))
+              seen = []
+              for case in root.findall("testcase"):
+                  seen.append(case.attrib.get("name", ""))
+                  if case.find("skipped") is not None:
+                      blocked.append(name + "." + case.attrib.get("name", "") + " skipped")
+                  note_failure(name, case)
+              missing = [method for method in methods if method not in seen]
+              lines.append(f"{name} tests={tests} failures={fail_n} errors={err_n} skipped={skipped} methods={len(seen)}")
+              if tests <= 0 or skipped or fail_n or err_n or missing:
                   blocked.append(name)
+              for method in missing:
+                  lines.append(f"{name}.{method} NOT_RUN")
+          version = pathlib.Path("../ci-meta/postgres-version.txt")
+          pg = version.read_text(encoding="utf-8").strip() if version.exists() else "unread"
+          sha = os.environ.get("GITHUB_SHA", "")
+          url = f"{os.environ.get('GITHUB_SERVER_URL', '')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
           text = "\n".join(lines)
           (out / "it-summary.txt").write_text(text + "\n", encoding="utf-8")
-          print(text)
+          summary = [
+              "## V4 CI integration",
+              "",
+              f"- commit: `{sha}`",
+              f"- run: {url}",
+              f"- postgres: {clean(pg)}",
+              "",
+              "```",
+              text,
+              "```",
+          ]
+          if failures:
+              summary.extend(["", "Failures:"])
+              summary.extend(f"- `{item}`" for item in failures[:20])
+          if blocked:
+              summary.extend(["", f"Acceptance blocked: {', '.join(blocked)}"])
+          body = "\n".join(summary) + "\n"
+          print(body)
+          step = os.environ.get("GITHUB_STEP_SUMMARY")
+          if step:
+              with open(step, "a", encoding="utf-8") as handle:
+                  handle.write(body)
           if blocked:
               print("ACCEPTANCE_BLOCKED " + ", ".join(blocked))
               sys.exit(1)

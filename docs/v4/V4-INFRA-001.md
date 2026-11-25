@@ -53,15 +53,24 @@ Surefire 不跑 `*IT`。`mvn test` 不会走到 clean。
 
 生产 compose 里的库名是 `aiditto_pg`，主机也不是这份允许列表里的业务地址。本轮没有改 `deploy/` 或 `application-prod.yml`。
 
-## 第一次运行
+## 前两次运行
 
-提交 `725b85df18f6d9e5c12b492c5861e568839a2d94` 推送后触发：
+两次都跑完了，失败相同。PostgreSQL `16.16 (Debian 16.16-1.pgdg13+1)`。
 
-https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45586978463
+| 运行 | 结果 |
+| --- | --- |
+| https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45586978463 | failure |
+| https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45588478771 | failure |
 
-总结论 failure。`domain-tests` success。`integration-tests` failure：容器和 `psql` 记录成功，随后 Maven verify 与 XML 验收都是退出码 1。`test-reports` success，报告已留下。
+`domain-tests` 成功。`TestDatabaseGuardTest` 3 通过。`PublishSafetyIT` 2 项里 1 通过、1 失败。`ConsentLegacyIT` 1 通过。`MatchIT` 4 通过。集成合计 7 项，6 通过，1 失败，0 errors，0 skipped。
 
-未登录不能下日志（403）和 artifact（401）。页面写着要登录才能看日志。PostgreSQL 的 `SELECT version()` 文本、三个 IT 的执行条数和并发通过数因此仍空着。S01 保持 NO-GO。
+失败在 `PublishSafetyIT.grantedDraftsPublishAndUnsafeRacesDoNot` 第 122 行：北京这周只有 3 对草稿，断言要求至少 8。并发断言没有执行。这不能说明并发通过，也不能说明并发有缺陷。
+
+原因在现有硬约束，不在数据库。`HardFilter.cohortsCompatible` 规定 synthetic 只能和 demo 配对，synthetic 不能互配。夹具 200 人里 demo 只有 4 个：`13800000001`、`13800000002`、`13800000003` 的地点在北京，`13800000004` 在上海。北京因此最多 3 对。领域测试的 83 对是因为 `FixtureCandidates` 没有写入 cohort，构造器默认 REAL，200 人可以互配。应用路径会写入真实 cohort。本轮不改这条规则，也不为了凑数量改求解器。
+
+发布安全场景改为 `PublishSafetyFixtures` 自建 demo cohort 成年用户、完整 profile、显式 GRANTED、独立 week 和 draft。正常发布仍调用 `PublishGuard`。`WeekRunner` 的端到端测试只要求真实求解有草稿并重复发布不变，不再要求固定 8 对。
+
+Job Summary 写入每个类的执行数、通过失败错误跳过、失败方法、断言摘要、源码行、commit 和 run URL。跳过或缺少方法时验收失败。
 
 ## 不在本轮
 
