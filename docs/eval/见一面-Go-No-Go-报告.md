@@ -1,7 +1,7 @@
 # 「见一面」上线前 Go/No-Go 报告（阶段 B 合成仿真）
 
 > 生成方式：`api/aiditto-app/src/test/java/cn/aiditto/sim/SimulationRunTest.java` 实跑生成，数据与 CI 断言同源，非人工填写。
-> 回放规模：users=200，cycles=12，seed=20261118，口是心非=45 人，长尾=37 人，耗时 18278 ms。
+> 回放规模：users=200，cycles=12，seed=20261118，口是心非=45 人，长尾=37 人，耗时 16378 ms。
 
 ## 总判定：**NO-GO（继续在阶段 B 打磨）**
 

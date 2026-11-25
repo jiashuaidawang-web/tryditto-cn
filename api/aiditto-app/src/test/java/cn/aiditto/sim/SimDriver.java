@@ -52,13 +52,25 @@ public final class SimDriver {
 
     public record Config(int users, int cycles, long seed, double twoFacedRatio,
                          double longTailRatio, int candidateTopK, boolean learningEnabled,
-                         boolean excludePastPairs, double womenShare, int learnedScoreTopN) {
+                         boolean excludePastPairs, double womenShare, int learnedScoreTopN,
+                         int refreshPerCycle) {
         public Config {
             users = Math.max(20, users);
             cycles = Math.max(2, cycles);
             candidateTopK = Math.max(5, candidateTopK);
             womenShare = Math.max(0.0, Math.min(1.0, womenShare));
             learnedScoreTopN = Math.max(0, learnedScoreTopN);
+            refreshPerCycle = Math.max(0, refreshPerCycle);
+        }
+
+        /**
+         * 开池模式：每周期有 refreshPerCycle 个老用户退出、等量新用户加入（滚动窗口）。
+         * 用于消除封闭池 pastPairs 耗竭造成的「学习组/影子组一起下降」结构性噪声——
+         * 真实产品里用户本就流动，封闭池 12 周不变是不真实的建模。
+         * refreshPerCycle=0 即原封闭池模式，逐位保持历史行为。
+         */
+        public boolean openPool() {
+            return refreshPerCycle > 0;
         }
 
         /** 兼容旧 8 参构造：默认男女 1:1、学习分对所有边生效（沿用历史口径）。 */
@@ -66,7 +78,7 @@ public final class SimDriver {
                       double longTailRatio, int candidateTopK, boolean learningEnabled,
                       boolean excludePastPairs) {
             this(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
-                    learningEnabled, excludePastPairs, 0.5, 0);
+                    learningEnabled, excludePastPairs, 0.5, 0, 0);
         }
 
         /** 兼容 9 参构造：默认学习分对所有边生效。 */
@@ -74,40 +86,63 @@ public final class SimDriver {
                       double longTailRatio, int candidateTopK, boolean learningEnabled,
                       boolean excludePastPairs, double womenShare) {
             this(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
-                    learningEnabled, excludePastPairs, womenShare, 0);
+                    learningEnabled, excludePastPairs, womenShare, 0, 0);
+        }
+
+        /** 兼容 10 参构造：默认封闭池。 */
+        public Config(int users, int cycles, long seed, double twoFacedRatio,
+                      double longTailRatio, int candidateTopK, boolean learningEnabled,
+                      boolean excludePastPairs, double womenShare, int learnedScoreTopN) {
+            this(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
+                    learningEnabled, excludePastPairs, womenShare, learnedScoreTopN, 0);
         }
 
         public static Config defaults() {
-            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, true, true);
+            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, true, true, 0.5, 0, 0);
         }
         /** 影子对照：完全相同的用户/真值/噪声，只关掉画像重写。 */
         public static Config frozen() {
-            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, false, true);
+            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, false, true, 0.5, 0, 0);
         }
         /** 固定候选池：不累积往期配对，用来剥离结构性下降、单独量化学习净收益。 */
         public static Config fixedPool() {
-            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, true, false);
+            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, true, false, 0.5, 0, 0);
         }
         public static Config fixedPoolFrozen() {
-            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, false, false);
+            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, false, false, 0.5, 0, 0);
+        }
+
+        /** 开池对照：每周期换 refresh 人（如 20），学习开。 */
+        public static Config openPool(int refresh) {
+            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, true, true, 0.5, 0, refresh);
+        }
+        /** 开池影子对照：同样换人，但关掉学习。 */
+        public static Config openPoolFrozen(int refresh) {
+            return new Config(200, 12, 20261118L, 0.20, 0.20, 20, false, true, 0.5, 0, refresh);
         }
 
         /** 深水区：改性别比（如 0.7 表示 7:3 女:男），其余保持不变。 */
         public Config withWomenShare(double share) {
             return new Config(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
-                    learningEnabled, excludePastPairs, share, learnedScoreTopN);
+                    learningEnabled, excludePastPairs, share, learnedScoreTopN, refreshPerCycle);
         }
 
         /** 深水区：扩池到指定人数。 */
         public Config withUsers(int n) {
             return new Config(n, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
-                    learningEnabled, excludePastPairs, womenShare, learnedScoreTopN);
+                    learningEnabled, excludePastPairs, womenShare, learnedScoreTopN, refreshPerCycle);
         }
 
         /** 深水区：换随机种子做多种子显著性检验。 */
         public Config withSeed(long s) {
             return new Config(users, cycles, s, twoFacedRatio, longTailRatio, candidateTopK,
-                    learningEnabled, excludePastPairs, womenShare, learnedScoreTopN);
+                    learningEnabled, excludePastPairs, womenShare, learnedScoreTopN, refreshPerCycle);
+        }
+
+        /** 修尺子：设置每周期换人数量（>0 开启开池模式）。 */
+        public Config withRefresh(int refresh) {
+            return new Config(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
+                    learningEnabled, excludePastPairs, womenShare, learnedScoreTopN, refresh);
         }
 
         /**
@@ -116,7 +151,7 @@ public final class SimDriver {
          */
         public Config withLearnedScoreTopN(int n) {
             return new Config(users, cycles, seed, twoFacedRatio, longTailRatio, candidateTopK,
-                    learningEnabled, excludePastPairs, womenShare, n);
+                    learningEnabled, excludePastPairs, womenShare, n, refreshPerCycle);
         }
     }
 
@@ -141,7 +176,11 @@ public final class SimDriver {
     public static Run run(Config cfg) {
         long start = System.currentTimeMillis();
         Random rnd = new Random(cfg.seed());
-        int n = cfg.users();
+        int window = cfg.users();                       // 每周期活跃窗口人数
+        // 开池：预生成所有周期要用到的人（滚动窗口），封闭池时 nTotal == window 行为逐位不变。
+        int n = cfg.openPool()
+                ? window + (cfg.cycles() - 1) * cfg.refreshPerCycle()
+                : window;
 
         // ── 隐藏真值（系统不可见）与系统可观测状态 ────────────────────────────────
         List<HiddenTruth> truths = new ArrayList<>(n);
@@ -210,7 +249,12 @@ public final class SimDriver {
         final long truthSeed = cfg.seed();
         for (int cycle = 1; cycle <= cfg.cycles(); cycle++) {
             long seed = cfg.seed() + cycle;
-            MatchingInput input = MatchingInput.of(LocalDate.of(2026, 1, 7).plusWeeks(cycle - 1), candidates, seed);
+            // 开池滚动窗口：本周期活跃用户 = [activeFrom, activeTo)（全局 0-based 索引）
+            int activeFrom = cfg.openPool() ? (cycle - 1) * cfg.refreshPerCycle() : 0;
+            int activeTo = activeFrom + window;
+            List<Candidate> activePool = cfg.openPool()
+                    ? candidates.subList(activeFrom, activeTo) : candidates;
+            MatchingInput input = MatchingInput.of(LocalDate.of(2026, 1, 7).plusWeeks(cycle - 1), activePool, seed);
             if (cfg.excludePastPairs()) input = input.withPastPairs(Set.copyOf(pastPairs));
             List<Edge> edges = MatchingSolver.buildEdges(input);
 
@@ -223,8 +267,8 @@ public final class SimDriver {
             // 下一周期 R1/R2 召回（Qdrant）与 AgentRerankService.loadPersonas（active 画像）
             // 读的都是新版本。之前仿真里双向反馈更新了 learned[b] 却始终用 stated[b] 打分，
             // 等于把一半学习成果丢掉了。
-            Map<PairKey, Double> recalled = recallFusion(cfg, candidates, learned, seed);
-            double exclusiveShare = exclusiveShare(cfg, candidates, learned, seed);
+            Map<PairKey, Double> recalled = recallFusion(cfg, activePool, learned, seed, activeFrom);
+            double exclusiveShare = exclusiveShare(cfg, activePool, learned, seed, activeFrom);
 
             Map<PairKey, Integer> aiScores = new HashMap<>();
             // D6 方案 A：学习排序分——直接由双方 learned 画像经 TasteWeights.rankAgainst 计算，
@@ -304,14 +348,19 @@ public final class SimDriver {
             }
             totalRepeat += cycleRepeat;
 
+            List<TasteWeights> activeLearned = new ArrayList<>(), activeTruths = new ArrayList<>();
             List<TasteWeights> learnedTf = new ArrayList<>(), truthTf = new ArrayList<>();
-            for (int i = 0; i < n; i++) if (twoFaced.get(i)) { learnedTf.add(learned.get(i)); truthTf.add(truths.get(i).weights()); }
-            double recovery = SimMetrics.tasteRecovery(learned, truths.stream().map(HiddenTruth::weights).toList());
+            for (int i = activeFrom; i < activeTo; i++) {
+                activeLearned.add(learned.get(i));
+                activeTruths.add(truths.get(i).weights());
+                if (twoFaced.get(i)) { learnedTf.add(learned.get(i)); truthTf.add(truths.get(i).weights()); }
+            }
+            double recovery = SimMetrics.tasteRecovery(activeLearned, activeTruths);
             double conv = SimMetrics.twoFacedConvergence(learnedTf);
             FeedbackSignal malicious = FeedbackSignal.derive("bad:humor", 1, "yes", "还行吧");
             double maliciousDelta = TasteWeights.neutral().apply(malicious.dim(), malicious.delta())
                     .maxDeltaFrom(TasteWeights.neutral());
-            double coverage = feasible.size() / (double) n;
+            double coverage = feasible.size() / (double) window;
             double longTailShare = matchedLongTail.size() / (double) Math.max(1, result.pairs().size() * 2);
             double fairness = SimMetrics.longTailFairness(longTailShare, longTailCount / (double) n);
             metrics.add(new CycleMetric(cycle, avg(regrets), SimMetrics.hitRate(chosen, allFeasible),
@@ -413,12 +462,12 @@ public final class SimDriver {
 
     /** 生产 RrfFusion：五路排名融合，产出 pair 的融合先验与单路独占占比。 */
     private static Map<PairKey, Double> recallFusion(Config cfg, List<Candidate> pool,
-                                                     List<TasteWeights> learned, long seed) {
+                                                     List<TasteWeights> learned, long seed, int offset) {
         Map<PairKey, Double> out = new HashMap<>();
         int n = pool.size();
         Random rnd = new Random(seed);
         for (int a = 0; a < n; a++) {
-            final int ai = a;
+            final int ai = a + offset;   // 画像用全局索引（开池窗口）；封闭池 offset=0 等价原逻辑
             List<Integer> idx = new ArrayList<>();
             for (int b = 0; b < n; b++) if (b != a) idx.add(b);
             List<List<RrfFusion.Ranked>> routes = new ArrayList<>();
@@ -430,11 +479,13 @@ public final class SimDriver {
                 if (r == 4) for (int b : idx) jitter.put(b, rnd.nextDouble() * 0.4);
                 final int route = r;
                 // R1/R2 用双方**更新后**的画像做语义召回；R5 探索路加确定性扰动兜长尾
+                // 画像索引 = 局部 b + offset（全局），保证开池窗口读到正确的人
                 ranked.sort(Comparator.comparingDouble(b ->
-                        -(TrueScore.compatibility(learned.get(ai), learned.get(b)) + jitter.getOrDefault(b, 0.0))));
+                        -(TrueScore.compatibility(learned.get(ai), learned.get(b + offset)) + jitter.getOrDefault(b, 0.0))));
                 List<RrfFusion.Ranked> one = new ArrayList<>();
                 for (int k = 0; k < Math.min(cfg.candidateTopK(), ranked.size()); k++) {
-                    one.add(new RrfFusion.Ranked(ranked.get(k) + 1L, k + 1, ROUTES.get(route)));
+                    // userId 用 Candidate 真实全局 id，与 MatchingSolver 的 Edge.id 对齐（封闭池时 = k+1 逐位不变）
+                    one.add(new RrfFusion.Ranked(pool.get(ranked.get(k)).id(), k + 1, ROUTES.get(route)));
                 }
                 routes.add(one);
             }
@@ -442,8 +493,9 @@ public final class SimDriver {
             for (String s : ROUTES) weights.put(s, 1.0);
             List<RrfFusion.Fused> fused = RrfFusion.merge(routes, weights, RRF_K);
             double maxScore = fused.isEmpty() ? 1.0 : fused.get(0).score();
+            long idA = pool.get(a).id();
             for (RrfFusion.Fused f : fused) {
-                long lo = Math.min(a + 1L, f.userId()), hi = Math.max(a + 1L, f.userId());
+                long lo = Math.min(idA, f.userId()), hi = Math.max(idA, f.userId());
                 out.put(PairKey.of(lo, hi), maxScore <= 0 ? 0.5 : Math.min(1.0, f.score() / maxScore));
             }
         }
@@ -451,13 +503,13 @@ public final class SimDriver {
     }
 
     private static double exclusiveShare(Config cfg, List<Candidate> pool,
-                                         List<TasteWeights> learned, long seed) {
+                                         List<TasteWeights> learned, long seed, int offset) {
         // 与 Step 5 的 maxExclusiveRouteShare 同口径：只统计"仅被唯一一路召回"的候选占比
         int sampled = Math.min(30, pool.size());
         double total = 0, exclusive = 0;
         Random rnd = new Random(seed + 7);
         for (int a = 0; a < sampled; a++) {
-            final int ai = a;
+            final int ai = a + offset;
             List<Integer> idx = new ArrayList<>();
             for (int b = 0; b < pool.size(); b++) if (b != a) idx.add(b);
             List<List<RrfFusion.Ranked>> routes = new ArrayList<>();
@@ -468,7 +520,7 @@ public final class SimDriver {
                 final int route = r;
                 // R1/R2 用双方**更新后**的画像做语义召回；R5 探索路加确定性扰动兜长尾
                 ranked.sort(Comparator.comparingDouble(b ->
-                        -(TrueScore.compatibility(learned.get(ai), learned.get(b)) + jitter.getOrDefault(b, 0.0))));
+                        -(TrueScore.compatibility(learned.get(ai), learned.get(b + offset)) + jitter.getOrDefault(b, 0.0))));
                 List<RrfFusion.Ranked> one = new ArrayList<>();
                 for (int k = 0; k < Math.min(cfg.candidateTopK(), ranked.size()); k++) {
                     one.add(new RrfFusion.Ranked(ranked.get(k) + 1L, k + 1, ROUTES.get(route)));
