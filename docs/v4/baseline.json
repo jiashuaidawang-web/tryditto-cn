@@ -1,0 +1,160 @@
+{
+  "audit": "V4-AUDIT-001",
+  "generatedAt": "2026-11-25T15:22:00+08:00",
+  "git": {
+    "branch": "master_agent_v4",
+    "head": "c74921b527166bdef9e3577cf55338170377cdde",
+    "sameAsMasterAgentV3": true,
+    "worktreeCleanBeforeAudit": true,
+    "businessCodeModified": false
+  },
+  "scope": {
+    "population": "synthetic_only",
+    "realUserValidity": false,
+    "productionDatabaseRead": false,
+    "note": "所有比率来自合成夹具或 SimDriver 内存回放。不能外推到真实用户。"
+  },
+  "productionFlagsDefault": {
+    "MATCH_AGENT_ENABLED": false,
+    "MATCH_AGENT_TOP_PAIRS": 15,
+    "MATCH_AGENT_MIN_TOTAL": 72,
+    "MATCH_AGENT_SIMULATE": true,
+    "LEARNING_ENABLED": true,
+    "learningInvokedByScheduler": false,
+    "RECALL_ENABLED": true,
+    "recallInvokedByScheduler": false,
+    "LLM_MODE": "mock",
+    "EMBEDDING_MODE": "hash",
+    "TASTE_ENABLED": true
+  },
+  "wiring": {
+    "weekPath": "MatchScheduler → WeekRunner → People.city → MatchingSolver → optional AgentRerank → Blossom",
+    "recallPipelineInWeekPath": false,
+    "vectorSyncInScheduler": false,
+    "feedbackLearningInScheduler": false,
+    "tasteExtractOnProfileEvent": true
+  },
+  "metrics": {
+    "bidirectionalFit": {
+      "status": "MISSING",
+      "reason": "CycleMetric 与 match 表都没有 A→B 与 B→A 两个分，也没有二者的差或调和平均。生产只存 low.rankAgainst(high) 和一个裁判 total。"
+    },
+    "ruleSolverSynthetic200": {
+      "source": "SyntheticFixtureTest.twoHundredUsersSolveFastWithNoViolations",
+      "fixture": "api/aiditto-app/src/main/resources/synthetic/users-v1.json",
+      "users": 200,
+      "aiScores": "empty",
+      "pairs": 83,
+      "unmatched": 34,
+      "matchedUsers": 166,
+      "userMatchRate": 0.83,
+      "edges": 822,
+      "possibleUndirectedPairs": 19900,
+      "edgeSurvivalRate": 0.0413,
+      "postMatchHardViolations": 0,
+      "hardFilterDropCount": "NOT_INSTRUMENTED",
+      "buildMillis": 49,
+      "solveMillis": 13,
+      "wallMillis": 62,
+      "solver": "BLOSSOM",
+      "note": "这是规则求解器在提交的 200 人合成夹具上的结果，含 cohort 隔离。不是 RecallPipeline，也不是 AI 精排。"
+    },
+    "simClosedPoolLearning": {
+      "runner": "SimDriver.Config.defaults",
+      "seed": 20261118,
+      "users": 200,
+      "cycles": 12,
+      "twoFacedUsers": 45,
+      "longTailUsers": 37,
+      "learnedScoreTopN": 0,
+      "noteLearnedScoreTopN": "0 表示学习分注入所有边。生产 AgentRerank 只注入全局 top 15。本配置高于生产口径。",
+      "recallImplementation": "SimDriver.recallFusion，不是 RecallPipeline",
+      "aiScoreImplementation": "proxy 50+50*(0.90*rankAgainst+0.10*recallPrior)，不是 AiJudge",
+      "elapsedMs": 16672,
+      "llmCalls": 0,
+      "llmSuccessRate": "NOT_APPLICABLE",
+      "llmDegradeRate": "NOT_APPLICABLE",
+      "llmCostRmb": "NOT_INSTRUMENTED",
+      "hardConstraintViolations": "NOT_INSTRUMENTED",
+      "candidateCoverageField": "feasibleUsers/window，不是向量召回覆盖率",
+      "cyclesDetail": [
+        {"cycle": 1, "pairs": 100, "userMatchRate": 1.0, "regret": 0.0886, "top1Hit": 0.515, "tasteRecovery": 0.8483, "twoFaced": 0.4889, "predTrueRho": 0.7666, "fairness": 1.0, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.445, "pairRepeat": 0},
+        {"cycle": 2, "pairs": 100, "userMatchRate": 1.0, "regret": 0.094, "top1Hit": 0.545, "tasteRecovery": 0.866, "twoFaced": 0.7111, "predTrueRho": 0.7876, "fairness": 1.0, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.443, "pairRepeat": 0},
+        {"cycle": 3, "pairs": 100, "userMatchRate": 1.0, "regret": 0.0789, "top1Hit": 0.565, "tasteRecovery": 0.878, "twoFaced": 0.8667, "predTrueRho": 0.775, "fairness": 1.0, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.443, "pairRepeat": 0},
+        {"cycle": 4, "pairs": 100, "userMatchRate": 1.0, "regret": 0.0928, "top1Hit": 0.545, "tasteRecovery": 0.8887, "twoFaced": 0.9556, "predTrueRho": 0.7825, "fairness": 1.0, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.436, "pairRepeat": 0},
+        {"cycle": 5, "pairs": 99, "userMatchRate": 0.99, "regret": 0.0791, "top1Hit": 0.5303, "tasteRecovery": 0.8971, "twoFaced": 0.9778, "predTrueRho": 0.7804, "fairness": 1.01, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.444, "pairRepeat": 0},
+        {"cycle": 6, "pairs": 100, "userMatchRate": 1.0, "regret": 0.0893, "top1Hit": 0.53, "tasteRecovery": 0.9026, "twoFaced": 1.0, "predTrueRho": 0.7809, "fairness": 1.0, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.438, "pairRepeat": 0},
+        {"cycle": 7, "pairs": 99, "userMatchRate": 0.99, "regret": 0.1015, "top1Hit": 0.4697, "tasteRecovery": 0.9035, "twoFaced": 1.0, "predTrueRho": 0.7765, "fairness": 0.983, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.442, "pairRepeat": 0},
+        {"cycle": 8, "pairs": 100, "userMatchRate": 1.0, "regret": 0.0994, "top1Hit": 0.445, "tasteRecovery": 0.9074, "twoFaced": 1.0, "predTrueRho": 0.7951, "fairness": 1.0, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.443, "pairRepeat": 0},
+        {"cycle": 9, "pairs": 97, "userMatchRate": 0.97, "regret": 0.0945, "top1Hit": 0.4948, "tasteRecovery": 0.9071, "twoFaced": 1.0, "predTrueRho": 0.7838, "fairness": 0.975, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.437, "pairRepeat": 0},
+        {"cycle": 10, "pairs": 97, "userMatchRate": 0.97, "regret": 0.1007, "top1Hit": 0.4794, "tasteRecovery": 0.9076, "twoFaced": 1.0, "predTrueRho": 0.7894, "fairness": 0.975, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.443, "pairRepeat": 0},
+        {"cycle": 11, "pairs": 98, "userMatchRate": 0.98, "regret": 0.0997, "top1Hit": 0.4592, "tasteRecovery": 0.9071, "twoFaced": 1.0, "predTrueRho": 0.7943, "fairness": 0.993, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.442, "pairRepeat": 0},
+        {"cycle": 12, "pairs": 97, "userMatchRate": 0.97, "regret": 0.1137, "top1Hit": 0.4588, "tasteRecovery": 0.9077, "twoFaced": 1.0, "predTrueRho": 0.7928, "fairness": 1.003, "feasibleCoverage": 1.0, "exclusiveRouteShare": 0.444, "pairRepeat": 0}
+      ],
+      "gates": {
+        "verdict": "NO-GO",
+        "junitFailed": false,
+        "monotoneDecreaseCount": 5,
+        "monotoneGate": ">=8",
+        "monotonePass": false,
+        "regretSlope": 0.002,
+        "slopeGate": "<0",
+        "slopePass": false,
+        "cycle12Top1Gate": ">=0.60",
+        "cycle12Top1Pass": false,
+        "cycle12RegretPass": true,
+        "tasteRecoveryPass": true,
+        "twoFacedPass": true,
+        "stabilityPass": true,
+        "pairRepeatPass": true
+      }
+    },
+    "simClosedPoolFrozenCycle12": {
+      "top1Hit": 0.4583333333333333,
+      "regret": 0.11487723584583327,
+      "predTrueRho": 0.7769064082402414,
+      "note": "同一种子、同一批人，learningEnabled=false。top1 与学习组同为约 0.46。"
+    },
+    "simFixedPoolCycle12": {
+      "learning": {"top1Hit": 0.62, "regret": 0.0649, "predTrueRho": 0.7837},
+      "frozen": {"top1Hit": 0.56, "regret": 0.0843, "predTrueRho": 0.7821},
+      "deltaLearningMinusFrozen": {"top1Hit": 0.06, "regret": -0.0194, "predTrueRho": 0.0016},
+      "note": "固定池去掉了往期配对耗尽。净变化说明权重更新改变了合成配对；ρ 几乎不动。仍是合成隐藏真值，不是真实反馈。"
+    },
+    "aiRerankCoverage": {
+      "productionDefault": 0,
+      "productionWhenEnabled": "min(15, edgesThatPassedHardFilterAndThreshold) 条全局边，最多 30 个用户",
+      "simThisRun": "每条可行边都有代理分或 0；不是 LLM 精排覆盖率",
+      "perUserGuarantee": false
+    },
+    "modelCalls": {
+      "thisAudit": "NOT_RUN",
+      "reason": "未设置 AIDITTO_LLM_E2E / AIDITTO_STEP6_IT 等开关，也没有读取 API key。仿真 0 次模型调用。",
+      "successRate": "NOT_RUN",
+      "degradeRate": "NOT_RUN",
+      "costRmb": "NOT_RUN",
+      "codeFact": "AgentRerank 与 RecallPipeline 写入 recall_candidate.llm_cost_rmb 时字面量是 0。"
+    },
+    "feedbackLearningEffect": {
+      "changesWeights": true,
+      "changesEdgeWeightWhenScoresInjected": true,
+      "wiredIntoWeekScheduler": false,
+      "syntheticFixedPoolTop1Delta": 0.06,
+      "syntheticFixedPoolRegretDelta": -0.0194,
+      "syntheticFixedPoolRhoDelta": 0.0016,
+      "syntheticClosedPoolMeetsQualityGates": false,
+      "realUserLift": "UNKNOWN"
+    },
+    "hardConstraintViolations": {
+      "synthetic200PostMatchInvariants": 0,
+      "propertyTests": "MatchingPropertiesTest.solverResultsSatisfyEveryRule 300/300 通过",
+      "sim": "NOT_INSTRUMENTED",
+      "republishRecheck": false
+    }
+  },
+  "reproduce": {
+    "domainTests": "cd api && mvn -pl aiditto-domain test",
+    "appUnitAndSim": "cd api && mvn -pl aiditto-app -am test -Dsurefire.failIfNoSpecifiedTests=false -Dtest=AiJudgeTest,TasteWriterTest,VoiceAssetServiceTest,FeedbackPriorTest,GenderNormsTest,AiCopyGeneratorTest,AiCopyServiceTest,LlmGatewayTest,ScenarioPromptsTest,ResonanceReasonTest,OpenAiCompatModelTest,OpenAiCompatEmbeddingServiceTest,VisionEmbeddingServiceTest,SimulationRunTest",
+    "warning": "SimulationRunTest 会覆盖 docs/eval/见一面-Go-No-Go-报告.md。本轮跑完后已还原审计前文件。"
+  }
+}
