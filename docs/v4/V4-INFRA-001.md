@@ -53,6 +53,16 @@ Surefire 不跑 `*IT`。`mvn test` 不会走到 clean。
 
 生产 compose 里的库名是 `aiditto_pg`，主机也不是这份允许列表里的业务地址。本轮没有改 `deploy/` 或 `application-prod.yml`。
 
+## 第一次运行
+
+提交 `725b85df18f6d9e5c12b492c5861e568839a2d94` 推送后触发：
+
+https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45586978463
+
+总结论 failure。`domain-tests` success。`integration-tests` failure：容器和 `psql` 记录成功，随后 Maven verify 与 XML 验收都是退出码 1。`test-reports` success，报告已留下。
+
+未登录不能下日志（403）和 artifact（401）。页面写着要登录才能看日志。PostgreSQL 的 `SELECT version()` 文本、三个 IT 的执行条数和并发通过数因此仍空着。S01 保持 NO-GO。
+
 ## 不在本轮
 
 Qdrant、真实模型、生产凭证。召回和算法质量仍是 NO-GO。

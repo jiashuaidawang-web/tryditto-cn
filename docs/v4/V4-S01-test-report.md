@@ -4,7 +4,7 @@
 
 三类结果分开记。领域测试跑过。真实数据库测试没有跑。真实用户效果没有评估。
 
-算法质量仍是 NO-GO。本地没有 PostgreSQL，当时的发布闸门验收是 NO-GO。V4-INFRA-001 把同一套 IT 放到 GitHub Actions 的 PostgreSQL 16 上跑。下面「本地」和「CI」分开记。CI 数字以该提交触发的 workflow 为准；写这份说明时运行尚未结束的，不把 YAML 存在当成测试通过。
+算法质量仍是 NO-GO。本地没有 PostgreSQL，当时的发布闸门验收是 NO-GO。V4-INFRA-001 把同一套 IT 放到 GitHub Actions 的 PostgreSQL 16 上跑。下面「本地」和「CI」分开记。CI 结论以 Actions 的 job 结果为准，不以工作流文件为准。
 
 ## 领域测试：已执行
 
@@ -91,22 +91,33 @@ Docker 可用时，应先起一个只给测试用的 PostgreSQL 16，映射到 5
 
 | 标准 | 状态 |
 | --- | --- |
-| 只有 GRANTED 能正式发布 | 领域测试通过。数据库 IT NOT_RUN |
-| UNKNOWN、REVOKED 不能正式发布 | 领域测试通过。REVOKED 不能被逃生口放行也有领域测试。数据库 IT NOT_RUN |
+| 只有 GRANTED 能正式发布 | 领域测试通过。数据库 IT 未读到通过记录 |
+| UNKNOWN、REVOKED 不能正式发布 | 领域测试通过。REVOKED 不能被逃生口放行也有领域测试。数据库 IT 未读到通过记录 |
 | 历史用户不自动授权 | V13 无回填。代码路径如此。没有拿历史库演练 |
-| 普通、管理、手动、演示发布不能绕过 | 代码都进 `PublishGuard`。IT NOT_RUN |
-| 并发与回滚 | 用例已写。NOT_RUN |
+| 普通、管理、手动、演示发布不能绕过 | 代码都进 `PublishGuard`。数据库 IT 未读到通过记录 |
+| 并发与回滚 | 用例已写。真实 PostgreSQL 上的通过数未读到 |
 | V3 基线 83 对、0 违规 | 领域测试通过 |
 | 生产配置 | 未改，未部署 |
 
 ## CI：V4-INFRA-001
 
-工作流 `.github/workflows/v4-ci.yml`。Runner 是 GitHub-hosted Ubuntu，Java 17，PostgreSQL 16，库名 `aiditto_s01_test`。细节见 `docs/v4/V4-INFRA-001.md`。
+工作流 `.github/workflows/v4-ci.yml`。Runner 是 GitHub-hosted Ubuntu，Java 17，服务镜像 `postgres:16`，库名 `aiditto_s01_test`。细节见 `docs/v4/V4-INFRA-001.md`。
 
-本地那次 `PublishSafetyIT`、`ConsentLegacyIT`、`MatchIT` 仍然是 NOT_RUN。CI 是否执行成功，要看这次 push 的 Actions 运行，而不是看工作流文件。没有发现测试、测试被跳过、或断言失败，工作流都不会算验收通过。
+已完成的运行：
+
+- 提交：`725b85df18f6d9e5c12b492c5861e568839a2d94`
+- 运行：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45586978463
+- 总结论：failure。状态 completed，不是还在排队。
+- `domain-tests`：success。步骤「Run domain tests」成功。本提交没有改领域测试。上一轮本机同一命令是 463 通过、0 失败、0 错误、0 跳过。这次运行的 Surefire XML 在 artifact `domain-surefire`（15009735808）里，未登录下载返回 401，所以没有从这次 XML 重数通过条数。
+- `integration-tests`：failure。PostgreSQL 容器初始化和 `psql` 记录步骤都成功，说明 Runner 已经能连上 `aiditto_s01_test`。`SELECT version()` 写在 `ci-meta/postgres-version.txt`，该文件在 artifact `integration-reports`（15009151489）里，同样 401，实际版本字符串没有读到。镜像标签是 `postgres:16`。
+- Maven 步骤「Run the guard and the publish-safety integration tests」从 2026-11-25T09:37:24Z 到 09:38:14Z，退出码 1。下一步验收脚本同一秒退出码 1。公开注解只有 “Process completed with exit code 1.”，没有测试名、断言或堆栈。
+- 日志接口未登录返回 403。任务页面显示 “Sign in to view logs”。因此 `PublishSafetyIT`、`ConsentLegacyIT`、`MatchIT` 各自的通过数、失败原因和并发用例结果都还不能填写。不能把这次标成三个类已通过。
+- `test-reports`：success。失败报告已上传，没有被成功 job 盖掉。另有 Node.js 20 与 `setup-java@v4` 的弃用警告，领域 job 在同样警告下仍然成功，警告不是这次失败原因。
+
+本地那次三个 IT 仍然是 NOT_RUN。CI 这次是失败，但失败明细被 GitHub 登录挡住。
 
 真实用户效果仍未评估。
 
 ## 建议
 
-在 CI 运行结果写回本文件之前，不把 S01 从 NO-GO 改成 GO。算法质量保持 NO-GO。不启动 V4-P01。
+S01 保持 NO-GO。算法质量保持 NO-GO。不启动 V4-P01。要改成 GO，需要另一次运行里三个 IT 的 Failsafe XML 显示已执行、无跳过、无失败，并且并发用例在这份 PostgreSQL 上通过。在读到堆栈之前，不删断言，也不把超时放宽。
