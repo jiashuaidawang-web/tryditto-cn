@@ -64,20 +64,19 @@ cd api && mvn -B -pl aiditto-app -am test -Dtest=ProfileExtractionParserTest -Ds
 
 ## CI
 
-实现提交 `ef08182426d414c117d22ebf909baa02f0622ab1`。
+阶段实现 `ef08182426d414c117d22ebf909baa02f0622ab1` 的运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45780763981 当时为 success。那次还没有本轮的代次、租约和语义测试。
 
-https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45780763981
+本轮代码提交 `3feeeae31d0a104236032589425e78732c4d4e53`：
 
-这次运行的结论是 success。页面上的三个 job 都完成：`domain-tests` 51 秒，`integration-tests` 2 分 3 秒，`test-reports` 5 秒。运行总时长 2 分 14 秒。
+https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45789587882
 
-`integration-tests` 里的「Reject a run that did not execute the IT scenarios」会在必需方法缺失、跳过、失败或报错时让 job 失败。该 job 是 success，所以 `ProfileExtractionIT` 的 13 个方法、原来的 37 项 PostgreSQL 集成测试和 `TestDatabaseGuardTest` 都在这次 PostgreSQL 上执行并通过。
+结论 success。`domain-tests`、`integration-tests`、`test-reports` 都成功。必跑检查那一步也是 success，所以 `ProfileExtractionIT` 的 20 个方法、原来的 37 项 PostgreSQL 集成测试、3 项 `TestDatabaseGuardTest` 和 `ProfileExtractionParserTest` 的 2 个方法都在这次 PostgreSQL 上执行并通过。
 
-运行日志和 artifact 需要登录才能下载。没有从 runner 上抄出 PostgreSQL 的 `version()`。工作流镜像是 `postgres:16`。没有把以前运行读到的 16.16 写成这次的新实测。
+没有从 runner 上抄出 PostgreSQL 的 `version()`。工作流镜像是 `postgres:16`。
 
 ## 本轮结论
 
-本机领域测试和解析器测试已通过。PostgreSQL 集成测试仍只在 GitHub Actions 上执行。本次代码提交的运行地址在运行完成后写入 `V4-P02-final-audit.md`。那次运行成功之前，不把工程质量写成 GO。
-
+- 工程质量：GO。范围是这条提取链路。
 - 真实模型理解：NOT_RUN。
 - 生产启用：NO-GO。`processing-enabled` 仍是 false。账户清除还没有调用 `erase`，匹配同意撤回还没有调用 `revokeProcessing`。
 - 算法质量：NO-GO。匹配算法没有改。

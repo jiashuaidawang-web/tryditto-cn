@@ -4,7 +4,7 @@
 
 生产画像处理保持关闭。匹配算法没有改。没有部署，没有合并 V3。
 
-本机领域测试：`cd api && mvn -B -pl aiditto-domain test`，492 项，0 失败，0 跳过。其中先前 488 项仍在，新增 `ProfileExtractionAuditTest` 3 项和 `ProfileLiveEvalTest` 1 项。200 人仿真：83 对，0 条硬约束违规。`ProfileExtractionParserTest` 2 项在本机通过，并已写入 GitHub Actions 的 Surefire 必跑清单。PostgreSQL 集成测试本机 NOT_RUN。本次代码提交的 Actions 地址在运行完成后补在文末。那次运行成功之前，工程质量不是 GO。
+本机领域测试：`cd api && mvn -B -pl aiditto-domain test`，492 项，0 失败，0 跳过。其中先前 488 项仍在，新增 `ProfileExtractionAuditTest` 3 项和 `ProfileLiveEvalTest` 1 项。200 人仿真：83 对，0 条硬约束违规。`ProfileExtractionParserTest` 2 项在本机通过，并已写入 GitHub Actions 的 Surefire 必跑清单。PostgreSQL 集成测试本机 NOT_RUN。代码提交 `3feeeae31d0a104236032589425e78732c4d4e53` 的运行是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45789587882 ，结论 success。
 
 ## P02-R01 证据语义
 
@@ -92,11 +92,19 @@
 
 ## CI
 
-代码提交的 Actions 运行完成后，把提交哈希和运行地址写在这里。集成测试 job 必须实际执行原有 37 项、`ProfileExtractionIT` 的 20 个方法、3 项 `TestDatabaseGuardTest`，以及 `ProfileExtractionParserTest` 的 2 个方法。未出现在报告里的测试不计数。
+代码提交：`3feeeae31d0a104236032589425e78732c4d4e53`
+
+https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45789587882
+
+运行结论 success。三个 job 都成功：`domain-tests` 从 09:11:00Z 到 09:11:51Z，`integration-tests` 从 09:11:01Z 到 09:13:47Z，`test-reports` 从 09:13:54Z 到 09:14:00Z。整次运行从 09:10:57Z 到 09:14:00Z。
+
+`integration-tests` 里的「Run the guard and the publish-safety integration tests」和「Reject a run that did not execute the IT scenarios」都是 success。后者会在必需方法缺失、跳过、失败或报错时让 job 失败。因此这次 PostgreSQL 上实际执行并通过的包括原来的 37 项集成测试、`ProfileExtractionIT` 的 20 个方法、3 项 `TestDatabaseGuardTest`，以及 `ProfileExtractionParserTest` 的 2 个方法。没有出现在这份必跑清单里的测试不计数。
+
+没有从 runner 日志抄 PostgreSQL 的 `version()`。工作流镜像是 `postgres:16`。
 
 ## 四项结论
 
-1. 工程质量：等待本次 Actions。成功之前不是 GO。
+1. 工程质量：GO。范围是这条提取链路的领域测试、解析器测试和这次 PostgreSQL 集成测试。
 2. 真实模型理解质量：NOT_RUN。
 3. 生产启用：NO-GO。
 4. 算法质量：NO-GO。

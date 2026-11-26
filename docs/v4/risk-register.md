@@ -244,7 +244,7 @@ V4-P01 与 V4-P01-FINAL 通过当前阶段架构验收。验收基线是 `ff4cf2
 
 P02 只增加有证据的画像提取。阶段实现 `ef08182426d414c117d22ebf909baa02f0622ab1` 的运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45780763981 为 success。最终架构验收当时是 NO-GO。
 
-本轮只补六项审计：证据语义、外发代次、任务租约、情景含义、自由文本边界，以及独立的真实模型评估集。匹配求解、评分、召回和发布闸门没有改。生产开关保持关闭。真实模型理解评估仍是 NOT_RUN。生产启用和算法质量仍是 NO-GO。
+本轮只补六项审计：证据语义、外发代次、任务租约、情景含义、自由文本边界，以及独立的真实模型评估集。代码提交 `3feeeae31d0a104236032589425e78732c4d4e53`，运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45789587882 为 success。匹配求解、评分、召回和发布闸门没有改。生产开关保持关闭。真实模型理解评估仍是 NOT_RUN。工程质量只覆盖这条提取链路。生产启用和算法质量仍是 NO-GO。
 
 剩余风险：
 
