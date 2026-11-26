@@ -146,7 +146,7 @@ jobs:
         run: |
           set -eu
           mvn -B -pl aiditto-app -am verify \
-            -Dtest=TestDatabaseGuardTest \
+            -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest \
             -Dsurefire.failIfNoSpecifiedTests=false \
             -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT \
             -Dfailsafe.failIfNoSpecifiedTests=true \
@@ -216,6 +216,19 @@ jobs:
                   "concurrentExtractsCallTheModelOnce",
                   "forgedEvidenceDoesNotChangeTheCurrentHash",
                   "scenarioChoiceCanSupportASignalWithoutExportingThePrompt",
+                  "oldExportEpochCannotWriteAfterRegrant",
+                  "revokeBeforeSendDoesNotCallTheModel",
+                  "expiredRunningAttemptIsReclaimedAndStaleFenceCannotWrite",
+                  "exhaustedLeaseDoesNotStayRunning",
+                  "missingOrCompletedTaskCannotCommit",
+                  "modelExceptionDoesNotLeaveTheTaskRunning",
+                  "unapprovedFreeTextAndSameLetterDoNotBecomeMeaning",
+              ],
+          }
+          surefire_required = {
+              "ProfileExtractionParserTest": [
+                  "acceptsOnlyAFeatureArray",
+                  "stripsAFenceAndRejectsMissingOrBrokenJson",
               ],
           }
           reports = pathlib.Path("aiditto-app/target/failsafe-reports")
@@ -261,6 +274,30 @@ jobs:
                   note_failure("TestDatabaseGuardTest", case)
           for name, methods in required.items():
               files = sorted(reports.glob(f"TEST-*{name}.xml"))
+              if not files:
+                  blocked.append(name + " report missing")
+                  lines.append(name + " MISSING")
+                  continue
+              root = ET.parse(files[0]).getroot()
+              tests = int(root.attrib.get("tests", "0"))
+              skipped = int(root.attrib.get("skipped", "0"))
+              fail_n = int(root.attrib.get("failures", "0"))
+              err_n = int(root.attrib.get("errors", "0"))
+              seen = []
+              for case in root.findall("testcase"):
+                  seen.append(case.attrib.get("name", ""))
+                  if case.find("skipped") is not None:
+                      blocked.append(name + "." + case.attrib.get("name", "") + " skipped")
+                  note_failure(name, case)
+              missing = [method for method in methods if method not in seen]
+              lines.append(f"{name} tests={tests} failures={fail_n} errors={err_n} skipped={skipped} methods={len(seen)}")
+              if tests <= 0 or skipped or fail_n or err_n or missing:
+                  blocked.append(name)
+              for method in missing:
+                  lines.append(f"{name}.{method} NOT_RUN")
+          surefire = pathlib.Path("aiditto-app/target/surefire-reports")
+          for name, methods in surefire_required.items():
+              files = sorted(surefire.glob(f"TEST-*{name}.xml"))
               if not files:
                   blocked.append(name + " report missing")
                   lines.append(name + " MISSING")

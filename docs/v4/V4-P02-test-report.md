@@ -15,12 +15,12 @@ P01 架构验收基线：`ff4cf2169f5aff3839abfacc28e2e7bac3cdc998`。修复提�
 cd api && mvn -B -pl aiditto-domain test
 ```
 
-结果：`Tests run: 488, Failures: 0, Errors: 0, Skipped: 0`。P01 最终的 482 项仍在。新增 `ProfileExtractionTest` 5 项、`ProfileEvalTest` 1 项。
+结果：`Tests run: 492, Failures: 0, Errors: 0, Skipped: 0`。先前的 488 项仍在。本轮新增 `ProfileExtractionAuditTest` 3 项、`ProfileLiveEvalTest` 1 项。
 
 `SyntheticFixtureTest` 本次输出：
 
 ```
-[synthetic-200] solved in 38 ms (build 24 ms, solve 13 ms): 83 pairs, 34 unmatched, 822 edges, solver BLOSSOM, violations 0
+[synthetic-200] solved in 57 ms (build 35 ms, solve 21 ms): 83 pairs, 34 unmatched, 822 edges, solver BLOSSOM, violations 0
 ```
 
 求解器、`Scorer`、`BlossomMatcher`、`HardFilter` 和 `rankAgainst` 没有改。
@@ -52,8 +52,15 @@ cd api && mvn -B -pl aiditto-app -am test -Dtest=ProfileExtractionParserTest -Ds
 11. `concurrentExtractsCallTheModelOnce`
 12. `forgedEvidenceDoesNotChangeTheCurrentHash`
 13. `scenarioChoiceCanSupportASignalWithoutExportingThePrompt`
+14. `oldExportEpochCannotWriteAfterRegrant`
+15. `revokeBeforeSendDoesNotCallTheModel`
+16. `expiredRunningAttemptIsReclaimedAndStaleFenceCannotWrite`
+17. `exhaustedLeaseDoesNotStayRunning`
+18. `missingOrCompletedTaskCannotCommit`
+19. `modelExceptionDoesNotLeaveTheTaskRunning`
+20. `unapprovedFreeTextAndSameLetterDoNotBecomeMeaning`
 
-原来的 37 项 PostgreSQL 集成测试和 3 项 `TestDatabaseGuardTest` 仍在清单里。缺方法、跳过、失败或报错都会让验收步骤失败。
+原来的 37 项 PostgreSQL 集成测试和 3 项 `TestDatabaseGuardTest` 仍在清单里。`ProfileExtractionParserTest` 的 `acceptsOnlyAFeatureArray` 和 `stripsAFenceAndRejectsMissingOrBrokenJson` 写进了 Surefire 的 `-Dtest` 和验收清单。未执行的测试不计入通过数量。缺方法、跳过、失败或报错都会让验收步骤失败。
 
 ## CI
 
@@ -67,10 +74,12 @@ https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45780763981
 
 运行日志和 artifact 需要登录才能下载。没有从 runner 上抄出 PostgreSQL 的 `version()`。工作流镜像是 `postgres:16`。没有把以前运行读到的 16.16 写成这次的新实测。
 
-## 三项结论
+## 本轮结论
 
-- 工程质量：GO。范围是这条提取链路的编译、领域测试、Mock 行为和这次 PostgreSQL 集成测试。
-- 模型理解：NO-GO。真实模型评估 NOT_RUN。详见 `V4-P02-eval-report.md`。
-- 生产启用：NO-GO。`processing-enabled` 仍是 false。账户清除还没有调用 `erase`，匹配同意撤回还没有调用 `revokeProcessing`。本轮没有生产提取、没有部署、没有合并 V3。
+本机领域测试和解析器测试已通过。PostgreSQL 集成测试仍只在 GitHub Actions 上执行。本次代码提交的运行地址在运行完成后写入 `V4-P02-final-audit.md`。那次运行成功之前，不把工程质量写成 GO。
 
-算法质量仍是 NO-GO。
+- 真实模型理解：NOT_RUN。
+- 生产启用：NO-GO。`processing-enabled` 仍是 false。账户清除还没有调用 `erase`，匹配同意撤回还没有调用 `revokeProcessing`。
+- 算法质量：NO-GO。匹配算法没有改。
+
+没有部署，没有合并 V3，没有启动 V4-M01。

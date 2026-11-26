@@ -10,7 +10,6 @@ import cn.aiditto.domain.relationship.FeatureRegistry;
 import cn.aiditto.domain.relationship.IssuedEvidenceDirectory;
 import cn.aiditto.domain.relationship.ProfileContext;
 import cn.aiditto.domain.relationship.ProfileContextBuilder;
-import cn.aiditto.domain.relationship.ProfileContextBuilder.Statement;
 import cn.aiditto.domain.relationship.ProfileExtractionPrompts;
 import cn.aiditto.domain.relationship.ProfileExtractionValidator;
 import cn.aiditto.domain.relationship.ProfileMerger;
@@ -99,10 +98,11 @@ public class RelationshipProfileService {
                     """, userId, Timestamp.from(now));
             return;
         }
+        if ("granted".equals(life.modelExport())) return;
         jdbc.update("""
                 UPDATE relationship_profile_lifecycle
-                SET model_export_authorization = 'granted', updated_at = ?
-                WHERE user_id = ?
+                SET model_export_authorization = 'granted', model_export_epoch = model_export_epoch + 1, updated_at = ?
+                WHERE user_id = ? AND model_export_authorization = 'revoked'
                 """, Timestamp.from(now), userId);
     }
 
@@ -111,11 +111,12 @@ public class RelationshipProfileService {
     public void revokeModelExport(long userId) {
         requireEnabled();
         lockActive(userId);
-        if (lifecycle(userId) == null) return;
+        Lifecycle life = lifecycle(userId);
+        if (life == null || "revoked".equals(life.modelExport())) return;
         jdbc.update("""
                 UPDATE relationship_profile_lifecycle
-                SET model_export_authorization = 'revoked', updated_at = ?
-                WHERE user_id = ?
+                SET model_export_authorization = 'revoked', model_export_epoch = model_export_epoch + 1, updated_at = ?
+                WHERE user_id = ? AND model_export_authorization = 'granted'
                 """, Timestamp.from(Times.millis(Instant.now())), userId);
     }
 
@@ -181,7 +182,7 @@ public class RelationshipProfileService {
     }
 
     public record ExtractionPermit(long userId, int sourceVersion, int watermark, long generation,
-                                   boolean processingGranted, boolean modelExportGranted) {}
+                                   boolean processingGranted, boolean modelExportGranted, long modelExportEpoch) {}
 
     public record ProvisionalWrite(ProfileVersion version, int accepted) {}
 
@@ -196,22 +197,22 @@ public class RelationshipProfileService {
      * The model call has already finished and this transaction does not call a model.
      */
     @Transactional
-    public ProvisionalWrite commitProvisional(long userId, long generation, String expectedHash,
-                                              List<Statement> statements, List<ExtractedFeature> proposed) {
+    public ProvisionalWrite commitProvisional(long userId, long generation, long exportEpoch, String expectedHash,
+                                              long fence, List<ExtractedFeature> proposed) {
         requireEnabled();
         lockActive(userId);
         ExtractionPermit permit = permit(userId);
         if (!permit.processingGranted() || permit.generation() != generation) {
             throw new DomainException(ErrorCode.FORBIDDEN, "画像处理授权与这次任务的代次不一致");
         }
-        if (!permit.modelExportGranted()) {
-            throw new DomainException(ErrorCode.FORBIDDEN, "外部模型授权已撤回，丢弃这次提取");
+        if (!permit.modelExportGranted() || permit.modelExportEpoch() != exportEpoch) {
+            throw new DomainException(ErrorCode.FORBIDDEN, "外部模型授权已变化，丢弃这次提取");
         }
         if (permit.sourceVersion() < 0) {
             throw DomainException.invalid("sourceProfileVersion", "没有可核对的源版本");
         }
         ProfileContext fresh = ProfileContextBuilder.build(inputs.load(userId, permit.sourceVersion(),
-                permit.generation(), true, true, statements));
+                permit.generation(), true, true, permit.modelExportEpoch()));
         if (!fresh.inputHash().equals(expectedHash)) {
             throw DomainException.invalid("inputHash", "源数据或代次已变化，丢弃这次提取");
         }
@@ -237,7 +238,11 @@ public class RelationshipProfileService {
         ProfileVersion version = apply(userId, permit.sourceVersion(), admitted, decision);
         int accepted = (int) admitted.evidence().stream()
                 .filter(item -> item.sourceType() == EvidenceSource.MODEL_INFERENCE).count();
-        tasks.complete(userId, expectedHash, ProfileExtractionPrompts.VERSION, generation, version.inputHash());
+        int completed = tasks.complete(userId, expectedHash, ProfileExtractionPrompts.VERSION, generation,
+                version.inputHash(), fence, exportEpoch);
+        if (completed != 1) {
+            throw new DomainException(ErrorCode.FORBIDDEN, "任务执行代次已失效，不能写入画像");
+        }
         return new ProvisionalWrite(version, accepted);
     }
 
@@ -388,11 +393,11 @@ public class RelationshipProfileService {
     private Lifecycle lifecycle(long userId) {
         List<Lifecycle> rows = jdbc.query("""
                 SELECT latest_processed_source_version, generation_epoch,
-                       processing_authorization, model_export_authorization
+                       processing_authorization, model_export_authorization, model_export_epoch
                 FROM relationship_profile_lifecycle WHERE user_id = ?
                 """, (rs, n) -> new Lifecycle(rs.getInt("latest_processed_source_version"),
                 rs.getLong("generation_epoch"), rs.getString("processing_authorization"),
-                rs.getString("model_export_authorization")), userId);
+                rs.getString("model_export_authorization"), rs.getLong("model_export_epoch")), userId);
         return rows.isEmpty() ? null : rows.get(0);
     }
 
@@ -407,7 +412,8 @@ public class RelationshipProfileService {
         return new ExtractionPermit(userId, version == null ? -1 : version,
                 life == null ? 0 : life.watermark(), life == null ? -1 : life.generation(),
                 life != null && "granted".equals(life.processing()),
-                life != null && "granted".equals(life.modelExport()));
+                life != null && "granted".equals(life.modelExport()),
+                life == null ? 0 : life.modelExportEpoch());
     }
 
     private void requireEnabled() {
@@ -418,5 +424,6 @@ public class RelationshipProfileService {
 
     private record Current(int version, String hash, ProfileVersion versionRow) {}
 
-    private record Lifecycle(int watermark, long generation, String processing, String modelExport) {}
+    private record Lifecycle(int watermark, long generation, String processing, String modelExport,
+                             long modelExportEpoch) {}
 }

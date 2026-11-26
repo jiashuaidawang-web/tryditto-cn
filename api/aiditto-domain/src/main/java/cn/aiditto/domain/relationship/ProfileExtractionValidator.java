@@ -21,33 +21,44 @@ public final class ProfileExtractionValidator {
 
     public record Rejection(String featureCode, String reason) {}
 
-    public record Result(List<ProfileEvidence> accepted, List<Rejection> rejected, int invalidRefs, int hardRequests) {
+    public record Verdict(String featureCode, SemanticSupport support) {}
+
+    public record Result(List<ProfileEvidence> accepted, List<Rejection> rejected, List<Verdict> verdicts,
+                         int invalidRefs, int hardRequests) {
         public Result {
             accepted = List.copyOf(accepted);
             rejected = List.copyOf(rejected);
+            verdicts = List.copyOf(verdicts);
         }
     }
 
     public static Result check(ProfileContext context, List<ExtractedFeature> proposed, FeatureRegistry registry) {
         List<ProfileEvidence> accepted = new ArrayList<>();
         List<Rejection> rejected = new ArrayList<>();
+        List<Verdict> verdicts = new ArrayList<>();
         int invalidRefs = 0;
         int hardRequests = 0;
-        if (proposed == null) return new Result(List.of(), List.of(), 0, 0);
+        if (proposed == null) return new Result(List.of(), List.of(), List.of(), 0, 0);
         for (ExtractedFeature feature : proposed) {
             if (feature.hardConstraint()) hardRequests++;
             String code = feature.featureCode() == null ? "" : feature.featureCode();
             try {
-                accepted.addAll(one(context, feature, registry));
+                Outcome outcome = one(context, feature, registry);
+                verdicts.add(new Verdict(code, outcome.support()));
+                if (outcome.support() == SemanticSupport.SEMANTIC_SUPPORTED) accepted.addAll(outcome.evidence());
+                else rejected.add(new Rejection(code, outcome.support().name()));
             } catch (IllegalArgumentException e) {
                 if ("invalid-ref".equals(e.getMessage())) invalidRefs++;
+                verdicts.add(new Verdict(code, SemanticSupport.REJECTED));
                 rejected.add(new Rejection(code, e.getMessage()));
             }
         }
-        return new Result(accepted, rejected, invalidRefs, hardRequests);
+        return new Result(accepted, rejected, verdicts, invalidRefs, hardRequests);
     }
 
-    private static List<ProfileEvidence> one(ProfileContext context, ExtractedFeature feature, FeatureRegistry registry) {
+    private record Outcome(SemanticSupport support, List<ProfileEvidence> evidence) {}
+
+    private static Outcome one(ProfileContext context, ExtractedFeature feature, FeatureRegistry registry) {
         if (feature.hardConstraint()) throw new IllegalArgumentException("hard-constraint");
         if (!Double.isFinite(feature.confidence()) || feature.confidence() < 0 || feature.confidence() > 1) {
             throw new IllegalArgumentException("confidence");
@@ -67,10 +78,14 @@ public final class ProfileExtractionValidator {
         }
         if (!definition.allows(section, EvidenceSource.MODEL_INFERENCE)) throw new IllegalArgumentException("source");
         if (feature.evidenceRefs().isEmpty()) throw new IllegalArgumentException("ungrounded");
+        SemanticSupport support = SemanticSupport.SEMANTIC_SUPPORTED;
         for (String ref : feature.evidenceRefs()) {
-            if (context.item(ref) == null) throw new IllegalArgumentException("invalid-ref");
-            if (!eligible(context.item(ref), section, feature)) throw new IllegalArgumentException("unsupported");
+            ProfileContext.Item item = context.item(ref);
+            if (item == null) throw new IllegalArgumentException("invalid-ref");
+            if (!eligible(item, section, feature)) throw new IllegalArgumentException("unsupported");
+            support = weaker(support, supportOf(item, section, feature));
         }
+        if (support != SemanticSupport.SEMANTIC_SUPPORTED) return new Outcome(support, List.of());
         FeatureValue claim = claim(definition, feature.proposedValue());
         BehaviorKind behavior = behavior(section, feature.behaviorKind());
         Operator operator = section == Section.PREFERENCE ? Operator.EQ : null;
@@ -82,7 +97,26 @@ public final class ProfileExtractionValidator {
                     EvidenceSource.MODEL_INFERENCE, ref, context.fingerprintToken(), feature.confidence(),
                     EvidenceStatus.PROVISIONAL, operator, importance, constraint, behavior, null, registry));
         }
-        return evidence;
+        return new Outcome(SemanticSupport.SEMANTIC_SUPPORTED, evidence);
+    }
+
+    private static SemanticSupport weaker(SemanticSupport left, SemanticSupport right) {
+        if (left == SemanticSupport.REJECTED || right == SemanticSupport.REJECTED) return SemanticSupport.REJECTED;
+        if (left == SemanticSupport.SEMANTIC_SUPPORT_PENDING || right == SemanticSupport.SEMANTIC_SUPPORT_PENDING) {
+            return SemanticSupport.SEMANTIC_SUPPORT_PENDING;
+        }
+        return SemanticSupport.SEMANTIC_SUPPORTED;
+    }
+
+    private static SemanticSupport supportOf(ProfileContext.Item item, Section section, ExtractedFeature feature) {
+        return switch (item.kind()) {
+            case "SELF_STATEMENT", "PREFERENCE_STATEMENT" -> StatementSemantics.judge(
+                    item.text(), section, feature.featureCode(), feature.proposedValue(), feature.importance());
+            case "SCENARIO" -> feature.proposedValue().equals(item.approvedMeaning())
+                    ? SemanticSupport.SEMANTIC_SUPPORTED : SemanticSupport.REJECTED;
+            case "QUESTIONNAIRE" -> SemanticSupport.REJECTED;
+            default -> SemanticSupport.REJECTED;
+        };
     }
 
     private static boolean eligible(ProfileContext.Item item, Section section, ExtractedFeature feature) {
@@ -90,9 +124,10 @@ public final class ProfileExtractionValidator {
             case "SELF_STATEMENT" -> section == Section.SELF && blank(feature.behaviorKind());
             case "PREFERENCE_STATEMENT" -> section == Section.PREFERENCE && blank(feature.behaviorKind());
             case "SCENARIO" -> section == Section.BEHAVIOR
-                    && "SCENARIO_RESPONSE".equals(feature.behaviorKind());
-            case "QUESTIONNAIRE" -> feature.featureCode().equals(item.featureCode())
-                    && item.value().equals(section.name() + ":" + feature.proposedValue());
+                    && "behavior.scenario.signal".equals(feature.featureCode())
+                    && "SCENARIO_RESPONSE".equals(feature.behaviorKind())
+                    && item.approvedMeaning() != null;
+            case "QUESTIONNAIRE" -> false;
             default -> false;
         };
     }

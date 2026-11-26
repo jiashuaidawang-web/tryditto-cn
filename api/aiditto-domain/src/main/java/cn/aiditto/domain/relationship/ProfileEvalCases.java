@@ -84,11 +84,9 @@ public final class ProfileEvalCases {
         ProfileContext context = context(8_640_000 + index, answers, List.of(
                 new ProfileContextBuilder.Statement("SELF", QUIET[index]),
                 new ProfileContextBuilder.Statement("SELF", LOUD[index])), List.of());
-        List<String> tokens = context.items().stream().filter(item -> "SELF_STATEMENT".equals(item.kind()))
-                .map(ProfileContext.Item::token).toList();
         return sample("contradiction", context, answers, List.of(
-                feature("SELF", "self.communication", "quiet", tokens.get(0), "", false),
-                feature("SELF", "self.communication", "frequent", tokens.get(1), "", false)),
+                feature("SELF", "self.communication", "quiet", tokenFor(context, QUIET[index]), "", false),
+                feature("SELF", "self.communication", "frequent", tokenFor(context, LOUD[index]), "", false)),
                 true, Set.of("SELF|self.communication|CONTESTED"), List.of());
     }
 
@@ -101,7 +99,7 @@ public final class ProfileEvalCases {
         };
         Map<String, Object> answers = answers("travel");
         ProfileContext context = context(8_650_000 + index, answers, List.of(),
-                List.of(new ProfileContextBuilder.ScenarioChoice(choice)));
+                List.of(new ProfileContextBuilder.ScenarioChoice("eval-" + index, "v1", choice, value, "eval-source")));
         return sample("scenario", context, answers, List.of(feature(
                 "BEHAVIOR", "behavior.scenario.signal", value, token(context, "SCENARIO"), "SCENARIO_RESPONSE", false)),
                 true, Set.of("BEHAVIOR|behavior.scenario.signal|" + value), List.of());
@@ -129,7 +127,7 @@ public final class ProfileEvalCases {
         answers.put("hobbies", List.of("reading"));
         answers.put("occupation", "联系1380013800" + index + "或secret@example.com");
         answers.put("firstMessage", "https://secret.example/" + index);
-        ProfileContext context = ProfileContextBuilder.build(new ProfileContextBuilder.Inputs(
+        ProfileContext context = ProfileContextBuilder.buildEvaluation(new ProfileContextBuilder.Inputs(
                 userId, 3, 2, true, true, answers,
                 List.of(new ProfileContextBuilder.Statement("SELF", "学号20201122" + index)), List.of()));
         return sample("sensitive", context, answers, List.of(), true, Set.of(),
@@ -171,7 +169,7 @@ public final class ProfileEvalCases {
     private static ProfileContext context(long userId, Map<String, Object> answers,
                                           List<ProfileContextBuilder.Statement> statements,
                                           List<ProfileContextBuilder.ScenarioChoice> scenarios) {
-        return ProfileContextBuilder.build(new ProfileContextBuilder.Inputs(
+        return ProfileContextBuilder.buildEvaluation(new ProfileContextBuilder.Inputs(
                 userId, 2, 1, true, true, answers, statements, scenarios));
     }
 
@@ -184,6 +182,10 @@ public final class ProfileEvalCases {
 
     private static String token(ProfileContext context, String kind) {
         return context.items().stream().filter(item -> kind.equals(item.kind())).findFirst().orElseThrow().token();
+    }
+
+    private static String tokenFor(ProfileContext context, String text) {
+        return context.items().stream().filter(item -> text.equals(item.text())).findFirst().orElseThrow().token();
     }
 
     private static ExtractedFeature feature(String section, String code, String value, String token,

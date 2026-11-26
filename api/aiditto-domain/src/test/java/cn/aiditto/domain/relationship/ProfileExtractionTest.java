@@ -46,7 +46,7 @@ class ProfileExtractionTest {
 
     @Test
     void exportOmitsPrivateTextAndAccountIds() {
-        ProfileContext context = ProfileContextBuilder.build(new ProfileContextBuilder.Inputs(
+        ProfileContext context = ProfileContextBuilder.buildEvaluation(new ProfileContextBuilder.Inputs(
                 8_675_309, 4, 2, true, true,
                 Map.of("occupation", "13800138000", "hobbies", List.of("reading"),
                         "expectedGender", List.of("men")),
@@ -68,7 +68,7 @@ class ProfileExtractionTest {
         List<ProfileEvidence> deterministic = RelationshipProfileProjector.project(
                 context.userId(), context.answers(), registry).evidence();
         ProfileExtractionValidator.Result result = ProfileExtractionValidator.check(context, List.of(
-                feature("SELF", "self.pace", "fast", token(context, "SELF_STATEMENT"), "")), registry);
+                feature("SELF", "self.pace", "slow", token(context, "SELF_STATEMENT"), "")), registry);
         ProfileEvidence confirmed = ProfileEvidence.build(context.userId(), "self.pace", RelationshipTypes.Section.SELF,
                 new FeatureValue.EnumOne("slow"), EvidenceSource.SELF_REPORTED, "stated-pace", "case", 1,
                 EvidenceStatus.CONFIRMED, null, null, null, null, null, registry);
@@ -98,7 +98,7 @@ class ProfileExtractionTest {
     }
 
     private static ProfileContext context(List<ProfileContextBuilder.Statement> statements) {
-        return ProfileContextBuilder.build(new ProfileContextBuilder.Inputs(
+        return ProfileContextBuilder.buildEvaluation(new ProfileContextBuilder.Inputs(
                 42, 1, 1, true, true, Map.of("hobbies", List.of("reading")), statements, List.of()));
     }
 

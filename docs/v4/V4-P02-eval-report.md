@@ -44,11 +44,28 @@
 
 真实模型理解质量：**NOT_RUN**。
 
-本机和 CI 都没有安全的独立真实模型配置。没有读取生产用户资料，也没有把 API Key 写入代码。Mock 通过只证明解析、校验、降级和写入这些工程行为。上面的 Precision 和 Recall 是手工标签与服务端校验器的一致率，不能当作某个供应商模型的理解准确率。
+120 份工程集的上表保持原样。它是手工标签经过服务端校验后的一致率，不是供应商模型的理解准确率。本轮没有降低这些测试。
 
-因此：
+独立集合是 `ProfileLiveEval`，`live-profile-v1`，66 条。数据集哈希 `4d4c9b0759dc91a2d872829b756a2d332fd0e9dbb86fd43d217f0a5ab99ddc1c`。Prompt 版本 `profile-extract-v1`。Prompt 哈希 `bfbbcf6903ba5cac0c31cd71c8b7375d10ef53d835b86a7a2601b52a0a510195`。
 
-- 单次真实提取耗时：NOT_RUN
-- Token 消耗和费用：NOT_RUN
-- 真实模型降级率：NOT_RUN
-- 模型理解：NO-GO
+阻塞：`aiditto.llm.mode` 默认是 mock，`LLM_PRIMARY_API_KEY` 为空。仓库里没有可安全使用的非生产真实模型配置。没有读取生产用户资料，也没有提交 API Key。因此没有第二家供应商的替换运行。
+
+原始输出和校验后结果都没有运行，不能用上表填进下面任何一格。
+
+| 项 | 模型原始输出 | 服务端校验后 |
+| --- | --- | --- |
+| provider | NOT_RUN | NOT_RUN |
+| model | NOT_RUN | NOT_RUN |
+| Precision | NOT_RUN | NOT_RUN |
+| Recall | NOT_RUN | NOT_RUN |
+| SELF/PREFERENCE 混淆率 | NOT_RUN | NOT_RUN |
+| 无证据推断率 | NOT_RUN | NOT_RUN |
+| 非法硬约束接受 | NOT_RUN | NOT_RUN |
+| 未授权外发 | NOT_RUN | NOT_RUN |
+| 敏感信息泄露 | NOT_RUN | NOT_RUN |
+| 结构化输出成功率 | NOT_RUN | NOT_RUN |
+| P50 / P95 延迟 | NOT_RUN | NOT_RUN |
+| Token | NOT_RUN | NOT_RUN |
+| 费用 | NOT_RUN | NOT_RUN |
+
+实验门槛写在 `V4-P02-eval-design.md`。它们不是这次的结果。模型理解仍是 NOT_RUN，不写成 GO，也不用工程夹具的 1.0 代替。

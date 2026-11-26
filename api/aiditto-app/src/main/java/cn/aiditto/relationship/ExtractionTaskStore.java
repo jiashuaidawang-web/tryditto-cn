@@ -8,11 +8,25 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
-/** Deduplicates extraction attempts. Rows do not contain user text or model context. */
+/**
+ * One row per input fingerprint and processing generation.
+ * The lease lets a crashed runner be replaced. The fence stops the replaced runner from writing.
+ * This transaction ends before any model call.
+ */
 @Component
 public class ExtractionTaskStore {
     public enum Attempt { STARTED, DONE, BUSY, EXHAUSTED }
+
+    public record Claim(Attempt attempt, String attemptId, long fence) {
+        static Claim idle(Attempt attempt) {
+            return new Claim(attempt, null, 0);
+        }
+    }
+
+    static final int MAX_ATTEMPTS = 3;
+    private static final long LEASE_SECONDS = 30;
 
     private final JdbcTemplate jdbc;
 
@@ -21,53 +35,99 @@ public class ExtractionTaskStore {
     }
 
     @Transactional
-    public Attempt tryStart(long userId, String inputHash, String promptVersion, long generation) {
+    public Claim tryStart(long userId, String inputHash, String promptVersion, long generation, long exportEpoch) {
         Timestamp now = Timestamp.from(Times.millis(Instant.now()));
+        Timestamp lease = Timestamp.from(Times.millis(Instant.now().plusSeconds(LEASE_SECONDS)));
+        String attemptId = UUID.randomUUID().toString();
         int inserted = jdbc.update("""
                 INSERT INTO relationship_profile_extraction
-                    (user_id, input_hash, prompt_version, generation_epoch, status, attempts, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'running', 1, ?, ?)
+                    (user_id, input_hash, prompt_version, generation_epoch, status, attempts,
+                     attempt_id, fence, lease_until, model_export_epoch, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'running', 1, ?, 1, ?, ?, ?, ?)
                 ON CONFLICT (user_id, input_hash, prompt_version, generation_epoch) DO NOTHING
-                """, userId, inputHash, promptVersion, generation, now, now);
-        if (inserted == 1) return Attempt.STARTED;
-        int resumed = jdbc.update("""
+                """, userId, inputHash, promptVersion, generation, attemptId, lease, exportEpoch, now, now);
+        if (inserted == 1) return new Claim(Attempt.STARTED, attemptId, 1);
+        Claim reclaimed = reclaimExpired(userId, inputHash, promptVersion, generation, now);
+        if (reclaimed != null) return reclaimed;
+        int exhausted = jdbc.update("""
                 UPDATE relationship_profile_extraction
-                SET status = 'running', attempts = attempts + 1, updated_at = ?
+                SET status = 'discarded', updated_at = ?
                 WHERE user_id = ? AND input_hash = ? AND prompt_version = ? AND generation_epoch = ?
-                  AND status IN ('degraded', 'discarded') AND attempts < 3
-                """, now, userId, inputHash, promptVersion, generation);
-        if (resumed == 1) return Attempt.STARTED;
+                  AND status = 'running' AND lease_until < ? AND attempts >= ?
+                """, now, userId, inputHash, promptVersion, generation, now, MAX_ATTEMPTS);
+        if (exhausted == 1) return Claim.idle(Attempt.EXHAUSTED);
+        Claim resumed = resumeFailed(userId, inputHash, promptVersion, generation, now);
+        if (resumed != null) return resumed;
         String status = status(userId, inputHash, promptVersion, generation);
-        if ("completed".equals(status)) return Attempt.DONE;
-        if ("running".equals(status)) return Attempt.BUSY;
-        return Attempt.EXHAUSTED;
+        if ("completed".equals(status)) return Claim.idle(Attempt.DONE);
+        if ("running".equals(status)) return Claim.idle(Attempt.BUSY);
+        return Claim.idle(Attempt.EXHAUSTED);
     }
 
     @Transactional
-    public void complete(long userId, String inputHash, String promptVersion, long generation, String resultHash) {
-        jdbc.update("""
+    public int complete(long userId, String inputHash, String promptVersion, long generation,
+                        String resultHash, long fence, long exportEpoch) {
+        return jdbc.update("""
                 UPDATE relationship_profile_extraction
                 SET status = 'completed', result_hash = ?, updated_at = ?
-                WHERE user_id = ? AND input_hash = ? AND prompt_version = ? AND generation_epoch = ? AND status = 'running'
-                """, resultHash, Timestamp.from(Times.millis(Instant.now())), userId, inputHash, promptVersion, generation);
+                WHERE user_id = ? AND input_hash = ? AND prompt_version = ? AND generation_epoch = ?
+                  AND status = 'running' AND fence = ? AND model_export_epoch = ?
+                """, resultHash, Timestamp.from(Times.millis(Instant.now())),
+                userId, inputHash, promptVersion, generation, fence, exportEpoch);
     }
 
     @Transactional
-    public void discard(long userId, String inputHash, String promptVersion, long generation) {
-        mark(userId, inputHash, promptVersion, generation, "discarded");
+    public int discard(long userId, String inputHash, String promptVersion, long generation, long fence) {
+        return mark(userId, inputHash, promptVersion, generation, fence, "discarded");
     }
 
     @Transactional
-    public void degrade(long userId, String inputHash, String promptVersion, long generation) {
-        mark(userId, inputHash, promptVersion, generation, "degraded");
+    public int degrade(long userId, String inputHash, String promptVersion, long generation, long fence) {
+        return mark(userId, inputHash, promptVersion, generation, fence, "degraded");
     }
 
-    private void mark(long userId, String inputHash, String promptVersion, long generation, String status) {
-        jdbc.update("""
+    private Claim reclaimExpired(long userId, String inputHash, String promptVersion, long generation, Timestamp now) {
+        return claim("""
+                UPDATE relationship_profile_extraction
+                SET status = 'running', attempts = attempts + 1, attempt_id = ?, fence = fence + 1,
+                    lease_until = ?, updated_at = ?
+                WHERE user_id = ? AND input_hash = ? AND prompt_version = ? AND generation_epoch = ?
+                  AND status = 'running' AND lease_until < ? AND attempts < ?
+                RETURNING attempt_id, fence
+                """, userId, inputHash, promptVersion, generation, now, true);
+    }
+
+    private Claim resumeFailed(long userId, String inputHash, String promptVersion, long generation, Timestamp now) {
+        return claim("""
+                UPDATE relationship_profile_extraction
+                SET status = 'running', attempts = attempts + 1, attempt_id = ?, fence = fence + 1,
+                    lease_until = ?, updated_at = ?
+                WHERE user_id = ? AND input_hash = ? AND prompt_version = ? AND generation_epoch = ?
+                  AND status IN ('degraded', 'discarded') AND attempts < ?
+                RETURNING attempt_id, fence
+                """, userId, inputHash, promptVersion, generation, now, false);
+    }
+
+    private Claim claim(String sql, long userId, String inputHash, String promptVersion, long generation,
+                        Timestamp now, boolean expiredOnly) {
+        Timestamp lease = Timestamp.from(Times.millis(Instant.now().plusSeconds(LEASE_SECONDS)));
+        String attemptId = UUID.randomUUID().toString();
+        Object[] args = expiredOnly
+                ? new Object[] {attemptId, lease, now, userId, inputHash, promptVersion, generation, now, MAX_ATTEMPTS}
+                : new Object[] {attemptId, lease, now, userId, inputHash, promptVersion, generation, MAX_ATTEMPTS};
+        List<Claim> rows = jdbc.query(sql,
+                (rs, n) -> new Claim(Attempt.STARTED, rs.getString("attempt_id"), rs.getLong("fence")), args);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private int mark(long userId, String inputHash, String promptVersion, long generation, long fence, String status) {
+        return jdbc.update("""
                 UPDATE relationship_profile_extraction
                 SET status = ?, updated_at = ?
-                WHERE user_id = ? AND input_hash = ? AND prompt_version = ? AND generation_epoch = ? AND status = 'running'
-                """, status, Timestamp.from(Times.millis(Instant.now())), userId, inputHash, promptVersion, generation);
+                WHERE user_id = ? AND input_hash = ? AND prompt_version = ? AND generation_epoch = ?
+                  AND status = 'running' AND fence = ?
+                """, status, Timestamp.from(Times.millis(Instant.now())),
+                userId, inputHash, promptVersion, generation, fence);
     }
 
     private String status(long userId, String inputHash, String promptVersion, long generation) {

@@ -42,7 +42,7 @@
 
 自述习惯是 `SELF_REPORTED`。用户在情景题里的真实选择是 `SCENARIO_RESPONSE`，并且只能支持 `behavior.scenario.signal`。`OBSERVED_BEHAVIOR` 只接受真实反馈观察。模型不能写记忆节。
 
-问卷条目可以出现在模型输入里。它不能支持另一个特征码。大多数问卷特征也不允许 `MODEL_INFERENCE`。
+问卷条目可以出现在模型输入里。它不能被模型引用成新的推断证据。
 
 没有对应证据的维度保持空。不用 0.5 或其他中性值填充，也不生成默认人格标签。
 
@@ -56,7 +56,9 @@
 - 处理代次：`generation_epoch`
 - 注册表版本：`features-1`
 - Prompt 版本：`profile-extract-v1`
-- 输入哈希：外发正文加上源版本、代次、Prompt 版本和注册表版本
+- 输入哈希：外发正文加上源版本、处理代次、模型外发代次、Prompt 版本和注册表版本
+- 模型外发代次：`model_export_epoch`。旧代次不能写入
+- 执行隔离：`attempt_id` 与 `fence`。晚返回的旧 fence 不能完成任务
 - 模型名：网关返回的适配器名称，只进调用日志
 
 同一源版本上的模型修订和用户改资料是两件事。`WriteMode.DETERMINISTIC` 在同一源版本上遇到不同哈希时拒绝。`WriteMode.MODEL_REVISION` 在水位已经等于该源版本、并且当前快照存在时接受修订。模型修订接口不能绕过授权和水位。

@@ -13,6 +13,7 @@ public record ProfileContext(
         long generationEpoch,
         boolean processingGranted,
         boolean modelExportGranted,
+        long modelExportEpoch,
         String featureRegistryVersion,
         String promptVersion,
         List<Item> items,
@@ -48,5 +49,11 @@ public record ProfileContext(
         return null;
     }
 
-    public record Item(String token, String kind, String featureCode, String value, String text) {}
+    public record Item(String token, String kind, String featureCode, String value, String text,
+                       String scenarioId, String scenarioVersion, String choiceKey,
+                       String approvedMeaning, String sourceReference) {
+        public Item(String token, String kind, String featureCode, String value, String text) {
+            this(token, kind, featureCode, value, text, null, null, null, null, null);
+        }
+    }
 }

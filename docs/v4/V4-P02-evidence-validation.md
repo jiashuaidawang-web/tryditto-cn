@@ -19,16 +19,17 @@
 13. `hardConstraint=true`、`DOCUMENTED_EXISTING_RULE` 和模型给出的 `UNBOUNDED` 都拒绝。
 14. `OBSERVED_BEHAVIOR` 和记忆节拒绝。模型不能据此生成行为观察或历史记忆。
 
-语义对应：
+引用合法只到 `REFERENCE_VALID`。`SemanticSupport` 还有 `SEMANTIC_SUPPORT_PENDING`、`SEMANTIC_SUPPORTED`、`USER_CONFIRMED` 和 `REJECTED`。只有 `SEMANTIC_SUPPORTED` 进入 `Result.accepted()`。`USER_CONFIRMED` 留给以后的用户确认，本轮不写。`MatchingFeatureGate.eligibleForOfficialScore` 只放行 `SEMANTIC_SUPPORTED` 和 `USER_CONFIRMED`。当前评分器不调用它。未经必要语义验证或用户确认的特征，默认不得进入正式匹配评分。
 
-| 上下文种类 | 可以支持 |
+同一次模型输出不能证明自己。本轮没有通用自然语言理解。`StatementSemantics` 只认整句封闭短语，以及假设、转述、不确定和否定这些明确反例。封闭短语对不上，或者句子支持的是另一个值，就拒绝。没有规则能判定时保持 `SEMANTIC_SUPPORT_PENDING`，不记成已经验证正确。
+
+| 上下文种类 | 可以进入已接受证据 |
 | --- | --- |
-| `SELF_STATEMENT` | 同一条自述上的 `SELF` 特征 |
-| `PREFERENCE_STATEMENT` | 同一条偏好上的 `PREFERENCE` 特征 |
-| `SCENARIO` | `BEHAVIOR` 且 `behaviorKind=SCENARIO_RESPONSE` |
-| `QUESTIONNAIRE` | 特征码相同，并且值与上下文里的分节值相同 |
+| `SELF_STATEMENT` / `PREFERENCE_STATEMENT` | 整句命中封闭短语，且分节、特征码和值都一致 |
+| `SCENARIO` | `behavior.scenario.signal`，`SCENARIO_RESPONSE`，提议值等于服务端批准含义 |
+| `QUESTIONNAIRE` | 不能被模型引用成推断证据 |
 
-直接事实沿用 P01 的投影和 `AnswerEvidenceDirectory`。语义推断把候选和它引用的 `ev-*` 一起留下，供以后独立评估。校验失败的原因记在 `ProfileExtractionValidator.Rejection`。
+情景回答仍是 `SCENARIO_RESPONSE`，不是 `OBSERVED_BEHAVIOR`。直接事实沿用 P01 的投影和 `AnswerEvidenceDirectory`。
 
 ## 合并优先级
 
