@@ -139,11 +139,14 @@ public final class FeatureRegistry {
     }
 
     private static FeatureDefinition text(String code, String name) {
-        Set<Section> sections = code.startsWith("opening.") ? Set.of(Section.BEHAVIOR) : Set.of(Section.SELF);
-        Set<EvidenceSource> sources = code.startsWith("opening.")
-                ? Set.of(EvidenceSource.SELF_REPORTED, EvidenceSource.DIRECT_ANSWER)
-                : Set.of(EvidenceSource.DIRECT_ANSWER, EvidenceSource.SELF_REPORTED);
-        return def(code, name, ValueType.TEXT, Set.of(), null, null, sections, sources, Sensitivity.ORDINARY);
+        if ("occupation.text".equals(code) || code.startsWith("opening.")) {
+            Set<Section> sections = code.startsWith("opening.") ? Set.of(Section.BEHAVIOR) : Set.of(Section.SELF);
+            return def(code, name, ValueType.TEXT, Set.of(), null, null, sections,
+                    Set.of(EvidenceSource.DIRECT_ANSWER), Sensitivity.SENSITIVE_REF);
+        }
+        Set<Section> sections = Set.of(Section.SELF);
+        return def(code, name, ValueType.TEXT, Set.of(), null, null, sections,
+                Set.of(EvidenceSource.DIRECT_ANSWER, EvidenceSource.SELF_REPORTED), Sensitivity.ORDINARY);
     }
 
     private static FeatureDefinition preferenceRange(String code, String name, double min, double max) {

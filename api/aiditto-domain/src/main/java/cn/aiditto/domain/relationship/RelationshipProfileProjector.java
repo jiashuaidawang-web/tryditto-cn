@@ -19,6 +19,14 @@ import java.util.Set;
  * This does not call a model and does not read or write {@code ProfileProjector}.
  */
 public final class RelationshipProfileProjector {
+    /** Question ids the projector reads. Anything else, including free-text branches, stays out of the snapshot. */
+    public static final Set<String> STORED_QUESTIONS = Set.of(
+            "hobbies", "cookingStyle", "musicSound", "travelStyle", "readingGenres",
+            "gymTrainingStyle", "gamingGenres", "moviesContent", "artMediums",
+            "relationshipLooking", "matchingStyle", "isStudent", "schoolYear",
+            "educationLevel", "firstDateBudget", "datingHelp", "expectedAgeRange",
+            "heightRange", "educationImportance", "expectedGender", "occupation", "firstMessage");
+
     private static final Set<String> HOBBIES = Set.of(
             "cooking", "music", "travel", "reading", "gym", "gaming", "movies", "art");
 
@@ -43,25 +51,12 @@ public final class RelationshipProfileProjector {
 
     private static void hobbies(long userId, Map<String, Object> answers, List<ProfileEvidence> evidence, FeatureRegistry registry) {
         List<String> known = new ArrayList<>();
-        List<String> custom = new ArrayList<>();
         for (String value : strings(answers.get("hobbies"))) {
             if (HOBBIES.contains(value)) known.add(value);
-            else {
-                String cleaned = SensitiveText.clean(value);
-                if (!cleaned.isEmpty()) custom.add(cleaned);
-            }
         }
         if (!known.isEmpty()) {
             evidence.add(ProfileEvidence.answer(userId, "lifestyle.hobbies", Section.SELF,
                     new FeatureValue.EnumMany(known), "hobbies", registry));
-        }
-        if (!custom.isEmpty()) {
-            String text = String.join("、", custom);
-            if (text.length() > 60) text = text.substring(0, 60).strip();
-            if (!text.isEmpty()) {
-                evidence.add(ProfileEvidence.answer(userId, "lifestyle.stated_interest", Section.SELF,
-                        new FeatureValue.Text(text), "hobbies", registry));
-            }
         }
     }
 
@@ -138,20 +133,21 @@ public final class RelationshipProfileProjector {
     }
 
     private static void texts(long userId, Map<String, Object> answers, List<ProfileEvidence> evidence, FeatureRegistry registry) {
-        if (answers.get("occupation") instanceof String occupation) {
-            String cleaned = SensitiveText.clean(occupation);
-            if (!cleaned.isEmpty()) {
-                evidence.add(ProfileEvidence.answer(userId, "occupation.text", Section.SELF, new FeatureValue.Text(cleaned), "occupation", registry));
-            }
+        if (present(answers.get("occupation"))) {
+            evidence.add(ProfileEvidence.answer(userId, "occupation.text", Section.SELF,
+                    new FeatureValue.ControlledRef("onboarding_answer.occupation"), "occupation", registry));
         }
-        if (answers.get("firstMessage") instanceof String message) {
-            String cleaned = SensitiveText.clean(message);
-            if (!cleaned.isEmpty()) {
-                evidence.add(ProfileEvidence.build(userId, "opening.message", Section.BEHAVIOR, new FeatureValue.Text(cleaned),
-                        EvidenceSource.DIRECT_ANSWER, "firstMessage", EvidenceIds.CATALOG, 1.0, EvidenceStatus.CONFIRMED,
-                        null, null, null, RelationshipTypes.BehaviorKind.SELF_REPORTED, null, registry));
-            }
+        if (present(answers.get("firstMessage"))) {
+            evidence.add(ProfileEvidence.build(userId, "opening.message", Section.BEHAVIOR,
+                    new FeatureValue.ControlledRef("onboarding_answer.first_message"),
+                    EvidenceSource.DIRECT_ANSWER, "firstMessage", EvidenceIds.CATALOG, 1.0, EvidenceStatus.CONFIRMED,
+                    null, null, null, RelationshipTypes.BehaviorKind.SELF_REPORTED, null, registry));
         }
+    }
+
+    private static boolean present(Object raw) {
+        if (raw instanceof String text) return !text.isBlank();
+        return Boolean.TRUE.equals(raw) || raw instanceof List<?> list && !list.isEmpty();
     }
 
     private static void preferences(long userId, Map<String, Object> answers, QuestionCatalog catalog,

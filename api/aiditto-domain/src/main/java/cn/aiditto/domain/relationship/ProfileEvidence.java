@@ -41,13 +41,16 @@ public record ProfileEvidence(
         if (section == null || claim == null || sourceType == null || status == null || visibility == null) {
             throw new IllegalArgumentException("evidence fields");
         }
-        if (sourceRef == null || sourceRef.isBlank() || sourceVersion == null || sourceVersion.isBlank()) {
-            throw new IllegalArgumentException("source");
+        if (!OrdinarySnapshot.safeToken(sourceRef) || !OrdinarySnapshot.safeToken(sourceVersion)) {
+            throw new IllegalArgumentException("source metadata is not a safe token");
+        }
+        if (claim instanceof FeatureValue.ControlledRef ref && !OrdinarySnapshot.allowedRef(ref.ref())) {
+            throw new IllegalArgumentException("controlled ref is not on the snapshot allowlist");
         }
         if (!Double.isFinite(confidence) || confidence < 0 || confidence > 1) {
             throw new IllegalArgumentException("confidence must be finite and inside 0..1");
         }
-        if (consentScope == null || consentScope.isBlank()) throw new IllegalArgumentException("consentScope");
+        if (!OrdinarySnapshot.safeToken(consentScope)) throw new IllegalArgumentException("consentScope");
         String expected = EvidenceIds.compute(subjectUserId, sourceType, sourceRef, sourceVersion, featureCode);
         if (evidenceId == null || !evidenceId.equals(expected)) {
             throw new IllegalArgumentException("evidence id is not the server id for this user and source");

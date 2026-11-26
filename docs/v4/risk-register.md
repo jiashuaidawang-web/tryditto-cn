@@ -204,6 +204,25 @@ P0-4 的代码已经落到 `master_agent_v4`，但还不能销项。
 
 真实用户效果没有评估。领域测试、数据库测试、线上效果是三件不同的事。
 
+## V4-P01-FINAL（2026-11-26）
+
+阶段性实现 `76468ce` 的领域测试、PostgreSQL 集成测试和两次 Actions 已经通过。最终验收当时是 NO-GO。源码审计的 5 项在本轮修复，记录在 `docs/v4/V4-P01-final-audit.md`。
+
+- 源版本水位不再绑在当前快照行上。相同内容不重复插行。迟到的更低源版本被拒绝。
+- 处理授权、匹配同意、模型外发授权分开。旧代次不能在撤回或清除之后写回。
+- 证据要能解析到该用户的有效来源。模拟内容和字符串前缀不是真实反馈的证明。
+- 伪造哈希、伪造 canonical、非法直接构造不能进入持久化边界。
+- 普通快照不复制自由文本。正则没有被当成完整的脱敏。
+
+尚未集成，因此生产画像处理保持关闭：
+
+- `AccountService` 注销只写 `deleting` 和 `purge_at`，不调用 `erase`。
+- 匹配同意的撤回不调用 `revokeProcessing`。
+- 没有真实 LLM 提取，`saveModelRevision` 拒绝写入。
+- 反馈事件还没有证据目录。
+
+P0-1、P0-2、P0-3 未改。算法质量仍是 NO-GO。不部署，不合并 V3，不启动 V4-P02。
+
 ## V4-INFRA-001（2026-11-25）
 
 本地不再安装 PostgreSQL。集成测试改到 GitHub Actions：`.github/workflows/v4-ci.yml`，一次性 PostgreSQL 16，库名只能是 `aiditto_s01_test`。`TestDatabaseGuard` 在 `flyway.clean()` 之前拒绝其它库名、其它主机，以及缺少 `TEST_DB_URL` 的情况。没有生产凭证，没有 LLM API Key。

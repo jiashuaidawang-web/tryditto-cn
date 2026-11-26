@@ -190,6 +190,17 @@ jobs:
                   "uniqueCurrentAndHashConstraints",
                   "legacyProfileAndTasteStayReadable",
                   "deletingUserIsRefusedAndEraseRemovesRows",
+                  "delayedSourceCannotReplaceAHigherWatermark",
+                  "returningToAnEarlierHashCreatesAnotherVersion",
+                  "claimedSourceMustMatchTheStoredProfileVersion",
+                  "sameSourceDifferentContentIsADeterministicConflict",
+                  "modelRevisionIsRefused",
+                  "revokedGenerationCannotWriteAndANewGenerationCan",
+                  "matchingConsentAndModelExportDoNotGrantProcessing",
+                  "offeredSnapshotMustMatchTheServerProjection",
+                  "concurrentSavesKeepASingleCurrentRow",
+                  "retractCurrentBlocksTheOldGeneration",
+                  "eraseRacesSaveAndLeavesNoReadableProfile",
               ],
           }
           reports = pathlib.Path("aiditto-app/target/failsafe-reports")

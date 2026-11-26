@@ -93,12 +93,19 @@ class RelationshipProfileTest {
             assertThat(target.importance()).isEqualTo(Importance.SUPER);
             assertThat(target.constraintType()).isEqualTo(ConstraintType.DOCUMENTED_EXISTING_RULE);
         });
-        assertThat(ProfileVersionPolicy.decide(true, 1, 1, before.inputHash(), false, 2, after.inputHash()).kind())
+        assertThat(ProfileVersionPolicy.decide(true, true, 1, 1, 1, 2, 2, true,
+                before.inputHash(), after.inputHash(), ProfileVersionPolicy.WriteMode.DETERMINISTIC).kind())
                 .isEqualTo(ProfileVersionPolicy.Kind.INSERT);
-        assertThat(ProfileVersionPolicy.decide(true, 2, 2, after.inputHash(), false, 1, before.inputHash()).kind())
+        assertThat(ProfileVersionPolicy.decide(true, true, 1, 1, 2, 1, 1, true,
+                after.inputHash(), before.inputHash(), ProfileVersionPolicy.WriteMode.DETERMINISTIC).kind())
                 .isEqualTo(ProfileVersionPolicy.Kind.REJECT_STALE);
-        assertThat(ProfileVersionPolicy.decide(true, 1, 1, before.inputHash(), false, 4, before.inputHash()).kind())
-                .isEqualTo(ProfileVersionPolicy.Kind.KEEP_CURRENT);
+        ProfileVersionPolicy.Decision kept = ProfileVersionPolicy.decide(true, true, 1, 1, 1, 5, 5, true,
+                before.inputHash(), before.inputHash(), ProfileVersionPolicy.WriteMode.DETERMINISTIC);
+        assertThat(kept.kind()).isEqualTo(ProfileVersionPolicy.Kind.KEEP_CURRENT);
+        assertThat(kept.watermark()).isEqualTo(5);
+        assertThat(ProfileVersionPolicy.decide(true, true, 1, 1, kept.watermark(), 3, 3, true,
+                before.inputHash(), after.inputHash(), ProfileVersionPolicy.WriteMode.DETERMINISTIC).kind())
+                .isEqualTo(ProfileVersionPolicy.Kind.REJECT_STALE);
     }
 
     @Test
@@ -202,7 +209,7 @@ class RelationshipProfileTest {
         answers.put("personalEmail", "secret@example.com");
         answers.put("schoolEmail", "student@school.edu");
         answers.put("location", Map.of("placeId", "place-secret", "lat", 31.2, "lng", 121.5));
-        answers.put("occupation", "联系13800138000或secret@example.com");
+        answers.put("occupation", "联系13800138000或secret@example.com，身份证110105199001011234，学号202011223344，住在北京市朝阳区建国路1号 https://secret.example/a");
         answers.put("firstMessage", "周末去看展");
         answers.put("politics", "center");
         answers.put("religion", List.of("buddhist"));
@@ -210,17 +217,28 @@ class RelationshipProfileTest {
         String json = snapshot.canonical();
         assertThat(json).doesNotContain("测试姓名", "woman", "2000-01-02", "men", "不能接受异地",
                 "secret@example.com", "student@school.edu", "place-secret", "31.2", "121.5", "13800138000",
-                "center", "buddhist", "self.social.initiative");
-        assertThat(json).contains("reading", "摄影");
-        assertThat(codes(snapshot.self())).contains("lifestyle.hobbies", "lifestyle.stated_interest", "occupation.text", "relationship.goal");
+                "center", "buddhist", "self.social.initiative", "摄影", "周末去看展",
+                "110105199001011234", "202011223344", "建国路", "https://secret.example");
+        assertThat(json).contains("reading");
+        assertThat(codes(snapshot.self())).contains("lifestyle.hobbies", "occupation.text", "relationship.goal")
+                .doesNotContain("lifestyle.stated_interest");
         assertThat(codes(snapshot.preference())).containsExactly("partner.gender");
         assertThat(snapshot.preference().targets().get(0).targetValue())
                 .isEqualTo(new FeatureValue.ControlledRef("profile.expected_genders_enc"));
+        assertThat(snapshot.self().features()).anySatisfy(feature -> {
+            assertThat(feature.featureCode()).isEqualTo("occupation.text");
+            assertThat(feature.value()).isEqualTo(new FeatureValue.ControlledRef("onboarding_answer.occupation"));
+        });
         assertThat(snapshot.behavior().records()).singleElement().satisfies(record -> {
             assertThat(record.kind()).isEqualTo(BehaviorKind.SELF_REPORTED);
-            assertThat(record.value()).isEqualTo(new FeatureValue.Text("周末去看展"));
+            assertThat(record.value()).isEqualTo(new FeatureValue.ControlledRef("onboarding_answer.first_message"));
         });
         assertThat(snapshot.memory().observations()).isEmpty();
+        RelationshipProfileSnapshot sealed = RelationshipProfileProjector.project(8,
+                Map.of("expectedGender", List.of("__sealed__")), registry);
+        assertThat(sealed.canonical()).doesNotContain("__sealed__", "men", "everyone");
+        assertThat(sealed.preference().targets().get(0).targetValue())
+                .isEqualTo(new FeatureValue.ControlledRef("profile.expected_genders_enc"));
     }
 
     @Test

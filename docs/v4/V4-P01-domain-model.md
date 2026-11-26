@@ -36,6 +36,10 @@ classDiagram
 
 `RelationshipProfile.of` 把证据收成当前特征。`RETRACTED` 留在证据列表里，不能支撑当前值。两条未撤回证据的结论不同时，特征是 `CONTESTED`，值为空，两条引用都保留，不覆盖。`RelationshipProfileProjector` 是另一条纯函数，不改旧的 `ProfileProjector`。
 
+record 的公开构造器仍然存在。能进数据库的快照必须再过 `SnapshotAdmission`。它核对 schema、注册表版本、canonical、`inputHash`、四节和证据，并调用 `EvidenceTrust`。`EvidenceIds.compute` 只生成稳定 id，不证明来源存在。来源由 `EvidenceSourceDirectory` 按用户、引用和版本解析。解析结果要与证据上的类型一致，授权范围必须是 `profile-self`。`matching` 和 `model-export` 不能支撑画像。`simulated=true` 的记录不能支撑，即使用户引用没有 `persona-` 或 `llm-` 这类前缀。已撤回的来源不能支撑未撤回的证据。反馈事件和 LLM 提取本轮没有真实目录，测试用确定性替身。
+
+普通快照的受控引用只有 `profile.expected_genders_enc`、`onboarding_answer.occupation`、`onboarding_answer.first_message`。自由文本，包括题库里没有的爱好原文，不复制进可持久化的快照。`sourceRef`、`sourceVersion` 和 `consentScope` 只能是不含长数字的短记号。`SensitiveText` 的邮箱和手机号正则只是特征注册表上的窄兜底，不能当成私人信息已经被消除。`TasteFacts` 的白名单没有放宽。
+
 ## 字段字典
 
 ### RelationshipProfileSnapshot
@@ -47,7 +51,7 @@ classDiagram
 | featureRegistryVersion | 本轮固定为 `features-1` |
 | self | 自身特征。没有证据的维度不出现 |
 | preference | 伴侣偏好。目标值、重要程度、约束类型、置信度分开 |
-| behavior | 自述、情景或观察。本轮投影只有自述开场白 |
+| behavior | 自述、情景或观察。本轮投影只保留开场白的受控引用 |
 | memory | 反馈观察。投影结果始终是空数组 |
 | evidence | 全部证据，含已撤回。服务端计算 `evidenceId` |
 | canonical | 哈希输入。键按字母序，不含生成时间和源画像版本 |
@@ -106,7 +110,7 @@ classDiagram
 
 ## 六组虚构画像
 
-这些用户 id 是 9101–9106。快照只存在测试和下面的文件里，不写入生产库，也不进入求解器。文件内容就是完整的 canonical JSON。哈希是这份 JSON 的 SHA-256。
+这些用户 id 是 9101–9106。快照只存在测试和下面的文件里，不写入生产库，也不进入求解器。文件内容就是完整的 canonical JSON。哈希是这份 JSON 的 SHA-256。文件保持原样。含自由文本的案例，例如案例一里的「摄影」，仍然能在内存里构造，用来说明领域对象。`SnapshotAdmission` 拒绝把这种自由文本写入持久化层。
 
 | 案例 | 文件 | inputHash | 要看的区分 |
 | --- | --- | --- | --- |

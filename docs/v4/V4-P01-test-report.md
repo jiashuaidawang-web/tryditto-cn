@@ -68,3 +68,32 @@ https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45769819902
 `domain-tests` 的「Run domain tests」成功。本机同一套命令是 477 项、0 失败。运行日志和 artifact 需要登录才能下载，所以没有从 runner 上抄出 PostgreSQL 的 `version()` 原文。工作流使用的镜像是 `postgres:16`。S01 已验收的两次运行读到的是 16.16。这次没有把那个数字写成新的实测值。
 
 算法质量仍是 NO-GO。没有部署，没有合并 V3，没有启动 V4-P02。
+
+## 最终验收修复
+
+命令仍是 `cd api && mvn -B -pl aiditto-domain test`。本机结果：`Tests run: 482, Failures: 0, Errors: 0, Skipped: 0`。原来的 477 项都还在。新增的 5 项是 `ProfileAuditTest`。`RelationshipProfileTest` 仍是 14 项。`SyntheticFixtureTest` 仍是 200 人、83 对、34 人未匹配、822 条边、0 条硬约束违规。
+
+本机没有 PostgreSQL，也没有 Docker。集成测试不在本机假装通过。`mvn -B -pl aiditto-app -am test-compile` 已通过。
+
+`RelationshipProfileIT` 原有 7 个方法都保留。清单里新增：
+
+8. `delayedSourceCannotReplaceAHigherWatermark`
+9. `returningToAnEarlierHashCreatesAnotherVersion`
+10. `claimedSourceMustMatchTheStoredProfileVersion`
+11. `sameSourceDifferentContentIsADeterministicConflict`
+12. `modelRevisionIsRefused`
+13. `revokedGenerationCannotWriteAndANewGenerationCan`
+14. `matchingConsentAndModelExportDoNotGrantProcessing`
+15. `offeredSnapshotMustMatchTheServerProjection`
+16. `concurrentSavesKeepASingleCurrentRow`
+17. `retractCurrentBlocksTheOldGeneration`
+18. `eraseRacesSaveAndLeavesNoReadableProfile`
+
+S01 的 19 个集成方法和 `TestDatabaseGuardTest` 的 3 个方法仍在 `.github/workflows/v4-ci.yml`。没有删除断言，没有跳过测试。
+
+Actions 的运行 URL、job 结论和 PostgreSQL 实测写在下面。镜像仍是 `postgres:16`。没有从本机编造 `version()`。
+
+- 代码提交：（推送后填写）
+- 运行：（推送后填写）
+- 结论：（推送后填写）
+

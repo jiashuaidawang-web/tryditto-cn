@@ -2,7 +2,10 @@ package cn.aiditto.domain.relationship;
 
 import java.util.regex.Pattern;
 
-/** Rejects contact data before it can land in an ordinary snapshot. */
+/**
+ * A narrow backstop for obvious tokens. It does not decide that free text is safe to copy.
+ * Occupation, opening lines, and custom hobbies are references or absent, not cleaned strings.
+ */
 final class SensitiveText {
     private static final Pattern EMAIL = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
     private static final Pattern PHONE = Pattern.compile("(?<!\\d)1[3-9]\\d{9}(?!\\d)");
