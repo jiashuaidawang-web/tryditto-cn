@@ -57,11 +57,19 @@ cd api && mvn -B -pl aiditto-app -am test -Dtest=ProfileExtractionParserTest -Ds
 
 ## CI
 
-代码提交的 Workflow Run 在推送后写入本节。在真实运行成功之前，工程质量不能写成 GO。
+实现提交 `ef08182426d414c117d22ebf909baa02f0622ab1`。
+
+https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45780763981
+
+这次运行的结论是 success。页面上的三个 job 都完成：`domain-tests` 51 秒，`integration-tests` 2 分 3 秒，`test-reports` 5 秒。运行总时长 2 分 14 秒。
+
+`integration-tests` 里的「Reject a run that did not execute the IT scenarios」会在必需方法缺失、跳过、失败或报错时让 job 失败。该 job 是 success，所以 `ProfileExtractionIT` 的 13 个方法、原来的 37 项 PostgreSQL 集成测试和 `TestDatabaseGuardTest` 都在这次 PostgreSQL 上执行并通过。
+
+运行日志和 artifact 需要登录才能下载。没有从 runner 上抄出 PostgreSQL 的 `version()`。工作流镜像是 `postgres:16`。没有把以前运行读到的 16.16 写成这次的新实测。
 
 ## 三项结论
 
-- 工程质量：等待本次代码提交的 GitHub Actions。领域测试本机已通过。PostgreSQL 集成测试本机 NOT_RUN。
+- 工程质量：GO。范围是这条提取链路的编译、领域测试、Mock 行为和这次 PostgreSQL 集成测试。
 - 模型理解：NO-GO。真实模型评估 NOT_RUN。详见 `V4-P02-eval-report.md`。
 - 生产启用：NO-GO。`processing-enabled` 仍是 false。账户清除还没有调用 `erase`，匹配同意撤回还没有调用 `revokeProcessing`。本轮没有生产提取、没有部署、没有合并 V3。
 
