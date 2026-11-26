@@ -91,9 +91,9 @@ https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45769819902
 
 S01 的 19 个集成方法和 `TestDatabaseGuardTest` 的 3 个方法仍在 `.github/workflows/v4-ci.yml`。没有删除断言，没有跳过测试。
 
-Actions 的运行 URL、job 结论和 PostgreSQL 实测写在下面。镜像仍是 `postgres:16`。没有从本机编造 `version()`。
+Actions 的运行 URL、job 结论和 PostgreSQL 实测写在下面。镜像仍是 `postgres:16`。artifact 下载返回 401，没有从 runner 抄出新的 `version()`。S01 已验收的运行读到的是 16.16，那个数字不记成这次的新实测。
 
-- 代码提交：（推送后填写）
-- 运行：（推送后填写）
-- 结论：（推送后填写）
+- 代码提交：`4f29edb067e6367b8c0f6d79b2113a3392467485`
+- 运行：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45774884362
+- 结论：`domain-tests`、`integration-tests`、`test-reports` 都是 success。`Run domain tests` 成功。`Reject a run that did not execute the IT scenarios` 成功，所以清单里的 `RelationshipProfileIT` 18 个方法、S01 的 19 个方法、`TestDatabaseGuardTest` 都实际执行，且没有失败、报错或跳过。
 

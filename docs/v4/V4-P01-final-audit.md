@@ -4,7 +4,9 @@
 
 阶段性结论保持不变：领域测试、PostgreSQL 集成测试和当时的两次 Actions 已通过，匹配算法和 S01 发布闸门没有改。最终验收当时是 NO-GO。本轮只修审计指出的 2 个 P0 和 3 个 P1。不启动 V4-P02，不接真实 LLM，不改匹配算法，不合并 V3，不部署。
 
-本机领域测试：`cd api && mvn -B -pl aiditto-domain test`，`Tests run: 482, Failures: 0, Errors: 0, Skipped: 0`。原来的 477 项仍在，新增 `ProfileAuditTest` 5 项。200 人仿真仍是 83 对、0 条硬约束违规。本机没有 PostgreSQL。集成测试的实际执行以本轮 GitHub Actions 为准，运行 URL 写在 `V4-P01-test-report.md`。没有把旧运行的 `PostgreSQL 16.16` 写成这次的新实测。
+本机领域测试：`cd api && mvn -B -pl aiditto-domain test`，`Tests run: 482, Failures: 0, Errors: 0, Skipped: 0`。原来的 477 项仍在，新增 `ProfileAuditTest` 5 项。200 人仿真仍是 83 对、0 条硬约束违规。本机没有 PostgreSQL。
+
+GitHub Actions：提交 `4f29edb067e6367b8c0f6d79b2113a3392467485`，运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45774884362 。三个 job 都是 success。集成测试里的「Reject a run that did not execute the IT scenarios」也是 success，因此新增的 `RelationshipProfileIT` 方法和原来的 7 个方法、S01 的 19 个方法、`TestDatabaseGuardTest` 都在 PostgreSQL 上执行并通过。artifact 需要登录，没有抄出这次 runner 的 `version()`。工作流镜像是 `postgres:16`。没有把旧运行的 16.16 写成这次的新实测。
 
 ## P01-R01 源版本水位
 
@@ -34,7 +36,7 @@
 - `RelationshipProfileIT.modelRevisionIsRefused`
 - `RelationshipProfileIT.uniqueCurrentAndHashConstraints` 仍断言第二行相同有效哈希失败，以及第二个 `is_current` 失败
 
-CI：见测试报告中的本轮运行。本机没有执行这些 IT。
+CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45774884362 的 `integration-tests` 为 success，且「Reject a run that did not execute the IT scenarios」为 success。本机没有执行这些 IT。
 
 剩余限制：水位存在生命周期行上。账户注销还不会调用 `erase`，所以生产开关保持关闭。模型修订只有策略区分，没有写入实现。
 
@@ -61,7 +63,7 @@ CI：见测试报告中的本轮运行。本机没有执行这些 IT。
 - `RelationshipProfileIT.concurrentSavesKeepASingleCurrentRow`
 - `RelationshipProfileIT.deletingUserIsRefusedAndEraseRemovesRows` 增加了注销状态下 `current()` 被拒绝
 
-CI：见测试报告中的本轮运行。
+CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45774884362 。`retractCurrentBlocksTheOldGeneration`、`eraseRacesSaveAndLeavesNoReadableProfile` 和 `concurrentSavesKeepASingleCurrentRow` 都在该次 PostgreSQL 运行的必跑清单里，拒绝步骤成功。
 
 剩余限制：未集成。`AccountService` 不调用 `erase`。匹配同意的撤回不调用 `revokeProcessing`。没有用户界面会调用 `grantProcessing`。`aiditto.relationship-profile.processing-enabled` 在 `application.yml` 和 `application-prod.yml` 都是 false，生产文件不提供环境变量覆盖。这些事件接上之前，不能打开生产画像处理。
 
@@ -82,7 +84,7 @@ CI：见测试报告中的本轮运行。
 - `RelationshipProfileIT.offeredSnapshotMustMatchTheServerProjection`
 - `RelationshipProfileIT.matchingConsentAndModelExportDoNotGrantProcessing`
 
-CI：领域测试已在本机通过。PostgreSQL 上的两个 IT 见本轮 Actions。
+CI：领域测试步骤在同一次运行中成功。PostgreSQL 上的两个 IT 也在该运行的必跑清单里，拒绝步骤成功。
 
 剩余限制：真实反馈事件和 LLM 提取没有接入。问卷目录把现存答案视为未撤回、未模拟的直接答案。这是测试和当前问卷存储能支持的范围，不是一条通用的证据总线。
 
@@ -102,7 +104,7 @@ CI：领域测试已在本机通过。PostgreSQL 上的两个 IT 见本轮 Actio
 - `RelationshipProfileIT.offeredSnapshotMustMatchTheServerProjection`
 - `RelationshipProfileIT.persistsAndReadsTheSnapshot`
 
-CI：领域测试已在本机通过。写入边界的 IT 见本轮 Actions。
+CI：领域测试步骤在同一次运行中成功。写入边界的 IT 在该运行的必跑清单里，拒绝步骤成功。
 
 剩余限制：内存中的虚构案例仍可直接构造，包括自由文本。它们不是持久化路径。案例 JSON 没有改。
 
@@ -122,7 +124,7 @@ CI：领域测试已在本机通过。写入边界的 IT 见本轮 Actions。
 - `ProfileAuditTest.simulatedFeedbackNeedsNoSpecialPrefixAndScopesStaySeparate` 里的不安全 `sourceRef`
 - `RelationshipProfileIT.persistsAndReadsTheSnapshot` 仍检查库里的 JSON 不含姓名、邮箱、地点和手机号
 
-CI：领域测试已在本机通过。使用的是合成字符串，不是真实个人信息。
+CI：领域测试步骤在同一次运行中成功。使用的是合成字符串，不是真实个人信息。库内 JSON 的检查在 `persistsAndReadsTheSnapshot`，该运行的拒绝步骤成功。
 
 剩余限制：正则仍留在 `FeatureRegistry` 的普通文本兜底上，只覆盖它能认出的邮箱和手机号。自由文本的安全做法是不复制。问卷原表里的原文还在 `onboarding_answer`，快照只留引用。密封的性别期望不会在投影时被解密来识别「不限」。
 
