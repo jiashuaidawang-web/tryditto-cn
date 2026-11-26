@@ -53,4 +53,18 @@ S01 的 19 个集成方法和 `TestDatabaseGuardTest` 的 3 个方法仍在同�
 
 ## CI
 
-推送 `master_agent_v4` 之后把运行 URL、PostgreSQL 版本、领域测试总数和 `RelationshipProfileIT` 的方法计数补进这一节。在那之前，数据库验收不能写成已经通过。
+提交 `76468ce775a004c821e116bb07919531920f1efc`。
+
+https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45769819902
+
+这次运行的三个 job 都是 success：`domain-tests`、`integration-tests`、`test-reports`。
+
+`integration-tests` 里的「Reject a run that did not execute the IT scenarios」也是 success。这一步在任一必需方法缺失、跳过、失败或报错时会让 job 失败。因此下面这些方法都在 PostgreSQL 上实际执行并通过：
+
+- `RelationshipProfileIT`：7 个方法，即上面列出的持久化、重复输入、新版本、旧源拒绝、唯一约束、旧表兼容、注销拒绝和删除。
+- `PublishSafetyIT`：14。`ConsentLegacyIT`：1。`MatchIT`：4。合计仍是 S01 的 19。
+- `TestDatabaseGuardTest`：报告存在，且 tests > 0、failures、errors、skipped 都是 0。脚本不把「编译通过但没跑」算成功。
+
+`domain-tests` 的「Run domain tests」成功。本机同一套命令是 477 项、0 失败。运行日志和 artifact 需要登录才能下载，所以没有从 runner 上抄出 PostgreSQL 的 `version()` 原文。工作流使用的镜像是 `postgres:16`。S01 已验收的两次运行读到的是 16.16。这次没有把那个数字写成新的实测值。
+
+算法质量仍是 NO-GO。没有部署，没有合并 V3，没有启动 V4-P02。
