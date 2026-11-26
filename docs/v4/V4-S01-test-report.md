@@ -2,6 +2,19 @@
 
 日期：2026-11-25。分支 `master_agent_v4`。审计提交 `77d2a2b9b4ab3a1495e549ddd3cdaf78785b54ff`。
 
+## 架构验收（2026-11-26）
+
+V4-S01、V4-INFRA-001、V4-INFRA-002 通过当前阶段架构验收。算法质量仍是 NO-GO，未批准生产部署。
+
+核对过的成功运行：
+
+- https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45591470398
+- https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45592507019
+
+PostgreSQL 16.16。领域测试 463 通过。`PublishSafetyIT` 14、`ConsentLegacyIT` 1、`MatchIT` 4、`TestDatabaseGuardTest` 3，合计 0 failures、0 errors、0 skipped。
+
+下面保留验收前的本地 NOT_RUN 和前两次 CI 失败，那些记录不删除。
+
 三类结果分开记。领域测试跑过。真实数据库测试没有跑。真实用户效果没有评估。
 
 算法质量仍是 NO-GO。本地没有 PostgreSQL，当时的发布闸门验收是 NO-GO。V4-INFRA-001 把同一套 IT 放到 GitHub Actions 的 PostgreSQL 16 上跑。下面「本地」和「CI」分开记。CI 结论以 Actions 的 job 结果为准，不以工作流文件为准。

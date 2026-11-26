@@ -148,7 +148,7 @@ jobs:
           mvn -B -pl aiditto-app -am verify \
             -Dtest=TestDatabaseGuardTest \
             -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT \
+            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT \
             -Dfailsafe.failIfNoSpecifiedTests=true \
             -DforkCount=1 \
             -DreuseForks=false
@@ -181,6 +181,15 @@ jobs:
                   "realUsersAreNotPairedWithSyntheticOnesAndResetLeavesThemAlone",
                   "partnerActionRefusesARealPartnerAndStepsResume",
                   "deadlineTickIsIdempotentAndSyntheticPhonesGetNoCode",
+              ],
+              "RelationshipProfileIT": [
+                  "persistsAndReadsTheSnapshot",
+                  "sameInputDoesNotCreateAnotherVersion",
+                  "differentInputCreatesTheNextVersion",
+                  "olderSourceCannotOverwrite",
+                  "uniqueCurrentAndHashConstraints",
+                  "legacyProfileAndTasteStayReadable",
+                  "deletingUserIsRefusedAndEraseRemovesRows",
               ],
           }
           reports = pathlib.Path("aiditto-app/target/failsafe-reports")

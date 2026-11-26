@@ -210,4 +210,4 @@ P0-4 的代码已经落到 `master_agent_v4`，但还不能销项。
 
 前两次运行都失败，而且失败点相同。PostgreSQL 16.16。`PublishSafetyIT` 在准备数据时断言北京草稿 `>= 8`，实际 3。这 3 对是 cohort 规则的结果：synthetic 不能互配，北京只有 3 个 demo。那两次没有覆盖到并发代码。
 
-夹具拆开后的运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45591470398 总结论 success。14 个发布安全方法，包括回滚、撤回、拉黑、注销、硬约束、重复发布和共用用户锁，都执行并通过。这还不是架构验收。P0-4 等验收后再销项。P0-1、P0-2、P0-3 未改。不开始 V4-P01。
+夹具拆开后的运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45591470398 总结论 success。文档提交再次运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45592507019 也成功。14 个发布安全方法，包括回滚、撤回、拉黑、注销、硬约束、重复发布和共用用户锁，都执行并通过。2026-11-26 架构验收通过当前阶段。P0-4 的工程验收关闭。算法质量仍是 NO-GO，不部署。P0-1、P0-2、P0-3 未改。V4-P01 从画像模型和证据开始，不改匹配算法。
