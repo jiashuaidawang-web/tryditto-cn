@@ -25,10 +25,10 @@
 | education.year | 年级 | ENUM | freshman, sophomore, junior, senior, master, phd, other |
 | education.level | 学历 | ENUM | highSchool, college, graduate。`preferNot` 不在表内，用 `WITHHELD` |
 | spending.first_date | 第一次见面的花费口径 | ENUM | under20, 20to50, 50to100, 100plus。`noPref` 用 `UNBOUNDED` |
-| occupation.text | 自述近况 | TEXT | 清洗后最长 60。去掉邮箱和手机号 |
+| occupation.text | 自述近况 | TEXT 引用 | 只保存 `onboarding_answer.occupation`。快照不复制原文 |
 | lifestyle.stated_interest | 自述兴趣原文 | TEXT | 题库 `allowCustom` 的自定义兴趣。不是八个固定选项之一 |
 | support.help_wanted | 希望被帮忙的事 | ENUM_SET | approaching, convo, intoMe, confident, whatIWant, theDate, justDate |
-| opening.message | 自述开场白 | TEXT | 行为节。只保存原文，不推断性格 |
+| opening.message | 自述开场白 | TEXT 引用 | 行为节。只保存 `onboarding_answer.first_message` |
 
 ## 问卷里已经分开问的伴侣偏好
 
@@ -63,6 +63,14 @@
 | partner.schedule | 希望对方的作息 | PREFERENCE | early, flexible, late |
 
 偏好槽如果来自 `MODEL_INFERENCE`，约束必须是 `SOFT`，状态必须是 `PROVISIONAL`。不能标成既有硬规则。
+
+## 情景选择
+
+| featureCode | 名称 | 节 | 类型 | 合法值 | 来源 |
+| --- | --- | --- | --- | --- | --- |
+| behavior.scenario.signal | 情景选择中的行为倾向 | BEHAVIOR | ENUM | low, steady, high | `MODEL_INFERENCE`、`SELF_REPORTED` |
+
+注册表版本仍是 `features-1`。投影器不从问卷填这个槽。模型只有在本次上下文里看到用户真实的 A–D 选择时，才能给出暂定值。情景题面和自定义原文不进入模型输入。
 
 ## 明确没有的特征
 

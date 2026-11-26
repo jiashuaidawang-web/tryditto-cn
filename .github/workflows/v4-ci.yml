@@ -148,7 +148,7 @@ jobs:
           mvn -B -pl aiditto-app -am verify \
             -Dtest=TestDatabaseGuardTest \
             -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT \
+            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT \
             -Dfailsafe.failIfNoSpecifiedTests=true \
             -DforkCount=1 \
             -DreuseForks=false
@@ -201,6 +201,21 @@ jobs:
                   "concurrentSavesKeepASingleCurrentRow",
                   "retractCurrentBlocksTheOldGeneration",
                   "eraseRacesSaveAndLeavesNoReadableProfile",
+              ],
+              "ProfileExtractionIT": [
+                  "provisionalFeatureIsStoredAsARevision",
+                  "modelExportAbsentDoesNotCallTheModel",
+                  "processingGrantIsRequired",
+                  "revokedModelExportDiscardsTheInFlightResult",
+                  "revokedProcessingDiscardsTheInFlightResult",
+                  "changedSourceDiscardsTheModelResult",
+                  "sameInputDoesNotCallTheModelTwice",
+                  "invalidJsonOrTimeoutLeavesTheDeterministicSnapshot",
+                  "degradedAttemptCanBeRetried",
+                  "deletingUserCannotWrite",
+                  "concurrentExtractsCallTheModelOnce",
+                  "forgedEvidenceDoesNotChangeTheCurrentHash",
+                  "scenarioChoiceCanSupportASignalWithoutExportingThePrompt",
               ],
           }
           reports = pathlib.Path("aiditto-app/target/failsafe-reports")

@@ -223,6 +223,27 @@ P0-4 的代码已经落到 `master_agent_v4`，但还不能销项。
 
 P0-1、P0-2、P0-3 未改。算法质量仍是 NO-GO。不部署，不合并 V3，不启动 V4-P02。
 
+## V4-P01 架构验收（2026-11-26）
+
+V4-P01 与 V4-P01-FINAL 通过当前阶段架构验收。验收基线是 `ff4cf2169f5aff3839abfacc28e2e7bac3cdc998`。修复提交是 `4f29edb067e6367b8c0f6d79b2113a3392467485`。已核实的运行：
+
+- https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45774884362
+- https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45775384976
+
+当时的基线是 482 项领域测试、37 项 PostgreSQL 集成测试、3 项数据库防误操作测试，以及 200 人仿真 83 对、0 条硬约束违规。
+
+生产画像处理仍然关闭。打开它之前，下面三件事都要接上，而且三项授权继续分开：
+
+- `AccountService` 的实际清除要调用 `erase`。现在注销只写 `deleting` 和 `purge_at`。
+- 匹配同意的撤回要调用 `revokeProcessing`。匹配同意不能隐式打开画像处理。
+- 画像处理授权必须单独授予。`aiditto.relationship-profile.processing-enabled` 在 `application.yml` 里保持 false，`application-prod.yml` 里写死 false。
+
+向外部模型提供数据使用独立的 `model_export_authorization`。撤回它调用 `revokeModelExport`，不改变处理授权、代次或匹配同意。
+
+## V4-P02 状态（2026-11-26）
+
+P02 只增加有证据的画像提取。匹配求解、评分、召回和发布闸门没有改。生产开关保持关闭。真实模型理解评估是 NOT_RUN。算法质量和生产启用资格都是 NO-GO。
+
 ## V4-INFRA-001（2026-11-25）
 
 本地不再安装 PostgreSQL。集成测试改到 GitHub Actions：`.github/workflows/v4-ci.yml`，一次性 PostgreSQL 16，库名只能是 `aiditto_s01_test`。`TestDatabaseGuard` 在 `flyway.clean()` 之前拒绝其它库名、其它主机，以及缺少 `TEST_DB_URL` 的情况。没有生产凭证，没有 LLM API Key。

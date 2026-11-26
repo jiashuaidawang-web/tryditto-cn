@@ -4,12 +4,22 @@ import cn.aiditto.account.User;
 import cn.aiditto.account.UserLock;
 import cn.aiditto.domain.common.DomainException;
 import cn.aiditto.domain.common.ErrorCode;
+import cn.aiditto.domain.relationship.CompositeEvidenceDirectory;
+import cn.aiditto.domain.relationship.ExtractedFeature;
 import cn.aiditto.domain.relationship.FeatureRegistry;
+import cn.aiditto.domain.relationship.IssuedEvidenceDirectory;
+import cn.aiditto.domain.relationship.ProfileContext;
+import cn.aiditto.domain.relationship.ProfileContextBuilder;
+import cn.aiditto.domain.relationship.ProfileContextBuilder.Statement;
+import cn.aiditto.domain.relationship.ProfileExtractionPrompts;
+import cn.aiditto.domain.relationship.ProfileExtractionValidator;
+import cn.aiditto.domain.relationship.ProfileMerger;
 import cn.aiditto.domain.relationship.ProfileVersion;
 import cn.aiditto.domain.relationship.ProfileVersionPolicy;
 import cn.aiditto.domain.relationship.ProfileVersionPolicy.WriteMode;
 import cn.aiditto.domain.relationship.RelationshipProfileProjector;
 import cn.aiditto.domain.relationship.RelationshipProfileSnapshot;
+import cn.aiditto.domain.relationship.RelationshipTypes.EvidenceSource;
 import cn.aiditto.domain.relationship.SnapshotAdmission;
 import cn.aiditto.infra.web.Times;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,14 +42,19 @@ public class RelationshipProfileService {
     private final JdbcTemplate jdbc;
     private final UserLock userLock;
     private final AnswerEvidenceDirectory answers;
+    private final ProfileInputLoader inputs;
+    private final ExtractionTaskStore tasks;
     private final boolean processingEnabled;
     private final FeatureRegistry registry = FeatureRegistry.v1();
 
     public RelationshipProfileService(JdbcTemplate jdbc, UserLock userLock, AnswerEvidenceDirectory answers,
+                                      ProfileInputLoader inputs, ExtractionTaskStore tasks,
                                       @Value("${aiditto.relationship-profile.processing-enabled:false}") boolean processingEnabled) {
         this.jdbc = jdbc;
         this.userLock = userLock;
         this.answers = answers;
+        this.inputs = inputs;
+        this.tasks = tasks;
         this.processingEnabled = processingEnabled;
     }
 
@@ -89,6 +104,19 @@ public class RelationshipProfileService {
                 SET model_export_authorization = 'granted', updated_at = ?
                 WHERE user_id = ?
                 """, Timestamp.from(now), userId);
+    }
+
+    /** Stops further model export. It does not revoke profile processing or matching consent. */
+    @Transactional
+    public void revokeModelExport(long userId) {
+        requireEnabled();
+        lockActive(userId);
+        if (lifecycle(userId) == null) return;
+        jdbc.update("""
+                UPDATE relationship_profile_lifecycle
+                SET model_export_authorization = 'revoked', updated_at = ?
+                WHERE user_id = ?
+                """, Timestamp.from(Times.millis(Instant.now())), userId);
     }
 
     @Transactional
@@ -141,12 +169,76 @@ public class RelationshipProfileService {
         return apply(userId, claimedSource, server, decision);
     }
 
-    /** Model revisions are a different decision from a deterministic conflict, and this round refuses them. */
+    /**
+     * Refuses a caller-built snapshot. A provisional merge is written only by {@link #commitProvisional},
+     * after the server checks the generation, the source version, and both grants.
+     */
     @Transactional
     public ProfileVersion saveModelRevision(long userId, int claimedSource, long generation, RelationshipProfileSnapshot offered) {
         requireEnabled();
         lockActive(userId);
-        throw new DomainException(ErrorCode.FORBIDDEN, "模型提取尚未接入，不能按模型修订写入画像");
+        throw new DomainException(ErrorCode.FORBIDDEN, "不能提交模型生成的快照");
+    }
+
+    public record ExtractionPermit(long userId, int sourceVersion, int watermark, long generation,
+                                   boolean processingGranted, boolean modelExportGranted) {}
+
+    public record ProvisionalWrite(ProfileVersion version, int accepted) {}
+
+    @Transactional(readOnly = true)
+    public ExtractionPermit readPermit(long userId) {
+        requireEnabled();
+        return permit(userId);
+    }
+
+    /**
+     * Rechecks authorization and the input fingerprint under the user lock, then writes a server-built revision.
+     * The model call has already finished and this transaction does not call a model.
+     */
+    @Transactional
+    public ProvisionalWrite commitProvisional(long userId, long generation, String expectedHash,
+                                              List<Statement> statements, List<ExtractedFeature> proposed) {
+        requireEnabled();
+        lockActive(userId);
+        ExtractionPermit permit = permit(userId);
+        if (!permit.processingGranted() || permit.generation() != generation) {
+            throw new DomainException(ErrorCode.FORBIDDEN, "画像处理授权与这次任务的代次不一致");
+        }
+        if (!permit.modelExportGranted()) {
+            throw new DomainException(ErrorCode.FORBIDDEN, "外部模型授权已撤回，丢弃这次提取");
+        }
+        if (permit.sourceVersion() < 0) {
+            throw DomainException.invalid("sourceProfileVersion", "没有可核对的源版本");
+        }
+        ProfileContext fresh = ProfileContextBuilder.build(inputs.load(userId, permit.sourceVersion(),
+                permit.generation(), true, true, statements));
+        if (!fresh.inputHash().equals(expectedHash)) {
+            throw DomainException.invalid("inputHash", "源数据或代次已变化，丢弃这次提取");
+        }
+        ProfileExtractionValidator.Result validation = ProfileExtractionValidator.check(fresh, proposed, registry);
+        RelationshipProfileSnapshot merged = ProfileMerger.merge(userId,
+                RelationshipProfileProjector.project(userId, fresh.answers(), registry).evidence(),
+                validation.accepted(), registry);
+        RelationshipProfileSnapshot admitted;
+        try {
+            admitted = SnapshotAdmission.admit(merged, registry,
+                    new CompositeEvidenceDirectory(new IssuedEvidenceDirectory(fresh), answers));
+        } catch (IllegalArgumentException e) {
+            throw DomainException.invalid("snapshot", e.getMessage());
+        }
+        Current current = currentRow(userId);
+        ProfileVersionPolicy.Decision decision = ProfileVersionPolicy.decide(
+                true, true, generation, permit.generation(), permit.watermark(),
+                permit.sourceVersion(), permit.sourceVersion(), current != null,
+                current == null ? null : current.hash(), admitted.inputHash(), WriteMode.MODEL_REVISION);
+        if (decision.kind() == ProfileVersionPolicy.Kind.INSERT) {
+            throw DomainException.invalid("sourceProfileVersion", "模型修订只能补充当前源版本上已经写入的确定性画像");
+        }
+        ProfileVersion version = apply(userId, permit.sourceVersion(), admitted, decision);
+        int accepted = (int) admitted.evidence().stream()
+                .filter(item -> item.sourceType() == EvidenceSource.MODEL_INFERENCE).count();
+        tasks.complete(userId, expectedHash, ProfileExtractionPrompts.VERSION, generation, version.inputHash());
+        return new ProvisionalWrite(version, accepted);
     }
 
     /**
@@ -218,7 +310,7 @@ public class RelationshipProfileService {
             case REJECT_UNVERIFIED_SOURCE -> throw DomainException.invalid("sourceProfileVersion", "声明的源版本与 profile.version 不一致");
             case REJECT_STALE -> throw DomainException.invalid("sourceProfileVersion", "旧的源画像不能覆盖已处理的水位");
             case REJECT_CONFLICT -> throw DomainException.invalid("sourceProfileVersion", "同一个源版本的确定性投影不能改成另一份内容");
-            case ACCEPT_REVISION -> throw new DomainException(ErrorCode.FORBIDDEN, "模型提取尚未接入，不能按模型修订写入画像");
+            case ACCEPT_REVISION -> insert(userId, claimedSource, snapshot, decision.watermark());
         };
     }
 
@@ -295,11 +387,27 @@ public class RelationshipProfileService {
 
     private Lifecycle lifecycle(long userId) {
         List<Lifecycle> rows = jdbc.query("""
-                SELECT latest_processed_source_version, generation_epoch, processing_authorization
+                SELECT latest_processed_source_version, generation_epoch,
+                       processing_authorization, model_export_authorization
                 FROM relationship_profile_lifecycle WHERE user_id = ?
                 """, (rs, n) -> new Lifecycle(rs.getInt("latest_processed_source_version"),
-                rs.getLong("generation_epoch"), rs.getString("processing_authorization")), userId);
+                rs.getLong("generation_epoch"), rs.getString("processing_authorization"),
+                rs.getString("model_export_authorization")), userId);
         return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private ExtractionPermit permit(long userId) {
+        String status = jdbc.queryForObject("SELECT status FROM \"user\" WHERE id = ?", String.class, userId);
+        if (status == null) throw new DomainException(ErrorCode.NOT_FOUND, "用户不存在");
+        if (User.DELETING.equals(status) || "purged".equals(status)) {
+            throw new DomainException(ErrorCode.ACCOUNT_INACTIVE, "账号正在注销，不能读写画像");
+        }
+        Lifecycle life = lifecycle(userId);
+        Integer version = profileVersion(userId);
+        return new ExtractionPermit(userId, version == null ? -1 : version,
+                life == null ? 0 : life.watermark(), life == null ? -1 : life.generation(),
+                life != null && "granted".equals(life.processing()),
+                life != null && "granted".equals(life.modelExport()));
     }
 
     private void requireEnabled() {
@@ -310,5 +418,5 @@ public class RelationshipProfileService {
 
     private record Current(int version, String hash, ProfileVersion versionRow) {}
 
-    private record Lifecycle(int watermark, long generation, String processing) {}
+    private record Lifecycle(int watermark, long generation, String processing, String modelExport) {}
 }

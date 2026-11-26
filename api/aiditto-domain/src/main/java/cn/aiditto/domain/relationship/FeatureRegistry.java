@@ -47,6 +47,9 @@ public final class FeatureRegistry {
         add(m, selfEnumSet("support.help_wanted", "希望被帮忙的事",
                 "approaching", "convo", "intoMe", "confident", "whatIWant", "theDate", "justDate"));
         add(m, text("opening.message", "自述开场白"));
+        add(m, def("behavior.scenario.signal", "情景选择中的行为倾向", ValueType.ENUM,
+                Set.of("low", "steady", "high"), null, null, Set.of(Section.BEHAVIOR),
+                Set.of(EvidenceSource.MODEL_INFERENCE, EvidenceSource.SELF_REPORTED), Sensitivity.ORDINARY));
         add(m, preferenceRange("partner.age", "希望对方的年龄段", 18, 80));
         add(m, preferenceRange("partner.height", "希望对方的身高范围", 120, 230));
         add(m, preference("partner.education", "对对方学历的要求", ValueType.ENUM, Set.of("atLeastMine"), null, null));
