@@ -17,7 +17,6 @@ import cn.aiditto.feedback.RelationshipFeedbackStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Instant;
@@ -52,13 +51,7 @@ class ProfileLearningIT extends ApiIT {
                 new SelfDirectionReport("p2", 82101, "self.communication", "quieter", T0.plusSeconds(1)),
                 new SelfDirectionReport("p3", 82101, "self.communication", "quieter", T0.plusSeconds(2))
         ), 82101, 0, 1, T0.plusSeconds(3)).get(0);
-        try {
-            learning.saveProposal(proposal);
-        } catch (DataAccessException ex) {
-            Throwable cause = ex;
-            while (cause.getCause() != null) cause = cause.getCause();
-            throw new IllegalStateException(cause.getClass().getSimpleName() + ": " + cause.getMessage(), ex);
-        }
+        learning.saveProposal(proposal);
         String status = jdbc.queryForObject(
                 "SELECT status FROM profile_learning_proposal WHERE proposal_id = ?", String.class, proposal.proposalId());
         assertThat(status).isEqualTo("PENDING_CONFIRMATION");

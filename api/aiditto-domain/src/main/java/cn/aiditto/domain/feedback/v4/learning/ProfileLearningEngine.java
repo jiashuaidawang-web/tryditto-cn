@@ -72,7 +72,7 @@ public final class ProfileLearningEngine {
                     && !other.learnableTarget().equals(signal.learnableTarget()));
             Section section = feature.startsWith("partner.") ? Section.PREFERENCE : Section.SELF;
             proposals.add(new ProfileLearningProposal(
-                    "hyp." + feature.replace('.', '-') + "." + value,
+                    "hyp." + subject + "." + feature.replace('.', '-') + "." + value,
                     subject, profileVersion, generation, feature, section, null, value,
                     Operator.EQ, Importance.KINDA, List.copyOf(ids), "PREFERENCE_HYPOTHESIS",
                     contradicted ? "CONTRADICTED" : "UNCONFIRMED",
