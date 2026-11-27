@@ -15,7 +15,9 @@
 | `QdrantClientIT` | NOT_RUN | 需要 `AIDITTO_QDRANT_IT=1` |
 | `VectorSyncIT` | NOT_RUN | 需要 Qdrant 变量。它测的是 V3 五路，不是本轮质量 |
 
-`V4VectorSyncTest` 已写进 `.github/workflows/v4-ci.yml` 的必跑清单。领域新测试由 `mvn -pl aiditto-domain test` 全量执行，不靠名单点名。`feature/v4-recall` 的 push 会触发这条工作流。
+`V4VectorSyncTest` 已写进 `.github/workflows/v4-ci.yml` 的必跑清单。领域新测试由 `mvn -pl aiditto-domain test` 全量执行，不靠名单点名。
+
+实现提交 `6156669736cfcdd61c4c430c52133b4f874d3f13`。对应工作流 [V4 CI run 15](https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45959918120) 已完成，结论 success。`domain-tests`、`integration-tests`、`test-reports` 都成功。这条 CI 仍然不跑 `V4QdrantIsolationIT`、`RecallEvalIT`、`RecallExperimentIT`、`QdrantClientIT`、`VectorSyncIT`，它们保持 NOT_RUN。
 
 哈希同步测试断言版本号以 `hash-` 开头。通过只说明工程链路，不说明语义近邻。
 
