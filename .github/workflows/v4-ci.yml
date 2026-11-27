@@ -3,7 +3,7 @@ name: V4 CI
 
 on:
   push:
-    branches: [master_agent_v4]
+    branches: [master_agent_v4, feature/v4-recall]
   pull_request:
     branches: [master_agent_v4]
   workflow_dispatch:
@@ -146,7 +146,7 @@ jobs:
         run: |
           set -eu
           mvn -B -pl aiditto-app -am verify \
-            -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest,ProfileAblationRunnerTest \
+            -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest,ProfileAblationRunnerTest,V4VectorSyncTest \
             -Dsurefire.failIfNoSpecifiedTests=false \
             -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT \
             -Dfailsafe.failIfNoSpecifiedTests=true \
@@ -233,6 +233,13 @@ jobs:
               ],
               "ProfileAblationRunnerTest": [
                   "preflightNamesTheStageWithoutPrintingTheKey",
+              ],
+              "V4VectorSyncTest": [
+                  "syncIsIdempotentAndAStaleVersionCannotOverwrite",
+                  "withdrawnSubjectLeavesTheIndex",
+                  "hashingSyncIsAnEngineeringStandIn",
+                  "productionCollectionIsRefused",
+                  "syntheticPopulationBaselineStaysTwoHundred",
               ],
           }
           reports = pathlib.Path("aiditto-app/target/failsafe-reports")
