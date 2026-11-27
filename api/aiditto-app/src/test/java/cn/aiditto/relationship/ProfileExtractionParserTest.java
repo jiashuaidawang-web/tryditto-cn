@@ -34,4 +34,18 @@ class ProfileExtractionParserTest {
         assertThat(ProfileExtractionParser.parse("").structured()).isFalse();
         assertThat(ProfileExtractionParser.parse(null).structured()).isFalse();
     }
+
+    @Test
+    void readsTheTaskShapeAndDoesNotRewriteCodes() {
+        ProfileExtractionParser.TaskParse parsed = ProfileExtractionParser.parseTask("""
+                {"features":[{"evidenceRef":"ev-1","evidenceSpan":"原文","proposedSection":"SELF",
+                "proposedFeatureCode":"not.a.real.code","proposedValue":"slow","hardConstraint":false}]}
+                """);
+        assertThat(parsed.structured()).isTrue();
+        assertThat(parsed.cited()).hasSize(1);
+        assertThat(parsed.cited().get(0).feature().featureCode()).isEqualTo("not.a.real.code");
+        assertThat(parsed.cited().get(0).evidenceSpan()).isEqualTo("原文");
+        assertThat(ProfileExtractionParser.verdict("{\"verdict\":\"MAYBE\"}")).isEmpty();
+        assertThat(ProfileExtractionParser.verdict("{\"verdict\":\"SUPPORTED\"}")).isEqualTo("SUPPORTED");
+    }
 }

@@ -146,7 +146,7 @@ jobs:
         run: |
           set -eu
           mvn -B -pl aiditto-app -am verify \
-            -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest \
+            -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest,ProfileAblationRunnerTest \
             -Dsurefire.failIfNoSpecifiedTests=false \
             -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT \
             -Dfailsafe.failIfNoSpecifiedTests=true \
@@ -229,6 +229,10 @@ jobs:
               "ProfileExtractionParserTest": [
                   "acceptsOnlyAFeatureArray",
                   "stripsAFenceAndRejectsMissingOrBrokenJson",
+                  "readsTheTaskShapeAndDoesNotRewriteCodes",
+              ],
+              "ProfileAblationRunnerTest": [
+                  "preflightNamesTheStageWithoutPrintingTheKey",
               ],
           }
           reports = pathlib.Path("aiditto-app/target/failsafe-reports")

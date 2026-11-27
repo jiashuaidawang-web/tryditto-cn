@@ -114,8 +114,10 @@ public final class ProfileContextBuilder {
             if (statement.retracted()) continue;
             if (statement.expiresAtMillis() != null && statement.expiresAtMillis() <= now) continue;
             if (!FreeTextPolicy.evaluationMayExpose(statement.text())) continue;
-            if (!"SELF".equals(statement.kind()) && !"PREFERENCE".equals(statement.kind())) continue;
-            raw.add(new Raw(statement.kind() + "_STATEMENT", null, null, statement.text().strip()));
+            if (!"SELF".equals(statement.kind()) && !"PREFERENCE".equals(statement.kind())
+                    && !"USER".equals(statement.kind())) continue;
+            String kind = "USER".equals(statement.kind()) ? "USER_STATEMENT" : statement.kind() + "_STATEMENT";
+            raw.add(new Raw(kind, null, null, statement.text().strip()));
         }
     }
 

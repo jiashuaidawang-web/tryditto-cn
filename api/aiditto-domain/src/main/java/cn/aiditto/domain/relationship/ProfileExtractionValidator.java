@@ -43,7 +43,33 @@ public final class ProfileExtractionValidator {
             if (feature.hardConstraint()) hardRequests++;
             String code = feature.featureCode() == null ? "" : feature.featureCode();
             try {
-                Outcome outcome = one(context, feature, registry);
+                Outcome outcome = one(context, feature, registry, "");
+                verdicts.add(new Verdict(code, outcome.support()));
+                if (outcome.support() == SemanticSupport.SEMANTIC_SUPPORTED) accepted.addAll(outcome.evidence());
+                else rejected.add(new Rejection(code, outcome.support().name()));
+            } catch (IllegalArgumentException e) {
+                if ("invalid-ref".equals(e.getMessage())) invalidRefs++;
+                verdicts.add(new Verdict(code, SemanticSupport.REJECTED));
+                rejected.add(new Rejection(code, e.getMessage()));
+            }
+        }
+        return new Result(accepted, rejected, verdicts, invalidRefs, hardRequests);
+    }
+
+    /** Experimental citations may carry the exact span the model claims to have read. */
+    public static Result checkCited(ProfileContext context, List<CitedFeature> proposed, FeatureRegistry registry) {
+        List<ProfileEvidence> accepted = new ArrayList<>();
+        List<Rejection> rejected = new ArrayList<>();
+        List<Verdict> verdicts = new ArrayList<>();
+        int invalidRefs = 0;
+        int hardRequests = 0;
+        if (proposed == null) return new Result(List.of(), List.of(), List.of(), 0, 0);
+        for (CitedFeature cited : proposed) {
+            ExtractedFeature feature = cited.feature();
+            if (feature.hardConstraint()) hardRequests++;
+            String code = feature.featureCode() == null ? "" : feature.featureCode();
+            try {
+                Outcome outcome = one(context, feature, registry, cited.evidenceSpan());
                 verdicts.add(new Verdict(code, outcome.support()));
                 if (outcome.support() == SemanticSupport.SEMANTIC_SUPPORTED) accepted.addAll(outcome.evidence());
                 else rejected.add(new Rejection(code, outcome.support().name()));
@@ -58,7 +84,7 @@ public final class ProfileExtractionValidator {
 
     private record Outcome(SemanticSupport support, List<ProfileEvidence> evidence) {}
 
-    private static Outcome one(ProfileContext context, ExtractedFeature feature, FeatureRegistry registry) {
+    private static Outcome one(ProfileContext context, ExtractedFeature feature, FeatureRegistry registry, String span) {
         if (feature.hardConstraint()) throw new IllegalArgumentException("hard-constraint");
         if (!Double.isFinite(feature.confidence()) || feature.confidence() < 0 || feature.confidence() > 1) {
             throw new IllegalArgumentException("confidence");
@@ -83,7 +109,12 @@ public final class ProfileExtractionValidator {
             ProfileContext.Item item = context.item(ref);
             if (item == null) throw new IllegalArgumentException("invalid-ref");
             if (!eligible(item, section, feature)) throw new IllegalArgumentException("unsupported");
-            support = weaker(support, supportOf(item, section, feature));
+            if ("USER_STATEMENT".equals(item.kind())) {
+                if (span == null || span.isBlank() || item.text() == null || !item.text().contains(span)) {
+                    throw new IllegalArgumentException("span");
+                }
+            }
+            support = weaker(support, supportOf(item, section, feature, span));
         }
         if (support != SemanticSupport.SEMANTIC_SUPPORTED) return new Outcome(support, List.of());
         FeatureValue claim = claim(definition, feature.proposedValue());
@@ -108,15 +139,29 @@ public final class ProfileExtractionValidator {
         return SemanticSupport.SEMANTIC_SUPPORTED;
     }
 
-    private static SemanticSupport supportOf(ProfileContext.Item item, Section section, ExtractedFeature feature) {
+    private static SemanticSupport supportOf(ProfileContext.Item item, Section section, ExtractedFeature feature, String span) {
         return switch (item.kind()) {
             case "SELF_STATEMENT", "PREFERENCE_STATEMENT" -> StatementSemantics.judge(
                     item.text(), section, feature.featureCode(), feature.proposedValue(), feature.importance());
+            case "USER_STATEMENT" -> judgeUnified(item.text(), span, section, feature);
             case "SCENARIO" -> feature.proposedValue().equals(item.approvedMeaning())
                     ? SemanticSupport.SEMANTIC_SUPPORTED : SemanticSupport.REJECTED;
             case "QUESTIONNAIRE" -> SemanticSupport.REJECTED;
             default -> SemanticSupport.REJECTED;
         };
+    }
+
+    /**
+     * A unified statement still has to survive the same closed rules.
+     * The span is judged on its own. Contradiction cues in the whole sentence still reject it,
+     * so a phrase cannot be cut out of a hypothesis or a quotation.
+     */
+    private static SemanticSupport judgeUnified(String text, String span, Section section, ExtractedFeature feature) {
+        SemanticSupport whole = StatementSemantics.judge(text, section, feature.featureCode(), feature.proposedValue(), feature.importance());
+        SemanticSupport part = StatementSemantics.judge(span, section, feature.featureCode(), feature.proposedValue(), feature.importance());
+        if (whole == SemanticSupport.REJECTED || part == SemanticSupport.REJECTED) return SemanticSupport.REJECTED;
+        if (part == SemanticSupport.SEMANTIC_SUPPORTED) return SemanticSupport.SEMANTIC_SUPPORTED;
+        return SemanticSupport.SEMANTIC_SUPPORT_PENDING;
     }
 
     private static boolean eligible(ProfileContext.Item item, Section section, ExtractedFeature feature) {
@@ -127,6 +172,7 @@ public final class ProfileExtractionValidator {
                     && "behavior.scenario.signal".equals(feature.featureCode())
                     && "SCENARIO_RESPONSE".equals(feature.behaviorKind())
                     && item.approvedMeaning() != null;
+            case "USER_STATEMENT" -> (section == Section.SELF || section == Section.PREFERENCE) && blank(feature.behaviorKind());
             case "QUESTIONNAIRE" -> false;
             default -> false;
         };

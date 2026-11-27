@@ -58,10 +58,12 @@ def secrets_of(values):
 
 
 def main():
-    if len(sys.argv) != 3:
-        sys.stderr.write("usage: live-eval-remote.py longcat|deepseek preflight|smoke|full|scan\n")
+    if len(sys.argv) < 3 or len(sys.argv) > 5:
+        sys.stderr.write("usage: live-eval-remote.py longcat|deepseek preflight|smoke|full|scan [e0|e1|e2|e3|e4] [v1|v2holdout]\n")
         return 2
     role, mode = sys.argv[1], sys.argv[2]
+    stage = sys.argv[3] if len(sys.argv) > 3 else "e0"
+    dataset = sys.argv[4] if len(sys.argv) > 4 else "v1"
     fields = role_fields(role)
     if fields is None:
         return 2
@@ -76,7 +78,8 @@ def main():
     model = values[fields[2]].strip()
     host = urlparse(values[fields[0]].strip()).hostname or "unparsed"
     sys.stdout.write("config role=%s model=%s host=%s key=present fallback=cleared\n" % (role, model, host))
-    report = os.path.join(root, "reports", role)
+    label = stage if dataset == "v1" else stage + "-" + dataset
+    report = os.path.join(root, "reports", role, label)
     logs = os.path.join(root, "logs")
     os.makedirs(report, 0o700, exist_ok=True)
     os.makedirs(logs, 0o700, exist_ok=True)
@@ -91,9 +94,9 @@ def main():
         "LLM_PRIMARY_API_KEY": values[fields[1]].strip(),
         "LLM_PRIMARY_MODEL": model,
         "LLM_TIMEOUT_MS": "45000",
-        "LIVE_EVAL_OUT": "/eval/reports/" + role,
+        "LIVE_EVAL_OUT": "/eval/reports/" + role + "/" + label,
     }
-    log_path = os.path.join(logs, "%s-%s.log" % (role, mode))
+    log_path = os.path.join(logs, "%s-%s-%s.log" % (role, label, mode))
     cmd = [
         "docker", "run", "--rm",
         "--memory", "800m",
@@ -107,8 +110,12 @@ def main():
         "-e", "LLM_TIMEOUT_MS",
         "-e", "LIVE_EVAL_OUT",
         "eclipse-temurin:17-jre",
-        "java", "-Xmx256m", "-cp", "lib/*", "cn.aiditto.relationship.ProfileLiveEvalRunner", mode,
+        "java", "-Xmx256m", "-cp", "lib/*",
     ]
+    if stage == "e0":
+        cmd.extend(["cn.aiditto.relationship.ProfileLiveEvalRunner", mode])
+    else:
+        cmd.extend(["cn.aiditto.relationship.ProfileAblationRunner", stage, mode, dataset])
     import subprocess
     with open(log_path, "w") as log:
         code = subprocess.call(cmd, env=clean, stdout=log, stderr=subprocess.STDOUT)
