@@ -426,4 +426,4 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - 学习没有执行。反馈学习质量是 NOT_RUN。
 - 真实关系质量和生产启用是 NOT_RUN / NO-GO。最终匹配算法质量仍是 NO-GO。
 
-细节见 `V4-F01-audit.md` 和 `V4-F01-test-report.md`。
+细节见 `V4-F01-audit.md` 和 `V4-F01-test-report.md`。分支 `feature/v4-feedback-events` 的实现提交 `1180943cca705718694d86919353f4cf5c466540`，CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46050654255 ，四个作业 success。

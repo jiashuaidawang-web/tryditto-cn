@@ -1,6 +1,8 @@
 # V4-F01 测试
 
-领域测试在本地执行。PostgreSQL 集成测试写在 `FeedbackEventIT`，并加进 `.github/workflows/v4-ci.yml` 的 `-Dit.test` 和要求执行的方法名单。本地没有可用的 PostgreSQL，这一份报告先记下领域结果。集成数字以该分支的 CI 为准，CI 地址在运行完成后补上。
+领域测试在本地执行。PostgreSQL 集成测试由 CI 的真实 PostgreSQL 16 执行。本地没有 PostgreSQL，所以没有在这台机器上重跑 `FeedbackEventIT`。
+
+实现与集成名单在 `1180943cca705718694d86919353f4cf5c466540`。CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46050654255 。四个作业都是 success。`FeedbackEventIT` 的 6 个方法在作业的必跑名单里，缺一个方法作业就会失败。GitHub 日志需要仓库管理员权限，没有从远程拉到 Surefire 总数。
 
 F01 从 `bbc092e8b0120f18032432dc22d1e56c7636b6cb` 拉出。该提交已并入 `master_agent_v4`，CI 是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46049404560 。四个作业 success。
 
@@ -34,6 +36,6 @@ F01 从 `bbc092e8b0120f18032432dc22d1e56c7636b6cb` 拉出。该提交已并入 `
 - `acceptAndRetractBothRemainAndLearningStops`：接受和撤回都留下，学习资格关闭。
 - `secondConsumptionDoesNotClaimAgain`：第二次消费声明失败，重新加载后是 `ALREADY_CONSUMED`。
 
-这些方法还没在本地的 PostgreSQL 上跑过。工作流会在 CI 的真实 PostgreSQL 16 上执行，并且少一个方法就会让作业失败。原有的 `PublishSafetyIT`、`ConsentLegacyIT`、`MatchIT`、`RelationshipProfileIT`、`ProfileExtractionIT` 仍在名单里。
+原有的 `PublishSafetyIT`、`ConsentLegacyIT`、`MatchIT`、`RelationshipProfileIT`、`ProfileExtractionIT` 仍在同一份名单里，这次集成作业一起成功。
 
 本轮没有调用模型，没有改口味，没有改匹配权重，也没有读生产反馈。
