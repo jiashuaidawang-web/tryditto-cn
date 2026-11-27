@@ -226,8 +226,8 @@
       "hardFilterResult": [],
       "scoreAB": null,
       "scoreBA": null,
-      "coverageAB": null,
-      "coverageBA": null,
+      "coverageAB": 0,
+      "coverageBA": 0,
       "arithmeticMean": null,
       "harmonicMean": null,
       "minDirection": null,
@@ -258,7 +258,7 @@
       "generationA": 1,
       "generationB": 1,
       "status": "HARD_VETO",
-      "hardFilterResult": ["AGE"],
+      "hardFilterResult": ["HARD_AGE"],
       "scoreAB": null,
       "scoreBA": null,
       "coverageAB": null,
@@ -272,16 +272,8 @@
       "strongPreferenceConflicts": [],
       "unknownFeatures": [],
       "contributions": [
-        {"direction": "AB", "preferenceCode": "partner.communication", "targetFeatureCode": "self.communication", "expectedValue": "quiet", "actualValue": "quiet", "importance": "SUPER", "operator": "EQ", "evidenceStatus": "CONFIRMED", "satisfaction": "SATISFIED", "weight": 3, "satisfactionValue": 1, "reasonCode": "EXACT"},
-        {"direction": "AB", "preferenceCode": "partner.pace", "targetFeatureCode": "self.pace", "expectedValue": "slow", "actualValue": "slow", "importance": "SUPER", "operator": "EQ", "evidenceStatus": "CONFIRMED", "satisfaction": "SATISFIED", "weight": 3, "satisfactionValue": 1, "reasonCode": "EXACT"},
-        {"direction": "AB", "preferenceCode": "partner.schedule", "targetFeatureCode": "self.schedule", "expectedValue": "early", "actualValue": "early", "importance": "SUPER", "operator": "EQ", "evidenceStatus": "CONFIRMED", "satisfaction": "SATISFIED", "weight": 3, "satisfactionValue": 1, "reasonCode": "EXACT"},
-        {"direction": "AB", "preferenceCode": "partner.social.initiative", "targetFeatureCode": "self.social.initiative", "expectedValue": "low", "actualValue": "low", "importance": "SUPER", "operator": "EQ", "evidenceStatus": "CONFIRMED", "satisfaction": "SATISFIED", "weight": 3, "satisfactionValue": 1, "reasonCode": "EXACT"},
-        {"direction": "BA", "preferenceCode": "partner.communication", "targetFeatureCode": "self.communication", "expectedValue": "quiet", "actualValue": "quiet", "importance": "SUPER", "operator": "EQ", "evidenceStatus": "CONFIRMED", "satisfaction": "SATISFIED", "weight": 3, "satisfactionValue": 1, "reasonCode": "EXACT"},
-        {"direction": "BA", "preferenceCode": "partner.pace", "targetFeatureCode": "self.pace", "expectedValue": "slow", "actualValue": "slow", "importance": "SUPER", "operator": "EQ", "evidenceStatus": "CONFIRMED", "satisfaction": "SATISFIED", "weight": 3, "satisfactionValue": 1, "reasonCode": "EXACT"},
-        {"direction": "BA", "preferenceCode": "partner.schedule", "targetFeatureCode": "self.schedule", "expectedValue": "early", "actualValue": "early", "importance": "SUPER", "operator": "EQ", "evidenceStatus": "CONFIRMED", "satisfaction": "SATISFIED", "weight": 3, "satisfactionValue": 1, "reasonCode": "EXACT"},
-        {"direction": "BA", "preferenceCode": "partner.social.initiative", "targetFeatureCode": "self.social.initiative", "expectedValue": "low", "actualValue": "low", "importance": "SUPER", "operator": "EQ", "evidenceStatus": "CONFIRMED", "satisfaction": "SATISFIED", "weight": 3, "satisfactionValue": 1, "reasonCode": "EXACT"}
       ],
-      "judgement": "年龄硬约束失败后，解释行可以留下，可排序分数必须为空。"
+      "judgement": "年龄硬约束失败后不生成可供后续推理使用的画像明细。"
     }
   ]
 }

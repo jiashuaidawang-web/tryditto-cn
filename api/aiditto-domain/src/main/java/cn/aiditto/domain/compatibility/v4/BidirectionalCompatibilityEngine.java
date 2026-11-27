@@ -1,20 +1,16 @@
 package cn.aiditto.domain.compatibility.v4;
 
-import cn.aiditto.domain.matching.HardFilter;
-import cn.aiditto.domain.matching.HardRule;
-import cn.aiditto.domain.matching.MatchingInput;
-
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 /**
- * Offline bidirectional fit. Hard constraints stay in {@link HardFilter}.
- * This class does not call the production {@code Scorer} and does not call a model.
+ * Offline bidirectional fit. Authorization and hard constraints run before any profile row is produced.
+ * This class does not call the production scorer or a model, and it does not invent a matching history.
  */
 public final class BidirectionalCompatibilityEngine {
-    public static final LocalDate WEEK = LocalDate.of(2026, 11, 25);
+    public static final java.time.LocalDate WEEK = java.time.LocalDate.of(2026, 11, 25);
+    public static final java.time.Instant NOW = java.time.Instant.parse("2026-11-27T06:00:00Z");
 
     private final DirectionalCompatibilityScorer scorer;
     private final FeatureAlignmentRegistry alignments;
@@ -28,40 +24,43 @@ public final class BidirectionalCompatibilityEngine {
         return new BidirectionalCompatibilityEngine(FeatureAlignmentRegistry.v1());
     }
 
-    public PairCompatibilityResult score(CompatibilitySubject left, CompatibilitySubject right) {
-        DirectionalCompatibilityResult ab = scorer.score(left, right, "AB");
-        DirectionalCompatibilityResult ba = scorer.score(right, left, "BA");
-        List<String> hard = new ArrayList<>();
-        if (!left.current() || left.withdrawn() || !right.current() || right.withdrawn()) {
-            return publish(left, right, hard, null, null, null, null, CompatibilityStatus.NOT_CURRENT, ab, ba);
-        }
-        MatchingInput input = MatchingInput.of(WEEK, List.of(left.candidate(), right.candidate()), 1);
-        for (HardRule rule : HardFilter.violations(left.candidate(), right.candidate(), input)) hard.add(rule.name());
-        if (!hard.isEmpty()) {
-            return publish(left, right, hard, null, null, null, null, CompatibilityStatus.HARD_VETO, ab, ba);
-        }
-        CompatibilityStatus status = statusOf(ab, ba);
-        Double scoreAB = status == CompatibilityStatus.SCORED || ab.score() != null ? ab.score() : null;
-        Double scoreBA = status == CompatibilityStatus.SCORED || ba.score() != null ? ba.score() : null;
-        if (status != CompatibilityStatus.SCORED && status != CompatibilityStatus.INSUFFICIENT_EVIDENCE) {
-            scoreAB = ab.status() == CompatibilityStatus.SCORED ? ab.score() : null;
-            scoreBA = ba.status() == CompatibilityStatus.SCORED ? ba.score() : null;
-        }
-        Double coverageAB = ab.coverage();
-        Double coverageBA = ba.coverage();
-        if (ab.status() == CompatibilityStatus.NOT_CURRENT) coverageAB = null;
-        if (ba.status() == CompatibilityStatus.NOT_CURRENT) coverageBA = null;
-        return publish(left, right, hard, scoreAB, scoreBA, coverageAB, coverageBA, status, ab, ba);
+    public CompatibilityDecision decide(CompatibilitySubject left, CompatibilitySubject right, CompatibilityContext context) {
+        return CompatibilityDecision.from(score(left, right, context));
     }
 
-    private PairCompatibilityResult publish(CompatibilitySubject left, CompatibilitySubject right, List<String> hard,
+    public PairCompatibilityResult score(CompatibilitySubject left, CompatibilitySubject right, CompatibilityContext context) {
+        List<String> blocked = context.blockReasons(left, right);
+        if (!blocked.isEmpty()) {
+            CompatibilityStatus status = statusForBlock(blocked);
+            return publish(left, right, blocked, null, null, null, null, status,
+                    empty(left, right, "AB", status), empty(right, left, "BA", status));
+        }
+        DirectionalCompatibilityResult ab = scorer.score(left, right, "AB");
+        DirectionalCompatibilityResult ba = scorer.score(right, left, "BA");
+        return publish(left, right, List.of(), ab.score(), ba.score(), ab.coverage(), ba.coverage(), statusOf(ab, ba), ab, ba);
+    }
+
+    private static CompatibilityStatus statusForBlock(List<String> blocked) {
+        if (blocked.stream().anyMatch(code -> code.equals("PROFILE_STALE") || code.equals("PROFILE_WITHDRAWN"))) {
+            return CompatibilityStatus.NOT_CURRENT;
+        }
+        if (blocked.stream().anyMatch(code -> code.startsWith("HARD_"))) return CompatibilityStatus.HARD_VETO;
+        return CompatibilityStatus.NOT_ELIGIBLE;
+    }
+
+    private PairCompatibilityResult publish(CompatibilitySubject left, CompatibilitySubject right, List<String> blocked,
                                             Double scoreAB, Double scoreBA, Double coverageAB, Double coverageBA,
                                             CompatibilityStatus status, DirectionalCompatibilityResult ab,
                                             DirectionalCompatibilityResult ba) {
+        boolean sealed = status == CompatibilityStatus.HARD_VETO
+                || status == CompatibilityStatus.NOT_CURRENT
+                || status == CompatibilityStatus.NOT_ELIGIBLE;
         List<FeatureMatchContribution> rows = new ArrayList<>();
-        rows.addAll(ab.contributions());
-        rows.addAll(ba.contributions());
-        rows.sort(Comparator.comparing(FeatureMatchContribution::direction).thenComparing(FeatureMatchContribution::preferenceCode));
+        if (!sealed) {
+            rows.addAll(ab.contributions());
+            rows.addAll(ba.contributions());
+            rows.sort(Comparator.comparing(FeatureMatchContribution::direction).thenComparing(FeatureMatchContribution::preferenceCode));
+        }
         List<String> conflicts = new ArrayList<>();
         List<String> unknown = new ArrayList<>();
         for (FeatureMatchContribution row : rows) {
@@ -70,11 +69,19 @@ public final class BidirectionalCompatibilityEngine {
             }
             if (row.satisfaction() == Satisfaction.UNKNOWN) unknown.add(row.direction() + ":" + row.preferenceCode());
         }
-        Double strongAB = ab.evidence().strongSatisfaction();
-        Double strongBA = ba.evidence().strongSatisfaction();
+        Double strongAB = sealed ? null : ab.evidence().strongSatisfaction();
+        Double strongBA = sealed ? null : ba.evidence().strongSatisfaction();
+        if (sealed) {
+            scoreAB = null;
+            scoreBA = null;
+            coverageAB = null;
+            coverageBA = null;
+            ab = empty(left, right, "AB", status);
+            ba = empty(right, left, "BA", status);
+        }
         return new PairCompatibilityResult(
                 left.userId(), right.userId(), left.profileVersion(), right.profileVersion(),
-                left.generation(), right.generation(), hard,
+                left.generation(), right.generation(), blocked,
                 scoreAB, scoreBA, coverageAB, coverageBA,
                 CompatibilityAggregator.arithmetic(scoreAB, scoreBA),
                 CompatibilityAggregator.harmonic(scoreAB, scoreBA),
@@ -85,6 +92,13 @@ public final class BidirectionalCompatibilityEngine {
                 conflicts, unknown, rows,
                 CompatibilityFormula.VERSION, alignments.featureRegistryVersion(), alignments.version(),
                 status, ab, ba);
+    }
+
+    private static DirectionalCompatibilityResult empty(CompatibilitySubject chooser, CompatibilitySubject target,
+                                                        String direction, CompatibilityStatus status) {
+        EvidenceCoverage evidence = new EvidenceCoverage(0, 0, 0, 0, null, null, null, 0);
+        return new DirectionalCompatibilityResult(chooser.userId(), target.userId(), direction, null, null,
+                evidence, List.of(), 0, 0, status);
     }
 
     private static CompatibilityStatus statusOf(DirectionalCompatibilityResult ab, DirectionalCompatibilityResult ba) {

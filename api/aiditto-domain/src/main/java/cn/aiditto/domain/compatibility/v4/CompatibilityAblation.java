@@ -112,6 +112,13 @@ public final class CompatibilityAblation {
     }
 
     private static List<MethodReport> evaluate(BidirectionalCompatibilityEngine engine, List<CompatibilityPopulation.LabeledPair> pairs) {
+        List<CompatibilitySubject> people = new java.util.ArrayList<>();
+        for (CompatibilityPopulation.LabeledPair pair : pairs) {
+            people.add(pair.seeker());
+            people.add(pair.candidate());
+        }
+        CompatibilityContext context = CompatibilityContext.experiment(
+                BidirectionalCompatibilityEngine.WEEK, BidirectionalCompatibilityEngine.NOW, people);
         Map<Long, List<Scored>> bySeeker = new LinkedHashMap<>();
         int unknown = 0;
         int withheld = 0;
@@ -122,7 +129,7 @@ public final class CompatibilityAblation {
         List<Long> scorerLatency = new ArrayList<>();
         for (CompatibilityPopulation.LabeledPair pair : pairs) {
             long started = System.nanoTime();
-            PairCompatibilityResult result = engine.score(pair.seeker(), pair.candidate());
+            PairCompatibilityResult result = engine.score(pair.seeker(), pair.candidate(), context);
             engineLatency.add(System.nanoTime() - started);
             long v3Started = System.nanoTime();
             int v3 = Scorer.score(pair.seeker().candidate(), pair.candidate().candidate(),

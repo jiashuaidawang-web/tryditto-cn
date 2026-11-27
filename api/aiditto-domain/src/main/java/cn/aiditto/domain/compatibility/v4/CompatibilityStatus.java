@@ -5,5 +5,6 @@ public enum CompatibilityStatus {
     INSUFFICIENT_EVIDENCE,
     NO_PREFERENCE,
     HARD_VETO,
-    NOT_CURRENT
+    NOT_CURRENT,
+    NOT_ELIGIBLE
 }

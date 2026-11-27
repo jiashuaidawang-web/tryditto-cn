@@ -69,10 +69,15 @@ public final class CompatibilityRecallStudy {
         int at20 = recalled(preferred, top50, 20);
         int at50 = recalled(preferred, top50, 50);
         BidirectionalCompatibilityEngine engine = BidirectionalCompatibilityEngine.v1();
+        List<CompatibilitySubject> scoredPeople = new ArrayList<>();
+        scoredPeople.add(seeker);
+        scoredPeople.addAll(preferred);
+        CompatibilityContext context = CompatibilityContext.experiment(
+                BidirectionalCompatibilityEngine.WEEK, BidirectionalCompatibilityEngine.NOW, scoredPeople);
         int fullRankedFirst = 0;
         int scored = 0;
         for (CompatibilitySubject match : preferred) {
-            PairCompatibilityResult result = engine.score(seeker, match);
+            PairCompatibilityResult result = engine.score(seeker, match, context);
             if (result.status() == CompatibilityStatus.SCORED && result.minDirection() != null && result.minDirection() >= 60) {
                 scored++;
                 fullRankedFirst++;
@@ -82,7 +87,7 @@ public final class CompatibilityRecallStudy {
         Set<Long> top20Ids = top50.hits().stream().limit(20).map(V4RecallEngine.Hit::candidateId).collect(java.util.stream.Collectors.toSet());
         for (CompatibilitySubject match : preferred) {
             if (!top20Ids.contains(match.userId())) continue;
-            PairCompatibilityResult result = engine.score(seeker, match);
+            PairCompatibilityResult result = engine.score(seeker, match, context);
             if (result.status() == CompatibilityStatus.SCORED) top20Scored++;
         }
         String note = "M01 挑战保留集 Recall@20 仍是 7/45，本实验没有重调它的权重。"

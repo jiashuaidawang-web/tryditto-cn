@@ -24,8 +24,8 @@ class BidirectionalCompatibilityTest {
     void directionsStaySeparateAndSwapKeepsTheAggregate() {
         CompatibilitySubject left = person(1, new String[]{"slow", "quiet", "low", "early"}, new String[]{"slow", "quiet", "low", "early"});
         CompatibilitySubject right = person(2, new String[]{"slow", "quiet", "low", "early"}, new String[]{"slow", "frequent", "high", "late"});
-        PairCompatibilityResult forward = engine.score(left, right);
-        PairCompatibilityResult backward = engine.score(right, left);
+        PairCompatibilityResult forward = fit(left, right);
+        PairCompatibilityResult backward = fit(right, left);
         assertThat(forward.scoreAB()).isEqualTo(100.0);
         assertThat(forward.scoreBA()).isEqualTo(25.0);
         assertThat(backward.scoreAB()).isEqualTo(forward.scoreBA());
@@ -48,7 +48,7 @@ class BidirectionalCompatibilityTest {
         CompatibilitySubject chooser = subject(2, List.of(feature("self.pace", "slow")), List.of(
                 CompatibilitySubject.preference("partner.pace", "slow", Importance.SUPER),
                 CompatibilitySubject.preference("partner.communication", "frequent", Importance.NONE)));
-        PairCompatibilityResult result = engine.score(chooser, self);
+        PairCompatibilityResult result = fit(chooser, self);
         assertThat(result.scoreAB()).isEqualTo(75.0);
         FeatureMatchContribution pace = row(result, "AB", "partner.pace");
         FeatureMatchContribution communication = row(result, "AB", "partner.communication");
@@ -61,7 +61,7 @@ class BidirectionalCompatibilityTest {
     void unknownIsNotZeroOrFiftyAndAZeroDenominatorStaysUndefined() {
         CompatibilitySubject chooser = person(1, new String[]{"slow", "quiet", "low", "early"}, new String[]{"slow", "quiet", "low", "early"});
         CompatibilitySubject missing = subject(2, List.of(), List.of(CompatibilitySubject.preference("partner.pace", "slow", Importance.SUPER)));
-        PairCompatibilityResult unknown = engine.score(chooser, missing);
+        PairCompatibilityResult unknown = fit(chooser, missing);
         assertThat(unknown.scoreAB()).isNull();
         assertThat(unknown.coverageAB()).isEqualTo(0.0);
         assertThat(unknown.status()).isEqualTo(CompatibilityStatus.INSUFFICIENT_EVIDENCE);
@@ -71,7 +71,7 @@ class BidirectionalCompatibilityTest {
         CompatibilitySubject unbounded = subject(3, List.of(feature("self.pace", "slow")), List.of(
                 new PreferenceTarget("partner.pace", Operator.EQ, new FeatureValue.Unbounded(), Importance.SUPER,
                         ConstraintType.UNBOUNDED, 1.0, List.of(), FeatureStatus.CONFIRMED)));
-        PairCompatibilityResult open = engine.score(unbounded, chooser);
+        PairCompatibilityResult open = fit(unbounded, chooser);
         assertThat(open.scoreAB()).isNull();
         assertThat(open.coverageAB()).isNull();
         assertThat(row(open, "AB", "partner.pace").satisfaction()).isEqualTo(Satisfaction.NOT_APPLICABLE);
@@ -84,18 +84,21 @@ class BidirectionalCompatibilityTest {
         CompatibilitySubject withheld = subject(2, List.of(
                 CompatibilitySubject.feature("self.pace", new FeatureValue.Withheld(), FeatureStatus.CONFIRMED),
                 feature("self.communication", "quiet")), List.of());
-        PairCompatibilityResult hidden = engine.score(chooser, withheld);
+        PairCompatibilityResult hidden = fit(chooser, withheld);
         assertThat(hidden.evidenceContributions()).noneMatch(row -> "WITHHELD".equals(row.actualValue()) || "WITHHELD".equals(row.expectedValue()));
-        assertThat(hidden.explanationAB().withheldOmitted()).isEqualTo(1);
+        assertThat(row(hidden, "AB", "partner.pace").reasonCode()).isEqualTo("TARGET_NOT_PUBLIC");
+        assertThat(row(hidden, "AB", "partner.pace").actualValue()).isNull();
+        assertThat(hidden.explanationAB().withheldOmitted()).isZero();
+        assertThat(hidden.coverageAB()).isEqualTo(0.0);
 
         CompatibilitySubject contested = subject(3, List.of(
                 CompatibilitySubject.feature("self.pace", null, FeatureStatus.CONTESTED)), List.of());
-        PairCompatibilityResult fight = engine.score(chooser, contested);
+        PairCompatibilityResult fight = fit(chooser, contested);
         assertThat(row(fight, "AB", "partner.pace").satisfaction()).isEqualTo(Satisfaction.CONTESTED);
         assertThat(fight.scoreAB()).isNull();
 
         CompatibilitySubject empty = person(4, new String[]{"slow", "quiet", "low", "early"}, new String[0]);
-        PairCompatibilityResult none = engine.score(empty, chooser);
+        PairCompatibilityResult none = fit(empty, chooser);
         assertThat(none.explanationAB().status()).isEqualTo(CompatibilityStatus.NO_PREFERENCE);
         assertThat(none.scoreAB()).isNull();
         assertThat(none.scoreBA()).isEqualTo(100.0);
@@ -107,7 +110,7 @@ class BidirectionalCompatibilityTest {
         CompatibilitySubject target = person(1, new String[]{"slow", "quiet", "low", "early"}, new String[0]);
         CompatibilitySubject stated = subject(2, List.of(), List.of(
                 CompatibilitySubject.preference("partner.pace", "slow", Importance.NONE)));
-        PairCompatibilityResult result = engine.score(stated, target);
+        PairCompatibilityResult result = fit(stated, target);
         assertThat(result.explanationAB().status()).isEqualTo(CompatibilityStatus.SCORED);
         assertThat(result.scoreAB()).isEqualTo(100.0);
         assertThat(row(result, "AB", "partner.pace").weight()).isEqualTo(1);
@@ -119,13 +122,13 @@ class BidirectionalCompatibilityTest {
         CompatibilitySubject wantsSteady = subject(2, List.of(), List.of(
                 CompatibilitySubject.preference("partner.pace", "steady", Importance.SUPER),
                 CompatibilitySubject.preference("partner.communication", "direct", Importance.SUPER)));
-        PairCompatibilityResult adjacent = engine.score(wantsSteady, slow);
+        PairCompatibilityResult adjacent = fit(wantsSteady, slow);
         assertThat(row(adjacent, "AB", "partner.pace").satisfaction()).isEqualTo(Satisfaction.PARTIALLY_SATISFIED);
         assertThat(row(adjacent, "AB", "partner.communication").satisfaction()).isEqualTo(Satisfaction.UNSATISFIED);
 
         CompatibilitySubject wantsFast = subject(3, List.of(), List.of(
                 CompatibilitySubject.preference("partner.pace", "fast", Importance.SUPER)));
-        assertThat(row(engine.score(wantsFast, slow), "AB", "partner.pace").satisfaction()).isEqualTo(Satisfaction.UNSATISFIED);
+        assertThat(row(fit(wantsFast, slow), "AB", "partner.pace").satisfaction()).isEqualTo(Satisfaction.UNSATISFIED);
     }
 
     @Test
@@ -133,7 +136,7 @@ class BidirectionalCompatibilityTest {
         CompatibilitySubject frequent = person(1, new String[]{"fast", "frequent", "high", "late"}, new String[0]);
         CompatibilitySubject support = subject(2, List.of(), List.of(
                 CompatibilitySubject.preference("partner.support", "close", Importance.SUPER)));
-        PairCompatibilityResult hypothesis = engine.score(support, frequent);
+        PairCompatibilityResult hypothesis = fit(support, frequent);
         assertThat(row(hypothesis, "AB", "partner.support").reasonCode()).isEqualTo("NO_ALIGNMENT");
         assertThat(hypothesis.scoreAB()).isNull();
         assertThat(hypothesis.evidenceContributions()).noneMatch(row -> "self.communication".equals(row.targetFeatureCode())
@@ -141,7 +144,7 @@ class BidirectionalCompatibilityTest {
 
         CompatibilitySubject illegal = subject(3, List.of(), List.of(
                 CompatibilitySubject.preference("partner.pace", "nope", Importance.SUPER)));
-        assertThat(row(engine.score(illegal, frequent), "AB", "partner.pace").reasonCode()).isEqualTo("ILLEGAL_VALUE");
+        assertThat(row(fit(illegal, frequent), "AB", "partner.pace").reasonCode()).isEqualTo("ILLEGAL_VALUE");
     }
 
     @Test
@@ -150,7 +153,7 @@ class BidirectionalCompatibilityTest {
         CompatibilitySubject pending = subject(2, List.of(), List.of(
                 CompatibilitySubject.preference("partner.pace", "slow", Importance.SUPER)))
                 .support("partner.pace", null, SemanticSupport.SEMANTIC_SUPPORT_PENDING);
-        PairCompatibilityResult result = engine.score(pending, target);
+        PairCompatibilityResult result = fit(pending, target);
         assertThat(result.explanationAB().notAdmitted()).isEqualTo(1);
         assertThat(result.evidenceContributions()).isEmpty();
         assertThat(result.scoreAB()).isNull();
@@ -163,19 +166,24 @@ class BidirectionalCompatibilityTest {
         Candidate aged = older.candidate().toBuilder().birthday(LocalDate.of(1980, 1, 1)).ageRange(40, 60).build();
         CompatibilitySubject veto = new CompatibilitySubject(2, 2, 1, true, false, older.fixtureSource(),
                 older.self(), older.preference(), older.selfSupport(), older.preferenceSupport(), aged);
-        PairCompatibilityResult result = engine.score(young, veto);
+        PairCompatibilityResult result = fit(young, veto);
         assertThat(result.status()).isEqualTo(CompatibilityStatus.HARD_VETO);
-        assertThat(result.hardFilterResult()).contains("AGE");
+        assertThat(result.hardFilterResult()).contains("HARD_AGE");
         assertThat(result.scoreAB()).isNull();
         assertThat(result.harmonicMean()).isNull();
-        assertThat(result.explanationAB().score()).isEqualTo(100.0);
+        assertThat(result.explanationAB().score()).isNull();
+        assertThat(result.evidenceContributions()).isEmpty();
+        CompatibilityDecision decision = CompatibilityDecision.from(result);
+        assertThat(decision.recommendationEligible()).isFalse();
+        assertThat(decision.reasoningEligible()).isFalse();
+        assertThat(decision.policyVersion()).isEqualTo(CompatibilityPolicies.VERSION);
     }
 
     @Test
     void theSameInputProducesTheSameResult() {
         CompatibilitySubject left = person(1, new String[]{"slow", "quiet", "low", "early"}, new String[]{"steady", "quiet", "low", "early"});
         CompatibilitySubject right = person(2, new String[]{"steady", "direct", "high", "flexible"}, new String[]{"slow", "quiet", "low", "early"});
-        assertThat(engine.score(left, right)).isEqualTo(engine.score(left, right));
+        assertThat(fit(left, right)).isEqualTo(fit(left, right));
     }
 
     @Test
@@ -194,7 +202,7 @@ class BidirectionalCompatibilityTest {
         CompatibilitySubject current = person(1, new String[]{"slow", "quiet", "low", "early"}, new String[0]);
         CompatibilitySubject withdrawn = new CompatibilitySubject(2, 1, 1, true, true, current.fixtureSource(),
                 current.self(), current.preference(), current.selfSupport(), current.preferenceSupport(), Candidate.builder(2).build());
-        assertThat(engine.score(current, withdrawn).status()).isEqualTo(CompatibilityStatus.NOT_CURRENT);
+        assertThat(fit(current, withdrawn).status()).isEqualTo(CompatibilityStatus.NOT_CURRENT);
         assertThatThrownBy(() -> CompatibilitySubject.synthetic(3, List.of(), List.of(), Candidate.builder(4).build()))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new CompatibilitySubject(3, 1, 1, true, false, "production-user:3",
@@ -218,10 +226,15 @@ class BidirectionalCompatibilityTest {
                         Importance.KINDA, ConstraintType.SOFT, 1.0, List.of(), FeatureStatus.CONFIRMED),
                 new PreferenceTarget("partner.age", Operator.ANY, new FeatureValue.Span(20, 30), Importance.SUPER,
                         ConstraintType.DOCUMENTED_EXISTING_RULE, 1.0, List.of(), FeatureStatus.CONFIRMED)));
-        PairCompatibilityResult result = engine.score(chooser, target);
+        PairCompatibilityResult result = fit(chooser, target);
         assertThat(row(result, "AB", "partner.pace").satisfaction()).isEqualTo(Satisfaction.SATISFIED);
         assertThat(row(result, "AB", "partner.pace").weight()).isEqualTo(2);
         assertThat(row(result, "AB", "partner.age").reasonCode()).isEqualTo("DOCUMENTED_EXISTING_RULE");
+    }
+
+    private PairCompatibilityResult fit(CompatibilitySubject left, CompatibilitySubject right) {
+        return engine.score(left, right, CompatibilityContext.experiment(
+                BidirectionalCompatibilityEngine.WEEK, BidirectionalCompatibilityEngine.NOW, java.util.List.of(left, right)));
     }
 
     private static CompatibilitySubject person(long id, String[] self, String[] preference) {

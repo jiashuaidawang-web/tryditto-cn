@@ -78,12 +78,17 @@ public final class DirectionalCompatibilityScorer {
         ProfileFeature actual = target.self().features().stream()
                 .filter(feature -> alignment.selfCode().equals(feature.featureCode())).findFirst().orElse(null);
         if (actual == null) {
-            return Row.kept(row(direction, preference, text(preference.targetValue()), null, Satisfaction.UNKNOWN, "TARGET_MISSING", alignment.selfCode()));
+            return Row.kept(unevaluable(direction, preference, alignment.selfCode(), "TARGET_MISSING"));
         }
         SemanticSupport actualSupport = target.selfSupport().get(actual.featureCode());
-        if (actual.value() instanceof FeatureValue.Withheld) return Row.withheld();
-        if (actual.status() == FeatureStatus.PROVISIONAL || !MatchingFeatureGate.eligibleForOfficialScore(actualSupport)) {
-            return Row.dropped();
+        if (actual.value() instanceof FeatureValue.Withheld) {
+            return Row.kept(unevaluable(direction, preference, alignment.selfCode(), "TARGET_NOT_PUBLIC"));
+        }
+        if (actual.status() == FeatureStatus.PROVISIONAL) {
+            return Row.kept(unevaluable(direction, preference, alignment.selfCode(), "TARGET_PROVISIONAL"));
+        }
+        if (!MatchingFeatureGate.eligibleForOfficialScore(actualSupport)) {
+            return Row.kept(unevaluable(direction, preference, alignment.selfCode(), "TARGET_SUPPORT"));
         }
         if (actual.status() == FeatureStatus.CONTESTED) {
             return Row.kept(row(direction, preference, text(preference.targetValue()), null, Satisfaction.CONTESTED, "CONTESTED", alignment.selfCode()));
@@ -164,6 +169,11 @@ public final class DirectionalCompatibilityScorer {
                 : new Compared(Satisfaction.UNSATISFIED, "MISMATCH");
     }
 
+    /** A credible preference whose target cannot be trusted. The demand stays in the coverage denominator. */
+    private static FeatureMatchContribution unevaluable(String direction, PreferenceTarget preference, String targetCode, String reason) {
+        return row(direction, preference, text(preference.targetValue()), null, Satisfaction.UNKNOWN, reason, targetCode);
+    }
+
     private static FeatureMatchContribution row(String direction, PreferenceTarget preference, String expected, String actual,
                                                  Satisfaction satisfaction, String reason, String targetCode) {
         Importance importance = preference.importance();
@@ -202,7 +212,7 @@ public final class DirectionalCompatibilityScorer {
             }
         }
         Double score = knownWeight == 0 ? null : knownSatisfaction * 100.0 / knownWeight;
-        double evaluable = knownWeight + unknownWeight;
+        double evaluable = knownWeight + unknownWeight + contestedWeight;
         Double coverage = evaluable == 0 ? null : knownWeight / evaluable;
         Double strong = strongSeen ? strongSatisfaction / strongWeight : null;
         return new EvidenceCoverage(knownWeight, unknownWeight, conflictWeight, contestedWeight, score, coverage, strong, compared);

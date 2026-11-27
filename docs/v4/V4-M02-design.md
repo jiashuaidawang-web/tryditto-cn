@@ -25,7 +25,7 @@
 
 ## 硬约束
 
-`BidirectionalCompatibilityEngine` 先跑 `HardFilter`。任一规则失败时，可排序的双向分数为空，状态是 `HARD_VETO`。解释行可以留下，供案例查看，但不能参与排序。
+`BidirectionalCompatibilityEngine` 只接受调用方给出的 `CompatibilityContext`。它先复用 `PoolGate`、`ConsentPolicy` 和 `HardFilter`。历史配对留在输入里，不会像发布资格那样先把当前配对从历史中拿掉。任一安全条件失败时，可排序分数为空，画像明细也为空，后续推理读不到这些行。硬约束失败的状态是 `HARD_VETO`。资料不是当前版本时是 `NOT_CURRENT`。其余未授权状态是 `NOT_ELIGIBLE`。
 
 ## 结果
 

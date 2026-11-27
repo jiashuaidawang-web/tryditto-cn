@@ -57,7 +57,7 @@ public final class CompatibilityCases {
                 story(engine, "M02-C8", "硬约束否决",
                         person(15, ideal(), ideal(), "gym"),
                         veto(16),
-                        "年龄硬约束失败后，解释行可以留下，可排序分数必须为空。"));
+                        "年龄硬约束失败后不生成可供后续推理使用的画像明细。"));
     }
 
     public static String json() {
@@ -130,7 +130,8 @@ public final class CompatibilityCases {
 
     private static Story story(BidirectionalCompatibilityEngine engine, String id, String title,
                                CompatibilitySubject left, CompatibilitySubject right, String judgement) {
-        return new Story(id, title, engine.score(left, right), judgement);
+        return new Story(id, title, engine.score(left, right, CompatibilityContext.experiment(
+                BidirectionalCompatibilityEngine.WEEK, BidirectionalCompatibilityEngine.NOW, List.of(left, right))), judgement);
     }
 
     private static String[] ideal() { return new String[]{"slow", "quiet", "low", "early"}; }
