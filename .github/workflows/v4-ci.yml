@@ -144,14 +144,31 @@ jobs:
       - name: Run the guard and the publish-safety integration tests
         working-directory: api
         run: |
-          set -eu
-          mvn -B -pl aiditto-app -am verify \
+          set -euo pipefail
+          if ! mvn -B -pl aiditto-app -am verify \
             -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest,ProfileAblationRunnerTest,V4VectorSyncTest \
             -Dsurefire.failIfNoSpecifiedTests=false \
             -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT \
             -Dfailsafe.failIfNoSpecifiedTests=true \
             -DforkCount=1 \
-            -DreuseForks=false
+            -DreuseForks=false \
+            2>&1 | tee ../ci-meta/maven-it.log; then
+            python3 - <<'PY'
+            import pathlib
+            path = pathlib.Path("../ci-meta/maven-it.log")
+            text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+            kept = []
+            for line in text.splitlines():
+                lowered = line.lower()
+                if any(word in lowered for word in ("password", "jdbc:", "api-key", "api_key", "bearer ")):
+                    continue
+                if any(word in line for word in ("ERROR", "FAILURE", "Failed", "COMPILATION", "Killed", "OutOfMemory", "There are test failures")):
+                    kept.append(" ".join(line.split())[:240])
+            for line in (kept[-12:] or ["maven exited without an error line"]):
+                print(f"::error title=integration::{line}")
+            PY
+            exit 1
+          fi
       - name: Reject a run that did not execute the IT scenarios
         if: always()
         working-directory: api
@@ -354,6 +371,10 @@ jobs:
               summary.extend(["", f"Acceptance blocked: {', '.join(blocked)}"])
           body = "\n".join(summary) + "\n"
           print(body)
+          for item in blocked[:20]:
+              print(f"::error title=integration::{item}")
+          for item in failures[:12]:
+              print(f"::error title=integration::{item}")
           step = os.environ.get("GITHUB_STEP_SUMMARY")
           if step:
               with open(step, "a", encoding="utf-8") as handle:
