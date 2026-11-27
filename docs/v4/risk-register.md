@@ -331,7 +331,7 @@ CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46003372691 
 
 M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告都成功。CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46026253764 ，提交 `8819b4314d057b37fd4caf2eff7357795f85c6a1`。
 
-后续任务 V4-M01-RANK 保留：研究 M02 双向粗排、更宽的召回、候选预算和真实语义向量对召回的影响。不在本轮改 M01 的冻结规则。
+后续任务 V4-M01-RANK 保留：研究 M02 双向粗排、更宽的召回、候选预算和真实语义向量对召回的影响。不在本轮改 M01 的冻结规则。2026-11-28 的离线结果见 V4-M01-RANK，M01 冻结规则仍然没有改。
 
 
 
@@ -342,3 +342,24 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 前两次运行都失败，而且失败点相同。PostgreSQL 16.16。`PublishSafetyIT` 在准备数据时断言北京草稿 `>= 8`，实际 3。这 3 对是 cohort 规则的结果：synthetic 不能互配，北京只有 3 个 demo。那两次没有覆盖到并发代码。
 
 夹具拆开后的运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45591470398 总结论 success。文档提交再次运行 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45592507019 也成功。14 个发布安全方法，包括回滚、撤回、拉黑、注销、硬约束、重复发布和共用用户锁，都执行并通过。2026-11-26 架构验收通过当前阶段。P0-4 的工程验收关闭。算法质量仍是 NO-GO，不部署。P0-1、P0-2、P0-3 未改。V4-P01 从画像模型和证据开始，不改匹配算法。
+
+## V4-M01-RANK（2026-11-28）
+
+离线研究在 `feature/v4-recall-rank`，起点是已经包含 M03 的 `544e3d8eac0f1f8c502ea1aedfe1762134c35007`。M01 权重、`RrfFusion`、M02 决策、M03 Prompt 和生产匹配都没有改。
+
+已分开的事项：
+
+- 召回 Map 只留 `self.pace`、`partner.pace` 和一项爱好。完整画像上的冲突被干扰候选共用的 Map 盖住。4 名强匹配的 Map 为空，路线分 0，融合里没有他们。
+- 较小 userId 在路线名次上占优。融合相邻同分是 0。最终的 userId 比较没有再改变次序。
+- RRF 最终 20 人在开发集和保留集都是 0 个手写强匹配。把预算加到 200 仍然是 0。
+- 只对 RRF 名单做 M02，只能覆盖进入融合的那一半。完整合法池和全画像预筛选覆盖两套集合的全部手写强匹配。空命中数仍然合法。
+- 本机 10,000 人、49,995,000 条边的全池 M02 是 69,724 ms。向量是 NOT_RUN。100 人的单边时间不能外推。
+
+仍开放：
+
+- RRF 路线本身的覆盖。加宽 K 和改并列都不能找回空 Map。
+- 预筛选在粗排预算 20 上的全覆盖依赖这份夹具的完全相反画像。部分重叠没有测量。
+- 真实语义向量。没有授权的独立 embedding 配置，不能把哈希向量写成语义质量。
+- 生产画像、生产 Qdrant、全局配对和生产启用。
+
+召回覆盖只对 E 和 F 的合成对照记为 GO。RRF-only、生产启用和最终匹配算法质量继续 NO-GO。真实向量继续 NOT_RUN。数字见 `V4-M01-RANK-eval-report.md`。
