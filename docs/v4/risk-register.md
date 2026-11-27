@@ -386,4 +386,6 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - 规模图没有独立关系标签。端到端合成匹配质量因此是 NO-GO。
 - 真实关系、生产画像、生产 Qdrant 和生产启用。
 
-小规模求解正确性和冻结标签门槛上的离线全局匹配记为 GO。候选图性能、端到端合成匹配质量、生产启用和最终匹配算法质量是 NO-GO。真实关系质量是 NOT_RUN。数字见 `V4-M04-eval-report.md`。实现提交 `e26c45ef0b323220530e9e2b72e9ec36b961efa2` 的 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46040944018 里，领域测试和 Qdrant 隔离成功。集成测试没有执行，因为 Maven 没有解析到 Spring Boot 父 POM。这次运行是 failure。工程质量要等重新排队的完整运行成功后再记为 GO。
+小规模求解正确性和冻结标签门槛上的离线全局匹配记为 GO。候选图性能、端到端合成匹配质量、生产启用和最终匹配算法质量是 NO-GO。真实关系质量是 NOT_RUN。数字见 `V4-M04-eval-report.md`。实现提交 `e26c45ef0b323220530e9e2b72e9ec36b961efa2`。第一次 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46040944018 在集成测试开始前失败：Maven 没有解析到 Spring Boot 父 POM。领域测试和 Qdrant 隔离那次已经成功。
+
+完整运行是提交 `a786df884ac8fa8e894c25659235855f73467587` 的 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46041537210 。四个作业都是 success。工程质量按这次运行记为 GO。
