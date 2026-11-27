@@ -1,0 +1,206 @@
+{
+  "schema": "feedback-lab-1",
+  "cases": [
+    {
+      "id": 1,
+      "title": "双方接受且愿意继续",
+      "snapshot": {"matchId": 71001, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 62, "bToA": 71},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_VIEWED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_VIEWED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MUTUAL_ACCEPTANCE_REACHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": "8b28519f-7251-4512-b2c1-b53af630aff4,3a884074-0379-407f-a460-1d8882aeb649"},
+        {"type": "CONTINUE_INTEREST_EXPRESSED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "CONTINUE_INTEREST_EXPRESSED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": true, "viewedB": true, "responseA": "ACCEPTED", "responseB": "ACCEPTED", "mutualAcceptance": true, "schedule": "UNKNOWN", "attendance": "UNKNOWN", "continueA": "EXPRESSED", "continueB": "EXPRESSED", "bothContinue": true, "contested": false, "retracted": false, "processingRevoked": false, "learningAllowed": true},
+      "unknown": ["ATTENDANCE_A", "ATTENDANCE_B", "SCHEDULE"],
+      "learning": {"matchFactEligible": true, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": []}
+    },
+    {
+      "id": 2,
+      "title": "A 接受，B 拒绝",
+      "snapshot": {"matchId": 71002, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 80, "bToA": 44},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_DECLINED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": "NO_ROMANTIC_INTEREST", "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "ACCEPTED", "responseB": "DECLINED", "mutualAcceptance": false, "schedule": "UNKNOWN", "attendance": "UNKNOWN", "continueA": "UNKNOWN", "continueB": "UNKNOWN", "bothContinue": false, "contested": false, "retracted": false, "processingRevoked": false, "learningAllowed": true},
+      "unknown": ["VIEW_A", "VIEW_B", "ATTENDANCE_A", "ATTENDANCE_B", "CONTINUE_A", "CONTINUE_B", "SCHEDULE"],
+      "learning": {"matchFactEligible": true, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": []}
+    },
+    {
+      "id": 3,
+      "title": "A 接受，B 超时",
+      "snapshot": {"matchId": 71003, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 55, "bToA": 40},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_EXPIRED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "ACCEPTED", "responseB": "EXPIRED", "mutualAcceptance": false, "schedule": "NOT_OCCURRED", "attendance": "UNKNOWN", "continueA": "UNKNOWN", "continueB": "UNKNOWN", "bothContinue": false, "contested": false, "retracted": false, "processingRevoked": false, "learningAllowed": true},
+      "unknown": ["VIEW_A", "VIEW_B", "ATTENDANCE_A", "ATTENDANCE_B", "CONTINUE_A", "CONTINUE_B"],
+      "learning": {"matchFactEligible": true, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": []}
+    },
+    {
+      "id": 4,
+      "title": "双方接受，窗口结束仍未安排见面",
+      "snapshot": {"matchId": 71004, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 70, "bToA": 70},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MUTUAL_ACCEPTANCE_REACHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": "1c72880e-40ab-4460-9d41-d0df21e5d48d,1867723d-747e-4dcc-9a98-d942681cf36c"},
+        {"type": "MATCH_EXPIRED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "ACCEPTED", "responseB": "ACCEPTED", "mutualAcceptance": true, "schedule": "NOT_OCCURRED", "attendance": "UNKNOWN", "continueA": "UNKNOWN", "continueB": "UNKNOWN", "bothContinue": false, "contested": false, "retracted": false, "processingRevoked": false, "learningAllowed": true},
+      "unknown": ["VIEW_A", "VIEW_B", "ATTENDANCE_A", "ATTENDANCE_B", "CONTINUE_A", "CONTINUE_B"],
+      "learning": {"matchFactEligible": true, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": []}
+    },
+    {
+      "id": 5,
+      "title": "安排见面后取消",
+      "snapshot": {"matchId": 71005, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 66, "bToA": 61},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MUTUAL_ACCEPTANCE_REACHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": "8cabd041-d0b8-43bc-9a9f-6ee1c15f360d,469e77e5-6f9e-4efc-9c3f-1a21b6396693"},
+        {"type": "DATE_SCHEDULED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "DATE_CANCELLED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "ACCEPTED", "responseB": "ACCEPTED", "mutualAcceptance": true, "schedule": "CANCELLED", "attendance": "UNKNOWN", "continueA": "UNKNOWN", "continueB": "UNKNOWN", "bothContinue": false, "contested": false, "retracted": false, "processingRevoked": false, "learningAllowed": true},
+      "unknown": ["VIEW_A", "VIEW_B", "ATTENDANCE_A", "ATTENDANCE_B", "CONTINUE_A", "CONTINUE_B"],
+      "learning": {"matchFactEligible": true, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": []}
+    },
+    {
+      "id": 6,
+      "title": "双方报告已经见面",
+      "snapshot": {"matchId": 71006, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 74, "bToA": 69},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MUTUAL_ACCEPTANCE_REACHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": "7fd1f0f7-e440-44f8-9631-a1edcac1eaef,a81e9122-626d-4f58-b8e8-34e7c118c48c"},
+        {"type": "DATE_SCHEDULED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "DATE_REPORTED_ATTENDED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "DATE_REPORTED_ATTENDED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "ACCEPTED", "responseB": "ACCEPTED", "mutualAcceptance": true, "schedule": "SCHEDULED", "attendance": "BOTH_REPORTED_ATTENDED", "continueA": "UNKNOWN", "continueB": "UNKNOWN", "bothContinue": false, "contested": false, "retracted": false, "processingRevoked": false, "learningAllowed": true},
+      "unknown": ["VIEW_A", "VIEW_B", "CONTINUE_A", "CONTINUE_B"],
+      "learning": {"matchFactEligible": true, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": []}
+    },
+    {
+      "id": 7,
+      "title": "双方见面报告矛盾",
+      "snapshot": {"matchId": 71007, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 58, "bToA": 63},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MUTUAL_ACCEPTANCE_REACHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": "a09e941b-7fa6-4048-87d6-669fa0461243,6e625ee7-1e55-4d4d-9004-16811b4be4dc"},
+        {"type": "DATE_SCHEDULED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "DATE_REPORTED_ATTENDED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "DATE_REPORTED_NOT_ATTENDED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "ACCEPTED", "responseB": "ACCEPTED", "mutualAcceptance": true, "schedule": "SCHEDULED", "attendance": "CONTESTED", "continueA": "UNKNOWN", "continueB": "UNKNOWN", "bothContinue": false, "contested": true, "retracted": false, "processingRevoked": false, "learningAllowed": false},
+      "unknown": ["VIEW_A", "VIEW_B", "CONTINUE_A", "CONTINUE_B"],
+      "learning": {"matchFactEligible": false, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": ["CONTESTED"]}
+    },
+    {
+      "id": 8,
+      "title": "一方愿意继续，另一方不愿",
+      "snapshot": {"matchId": 71008, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 64, "bToA": 52},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MUTUAL_ACCEPTANCE_REACHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": "6aad61d6-1c96-4bca-84e2-8c896613d9a3,14d2e8b5-7d6f-40d8-bb28-a63419817ff7"},
+        {"type": "CONTINUE_INTEREST_EXPRESSED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "CONTINUE_INTEREST_DECLINED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "ACCEPTED", "responseB": "ACCEPTED", "mutualAcceptance": true, "schedule": "UNKNOWN", "attendance": "UNKNOWN", "continueA": "EXPRESSED", "continueB": "DECLINED", "bothContinue": false, "contested": false, "retracted": false, "processingRevoked": false, "learningAllowed": true},
+      "unknown": ["VIEW_A", "VIEW_B", "ATTENDANCE_A", "ATTENDANCE_B", "SCHEDULE"],
+      "learning": {"matchFactEligible": true, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": []}
+    },
+    {
+      "id": 9,
+      "title": "用户更正之前的接受",
+      "snapshot": {"matchId": 71009, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 48, "bToA": 77},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MUTUAL_ACCEPTANCE_REACHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": "227d93fa-8841-4aeb-b83e-13d3648e88bf,477d62de-516a-452c-8783-4b6520a6c3e6"},
+        {"type": "FEEDBACK_CORRECTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": "INSUFFICIENT_INFORMATION", "supersedes": "227d93fa-8841-4aeb-b83e-13d3648e88bf", "causation": null},
+        {"type": "MATCH_DECLINED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": "INSUFFICIENT_INFORMATION", "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "DECLINED", "responseB": "ACCEPTED", "mutualAcceptance": false, "schedule": "UNKNOWN", "attendance": "UNKNOWN", "continueA": "UNKNOWN", "continueB": "UNKNOWN", "bothContinue": false, "contested": false, "retracted": false, "processingRevoked": false, "learningAllowed": false},
+      "unknown": ["VIEW_A", "VIEW_B", "ATTENDANCE_A", "ATTENDANCE_B", "CONTINUE_A", "CONTINUE_B", "SCHEDULE"],
+      "learning": {"matchFactEligible": false, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": ["CORRECTED"]}
+    },
+    {
+      "id": 10,
+      "title": "用户撤回反馈处理授权",
+      "snapshot": {"matchId": 71010, "userA": 81001, "userB": 81002, "profileVersionA": 7, "profileVersionB": 9, "published": true},
+      "scores": {"aToB": 73, "bToA": 73},
+      "strategy": {"policy": "policy-1", "objective": "objective-g2-1", "candidate": "strategy-e-1"},
+      "events": [
+        {"type": "MATCH_PUBLISHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MATCH_ACCEPTED", "actor": 81002, "direction": "B_TO_A", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null},
+        {"type": "MUTUAL_ACCEPTANCE_REACHED", "actor": 0, "direction": "JOINT", "source": "SYSTEM", "reason": null, "supersedes": null, "causation": "6742c9de-2d55-41a6-95c5-24d4d8e62ff5,2ae49533-a4d4-47f3-ad01-7baf26299c4e"},
+        {"type": "FEEDBACK_PROCESSING_REVOKED", "actor": 81001, "direction": "A_TO_B", "source": "PARTICIPANT", "reason": null, "supersedes": null, "causation": null}
+      ],
+      "projection": {"published": true, "viewedA": false, "viewedB": false, "responseA": "ACCEPTED", "responseB": "ACCEPTED", "mutualAcceptance": true, "schedule": "UNKNOWN", "attendance": "UNKNOWN", "continueA": "UNKNOWN", "continueB": "UNKNOWN", "bothContinue": false, "contested": false, "retracted": false, "processingRevoked": true, "learningAllowed": false},
+      "unknown": ["VIEW_A", "VIEW_B", "ATTENDANCE_A", "ATTENDANCE_B", "CONTINUE_A", "CONTINUE_B", "SCHEDULE"],
+      "learning": {"matchFactEligible": false, "profileUpdateAllowed": false, "negativeLabelAllowed": false, "reasons": ["PROCESSING_REVOKED"]}
+    }
+  ],
+  "cohort": {
+    "window": "ten fictional mature published matches",
+    "dedupe": "one match",
+    "published": {
+      "view_rate": "1/10",
+      "one_accept_rate": "10/10",
+      "mutual_accept_rate": "7/10",
+      "decline_rate": "2/10",
+      "expiry_rate": "1/10",
+      "schedule_rate": "3/10",
+      "reported_attendance_rate": "1/10",
+      "mutual_attendance_rate": "1/10",
+      "one_continue_rate": "2/10",
+      "mutual_continue_rate": "1/10",
+      "coverage_rate": "10/10",
+      "contest_rate": "1/10",
+      "retract_rate": "0/10",
+      "processing_revoked_rate": "1/10",
+      "learning_eligible_rate": "7/10"
+    },
+    "responded": {
+      "one_accept_rate_among_responded": "10/10",
+      "mutual_accept_rate_among_responded": "7/10"
+    }
+  }
+}

@@ -148,7 +148,7 @@ jobs:
           if ! mvn -B -pl aiditto-app -am verify \
             -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest,ProfileAblationRunnerTest,V4VectorSyncTest \
             -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT \
+            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT,FeedbackEventIT \
             -Dfailsafe.failIfNoSpecifiedTests=true \
             -DforkCount=1 \
             -DreuseForks=false \
@@ -240,6 +240,14 @@ jobs:
                   "missingOrCompletedTaskCannotCommit",
                   "modelExceptionDoesNotLeaveTheTaskRunning",
                   "unapprovedFreeTextAndSameLetterDoNotBecomeMeaning",
+              ],
+              "FeedbackEventIT": [
+                  "sameKeyIsOneRow",
+                  "replayMatchesTheStoredProjection",
+                  "eraseRemovesTheActorAndBlocksLearning",
+                  "concurrentAcceptsKeepOne",
+                  "acceptAndRetractBothRemainAndLearningStops",
+                  "secondConsumptionDoesNotClaimAgain",
               ],
           }
           surefire_required = {
