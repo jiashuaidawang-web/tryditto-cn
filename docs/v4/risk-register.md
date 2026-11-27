@@ -329,6 +329,8 @@ CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46003372691 
 
 结论：AI 关系解释、新增关系发现和排序增益都是 NO-GO。召回端到端、生产启用和最终匹配算法质量继续 NO-GO。逐项数字见 `V4-M03-live-eval-report.md`。
 
+M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告都成功。CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46026253764 ，提交 `8819b4314d057b37fd4caf2eff7357795f85c6a1`。
+
 后续任务 V4-M01-RANK 保留：研究 M02 双向粗排、更宽的召回、候选预算和真实语义向量对召回的影响。不在本轮改 M01 的冻结规则。
 
 

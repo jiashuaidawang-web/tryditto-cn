@@ -30,7 +30,7 @@ C1 与 C2 分开记录。C2 按方向、偏好、目标特征和类别去重；�
 
 | 项 | 结论 |
 | --- | --- |
-| M03 工程质量 | 见风险登记中的 CI。本地领域和应用测试已通过 |
+| M03 工程质量 | GO。CI 成功：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46026253764 ，提交 `8819b4314d057b37fd4caf2eff7357795f85c6a1` |
 | AI 关系解释质量 | NO-GO |
 | AI 新增关系发现质量 | NO-GO |
 | AI 排序增益 | NO-GO |
