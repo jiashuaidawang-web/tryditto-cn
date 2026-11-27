@@ -21,11 +21,15 @@
 
 ## CI
 
-地址在推送后补记。
+研究提交 `587539d9ccf9eac889055fd2c4b3be0ca02bd577`。
+
+https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46035257576
+
+`domain-tests`、`integration-tests`、`qdrant-isolation`、`test-reports` 都是 success。API 没有返回各套件的用例数，这里不沿用上一轮的 541、57、13、1。
 
 ## 结论
 
-- 工程质量：等待本分支 CI。本地研究测试已通过。
+- 工程质量：GO。上述四个作业都成功，本地 `RecallRankStudyTest` 也通过。
 - 召回质量：RRF-only 为 NO-GO。E 和 F 在开发集与独立保留集上覆盖全部手写强匹配，这一覆盖记为 GO，只适用于这两份合成对照。
 - 端到端候选评分质量：E 和 F 上，手写强匹配全部获得 M02 推荐资格，干扰候选被评分且未获资格，安全命中为 0。GO 只表示资格与手写标签在这两份对照上一致。
 - 真实向量质量：NOT_RUN。

@@ -363,3 +363,5 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - 生产画像、生产 Qdrant、全局配对和生产启用。
 
 召回覆盖只对 E 和 F 的合成对照记为 GO。RRF-only、生产启用和最终匹配算法质量继续 NO-GO。真实向量继续 NOT_RUN。数字见 `V4-M01-RANK-eval-report.md`。
+
+研究提交 `587539d9ccf9eac889055fd2c4b3be0ca02bd577`。CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46035257576 ，四个作业都是 success。工程质量按这次运行记为 GO。
