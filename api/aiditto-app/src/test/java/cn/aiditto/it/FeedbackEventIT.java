@@ -37,7 +37,7 @@ class FeedbackEventIT extends ApiIT {
 
     @AfterEach
     void releaseSharedActors() {
-        jdbc.update("DELETE FROM relationship_feedback_erasure WHERE user_id IN (81001, 81002)");
+        jdbc.update("DELETE FROM relationship_feedback_erasure WHERE user_id IN (81001, 81002, 81011, 81012)");
     }
 
     @Test
@@ -243,10 +243,10 @@ class FeedbackEventIT extends ApiIT {
         assertThat(actorRows).isZero();
         assertThat(erasures).isEqualTo(1);
 
-        MatchFeedbackContext revokeContext = context(72011);
+        MatchFeedbackContext revokeContext = context(72011, 81011, 81012);
         store.append(revokeContext, system(FeedbackEventType.MATCH_PUBLISHED, "it-pub-72011"), T0);
         RelationshipFeedbackEvent accept = store.append(revokeContext,
-                person(FeedbackEventType.MATCH_ACCEPTED, 81001, "it-acc-72011"), T0);
+                person(FeedbackEventType.MATCH_ACCEPTED, 81011, "it-acc-72011"), T0);
         CountDownLatch revokeStart = new CountDownLatch(1);
         ExecutorService revokePool = Executors.newFixedThreadPool(2);
         AtomicInteger refused = new AtomicInteger();
@@ -262,7 +262,7 @@ class FeedbackEventIT extends ApiIT {
         });
         Future<?> revoke = revokePool.submit(() -> {
             revokeStart.await();
-            store.append(revokeContext, person(FeedbackEventType.FEEDBACK_PROCESSING_REVOKED, 81001, "it-revoke-72011"),
+            store.append(revokeContext, person(FeedbackEventType.FEEDBACK_PROCESSING_REVOKED, 81011, "it-revoke-72011"),
                     T0.plusSeconds(2));
             return null;
         });
@@ -313,8 +313,12 @@ class FeedbackEventIT extends ApiIT {
     }
 
     private static MatchFeedbackContext context(long matchId) {
+        return context(matchId, 81001, 81002);
+    }
+
+    private static MatchFeedbackContext context(long matchId, long userA, long userB) {
         return MatchFeedbackContext.experiment(matchId, "run-f01", LocalDate.of(2026, 11, 23),
-                81001, 81002, true, 7, 9, "policy-1", "objective-g2-1", "strategy-e-1", true, true);
+                userA, userB, true, 7, 9, "policy-1", "objective-g2-1", "strategy-e-1", true, true);
     }
 
     private static FeedbackCommand system(FeedbackEventType type, String key) {
