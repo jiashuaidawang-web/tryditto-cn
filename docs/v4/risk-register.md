@@ -269,6 +269,28 @@ P02 只增加有证据的画像提取。阶段实现 `ef08182426d414c117d22ebf90
 - V3 的 `RecallEvalIT`、`RecallExperimentIT`、`QdrantClientIT`、`VectorSyncIT` 仍是 NOT_RUN。
 - 召回没有进入 `WeekRunner`。生产启用和最终匹配质量继续 NO-GO。
 
+## V4-M02（2026-11-27）
+
+双向评分留在 `feature/v4-bidirectional`。生产 `Scorer`、`MatchingSolver`、Blossom、`WeekRunner` 和 S01 没有改。M01 权重和挑战集没有改。
+
+已在离线合成数据上分开的事项：
+
+- A.preference → B.self 与 B.preference → A.self 分开计算。
+- 已知分、覆盖率、未知、矛盾、不公开和硬否决分开报告。
+- B0 到 B6 使用同一批合法边。开发集选择的是覆盖率门控后的调和平均，不是事先指定的调和平均。
+- 完整池上的评分和 M01 Top-K 上的评分分开。Top-20 没有带回被漏掉的候选。
+
+仍开放，且本轮没有关闭：
+
+- 跨实例向量生命周期保护。
+- 生产画像证据准入。`MatchingFeatureGate` 仍未接到生产评分。
+- 完整生产安全复查。
+- 召回泛化。挑战保留集 Recall@20 仍是 7/45。
+- 真实语义向量评估。本轮没有调用模型。
+
+离线双向评分只在冻结的合成对照上按规则通过。召回端到端、生产启用和最终匹配算法质量继续 NO-GO。
+
+
 ## V4-INFRA-001（2026-11-25）
 
 本地不再安装 PostgreSQL。集成测试改到 GitHub Actions：`.github/workflows/v4-ci.yml`，一次性 PostgreSQL 16，库名只能是 `aiditto_s01_test`。`TestDatabaseGuard` 在 `flyway.clean()` 之前拒绝其它库名、其它主机，以及缺少 `TEST_DB_URL` 的情况。没有生产凭证，没有 LLM API Key。
