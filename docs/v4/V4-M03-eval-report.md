@@ -45,6 +45,8 @@ C 方案没有改变成对排序。硬约束关系的实验分保持为空，推
 
 ## 结论
 
+M03 工程质量：GO。依据是离线测试和 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46003372691 的四项作业都成功。这只说明工程链路和安全夹具通过，不表示模型质量。
+
 真实模型关系推理质量：NOT_RUN。
 
 AI 排序增益：NOT_RUN。夹具前后的排序相同，不能当成增益。
