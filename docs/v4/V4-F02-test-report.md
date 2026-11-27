@@ -6,4 +6,4 @@
 
 `ProfileLearningIT` 覆盖提案保存、确认写入、拒绝和过期、待确认提案不进匹配、非法特征和硬约束、跨用户和无授权、来源撤回、重复确认、旧版本、并发确认、删除竞态、确认和消费凭证一起回滚，以及写后再读。这些方法名在 `.github/workflows/v4-ci.yml` 的必需清单里。
 
-CI 地址在分支推送后补记。
+分支 `feature/v4-profile-learning` 的实现提交是 `e24aae1f7f7b23a10aaec2a4f035fb0f7ed786bc`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46061670392 ，`domain-tests`、`integration-tests`、`qdrant-isolation`、`test-reports` 都是 success。集成作业里的必需清单包含 `ProfileLearningIT` 的 13 个方法；该作业成功，所以这些方法已执行且没有失败或跳过。远程 Surefire 总数需要管理员权限才能读取，这里不另报一份远程合计。

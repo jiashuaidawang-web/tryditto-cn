@@ -454,3 +454,5 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - 生产启用和最终匹配算法质量是 NO-GO。
 - F03 群体评估没有实现。
 - `AccountService.requestDelete` 仍不调用反馈删除或画像删除。
+
+分支 `feature/v4-profile-learning` 提交 `e24aae1f7f7b23a10aaec2a4f035fb0f7ed786bc`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46061670392 ，四个作业 success。本地领域测试 585 项，失败 0。
