@@ -11,6 +11,7 @@ public record GlobalMatchingResult(
         String scope,
         boolean optimalForThisGraph,
         boolean fullPopulationGraph,
+        boolean executablePlan,
         List<MatchedPair> pairs,
         List<UnmatchedPerson> unmatched,
         long totalFitCenti,
@@ -35,6 +36,11 @@ public record GlobalMatchingResult(
 
     public int matchedUsers() {
         return pairs.size() * 2;
+    }
+
+    /** Optimum of the solved graph, and that graph contains every eligible edge. */
+    public boolean optimalForFullEligibleGraph() {
+        return executablePlan && optimalForThisGraph && fullPopulationGraph && GlobalMatchingGraph.COMPLETE.equals(status);
     }
 
     public record MatchedPair(

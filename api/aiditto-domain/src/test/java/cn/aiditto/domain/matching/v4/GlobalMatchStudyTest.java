@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +32,8 @@ class GlobalMatchStudyTest {
         GlobalMatchingResult best = V4GlobalMatchingEngine.solve(GlobalMatchFixture.localOptimum(), Objective.G1_MAX_WEIGHT);
         assertThat(greedy.totalFitCenti()).isLessThan(best.totalFitCenti());
         assertThat(greedy.safetyViolations()).isZero();
+        assertThat(best.executablePlan()).isFalse();
+        assertThat(best.status()).isEqualTo(V4GlobalMatchingEngine.MATH_ONLY);
         GlobalMatchingResult heavy = V4GlobalMatchingEngine.solve(GlobalMatchFixture.cardinality(), Objective.G1_MAX_WEIGHT);
         GlobalMatchingResult many = V4GlobalMatchingEngine.solve(GlobalMatchFixture.cardinality(), Objective.G2_CARDINALITY_THEN_WEIGHT);
         assertThat(heavy.pairs()).hasSize(1);
@@ -119,6 +122,46 @@ class GlobalMatchStudyTest {
         GlobalMatchingGraph graph = GlobalMatchFixture.odd();
         var counts = GlobalSafetyAudit.audit(graph, List.of(PairKey.of(1, 3)));
         assertThat(GlobalSafetyAudit.total(counts)).isPositive();
+        var profileCounts = GlobalSafetyAudit.auditProfile(graph, List.of(PairKey.of(1, 2)));
+        assertThat(profileCounts).containsKey("MATH_EDGE");
+    }
+
+    @Test
+    void safetyRejectionDropsTheExecutablePlan() {
+        PreparedEdge planted = new PreparedEdge(1, 2, 1, 1, 1, 1, "M02", null,
+                90.0, 90.0, 1.0, 1.0, 90.0, 90.0, 9000, true, true, "", List.of());
+        GlobalMatchingInput input = GlobalMatchingInput.of("poison", "profile",
+                List.of(GlobalMatchPeople.placeholder(1), GlobalMatchPeople.placeholder(2)),
+                Set.of(), Set.of(), Set.of(), Map.of(), 1L);
+        GlobalMatchingGraph graph = new GlobalMatchingGraph(input, "E_FULL_POOL", "E_FULL_POOL",
+                GlobalMatchingGraph.Coverage.FULL_ELIGIBLE, List.of(planted), List.of(planted),
+                new GraphStats(2, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0),
+                GlobalMatchingGraph.COMPLETE, "planted math edge", Map.of());
+        GlobalMatchingResult result = V4GlobalMatchingEngine.solve(graph, Objective.G1_MAX_WEIGHT);
+        assertThat(result.status()).isEqualTo(V4GlobalMatchingEngine.SAFETY_REJECTED);
+        assertThat(result.pairs()).isEmpty();
+        assertThat(result.executablePlan()).isFalse();
+        assertThat(result.optimalForThisGraph()).isFalse();
+        assertThat(result.safetyBreakdown()).containsKey("MATH_EDGE");
+        assertThat(result.statusDetail()).contains("MATH_EDGE");
+    }
+
+    @Test
+    void exhaustedBudgetDoesNotStartTheSolver() {
+        GlobalMatchingResult result = V4GlobalMatchingEngine.solve(GlobalMatchFixture.odd(), Objective.G1_MAX_WEIGHT, System.nanoTime() - 1);
+        assertThat(result.pairs()).isEmpty();
+        assertThat(result.optimalForThisGraph()).isFalse();
+        assertThat(result.status()).isEqualTo(GlobalMatchingGraph.CAP_REACHED);
+        assertThat(result.statusDetail()).contains("wall budget");
+    }
+
+    @Test
+    void generationMismatchStaysVisibleWhenEdgesAreNotRetained() {
+        GlobalMatchingInput input = GlobalMatchFixture.dev().withGeneration(40_031, 99);
+        GlobalMatchingGraph graph = GlobalCandidateGraphBuilder.build(input, GlobalCandidateGraphBuilder.Strategy.E_FULL_POOL);
+        GlobalMatchingResult result = V4GlobalMatchingEngine.solve(graph, Objective.SELECTED);
+        assertThat(reason(result, 40_031)).isEqualTo("GENERATION_MISMATCH");
+        assertThat(result.pairs()).noneMatch(pair -> pair.lowId() == 40_031L || pair.highId() == 40_031L);
     }
 
     @Test
@@ -167,7 +210,18 @@ class GlobalMatchStudyTest {
             assertThat(forbidden).doesNotContain(pair.lowId(), pair.highId());
         }
         assertThat(reason(selected, base + 41)).isEqualTo("PROFILE_WITHDRAWN");
+        assertThat(reason(selected, base + 42)).isEqualTo("PROFILE_STALE");
         assertThat(reason(selected, base + 43)).isEqualTo("CONSENT_REVOKED");
+        assertThat(selected.executablePlan()).isTrue();
+        assertThat(selected.optimalForFullEligibleGraph()).isTrue();
+        assertThat(full.fullUserPool()).isTrue();
+        assertThat(full.fullEligibleGraph()).isTrue();
+        assertThat(shortlist.fullUserPool()).isTrue();
+        assertThat(shortlist.truncatedGraph()).isTrue();
+        assertThat(shortlist.fullEligibleGraph()).isFalse();
+        GlobalMatchingResult shortResult = V4GlobalMatchingEngine.solve(shortlist, Objective.SELECTED);
+        assertThat(shortResult.optimalForFullEligibleGraph()).isFalse();
+        assertThat(shortResult.status()).isEqualTo("TRUNCATED");
         GlobalMatchingGraph top = GlobalCandidateGraphBuilder.topK(full, 1);
         GlobalMatchingResult topResult = V4GlobalMatchingEngine.solve(top, Objective.SELECTED);
         System.out.println(input.cohort() + " top1 " + GlobalMatchStudy.line(topResult));

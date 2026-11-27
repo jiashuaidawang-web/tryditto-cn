@@ -81,6 +81,14 @@ public record GlobalMatchingInput(
                 candidateStrategyVersion, compatibilityPolicyVersion, objectiveVersion, syntheticUnmatchedWeeks, seed);
     }
 
+    public GlobalMatchingInput withGeneration(long userId, long generation) {
+        Map<Long, Long> generations = new LinkedHashMap<>(lifecycleGenerations);
+        generations.put(userId, generation);
+        return new GlobalMatchingInput(matchingRunId, matchingPeriod, cohort, eligibleUsers, profileSnapshotVersions,
+                generations, consentSnapshot, blockedPairs, forbiddenPairs, historicalRestrictions,
+                candidateStrategyVersion, compatibilityPolicyVersion, objectiveVersion, syntheticUnmatchedWeeks, seed);
+    }
+
     public GlobalMatchingInput withSnapshotVersion(long userId, long version) {
         Map<Long, Long> versions = new LinkedHashMap<>(profileSnapshotVersions);
         versions.put(userId, version);

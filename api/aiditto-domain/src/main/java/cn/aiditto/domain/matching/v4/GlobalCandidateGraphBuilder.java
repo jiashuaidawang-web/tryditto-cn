@@ -49,14 +49,17 @@ public final class GlobalCandidateGraphBuilder {
         }
         long filterAndScore = (System.nanoTime() - filterStart) / 1_000_000L;
         long buildMs = (System.nanoTime() - started) / 1_000_000L;
-        if (counters.capped) {
-            return new GlobalMatchingGraph(input, strategy.name(), strategy.name(), true, List.copyOf(diagnostic), List.of(),
-                    counters.stats(users.size(), diagnostic.size(), 0, profileMs, counters.filterMs, counters.scoreMs(), buildMs),
-                    GlobalMatchingGraph.CAP_REACHED, counters.detail + " loopMs=" + filterAndScore);
-        }
-        return new GlobalMatchingGraph(input, strategy.name(), strategy.name(), true, List.copyOf(diagnostic), List.copyOf(solver),
-                counters.stats(users.size(), diagnostic.size(), solver.size(), profileMs, counters.filterMs, counters.scoreMs(), buildMs),
-                GlobalMatchingGraph.COMPLETE, "buildMs=" + buildMs);
+        String detail = counters.capped
+                ? counters.detail + " loopMs=" + filterAndScore + " diagnosticOmitted=" + counters.diagnosticOmitted
+                : "buildMs=" + buildMs + " diagnosticOmitted=" + counters.diagnosticOmitted + " userNotes=" + counters.notes.size();
+        GlobalMatchingGraph.Coverage coverage = counters.capped
+                ? GlobalMatchingGraph.Coverage.ABORTED
+                : strategy == Strategy.F_SHORTLIST ? GlobalMatchingGraph.Coverage.TRUNCATED : GlobalMatchingGraph.Coverage.FULL_ELIGIBLE;
+        return new GlobalMatchingGraph(input, strategy.name(), strategy.name(), coverage,
+                counters.capped ? List.copyOf(diagnostic) : List.copyOf(diagnostic),
+                counters.capped ? List.of() : List.copyOf(solver),
+                counters.stats(users.size(), diagnostic.size(), counters.capped ? 0 : solver.size(), profileMs, counters.filterMs, counters.scoreMs(), buildMs),
+                counters.capped ? GlobalMatchingGraph.CAP_REACHED : GlobalMatchingGraph.COMPLETE, detail, counters.notes);
     }
 
     public static GlobalMatchingGraph topK(GlobalMatchingGraph full, int k) {
@@ -78,8 +81,11 @@ public final class GlobalCandidateGraphBuilder {
         GraphStats next = new GraphStats(stats.users(), stats.consideredPairs(), stats.diagnosticRetained(), solver.size(),
                 stats.hardBlocked(), stats.notEligible(), stats.eligible(), dropped, stats.withdrawnPairs(),
                 stats.consentPairs(), stats.historicalPairs(), stats.profileMs(), stats.filterMs(), stats.scoreMs(), stats.buildMs());
-        return new GlobalMatchingGraph(full.input(), full.strategy(), "TOP_" + k, false, full.diagnostic(), solver, next,
-                GlobalMatchingGraph.COMPLETE, "dropped=" + dropped);
+        GlobalMatchingGraph.Coverage coverage = full.mathFixture()
+                ? GlobalMatchingGraph.Coverage.MATH
+                : GlobalMatchingGraph.Coverage.TRUNCATED;
+        return new GlobalMatchingGraph(full.input(), full.strategy(), "TOP_" + k, coverage,
+                full.diagnostic(), solver, next, GlobalMatchingGraph.COMPLETE, "dropped=" + dropped, full.userDiagnostics());
     }
 
     private static void scoreAll(GlobalMatchingInput input, List<CompatibilitySubject> users, CompatibilityContext context,
@@ -103,11 +109,16 @@ public final class GlobalCandidateGraphBuilder {
                                        List<PreparedEdge> diagnostic, List<PreparedEdge> solver, boolean retainAll) {
         List<List<Long>> tops = new ArrayList<>();
         long filterStart = System.nanoTime();
+        long seen = 0;
         for (int i = 0; i < users.size(); i++) {
             List<long[]> best = new ArrayList<>();
             for (int j = 0; j < users.size(); j++) {
+                if ((++seen & 1023) == 0 && System.nanoTime() > deadline) {
+                    counters.cap("stopped during shortlist construction");
+                    return;
+                }
                 if (i == j) continue;
-                if (precheck(input, users.get(i), users.get(j)) != null) continue;
+                if (precheck(input, users.get(i), users.get(j), counters) != null) continue;
                 if (i < j) counters.passing++;
                 int hits = GlobalMatchPeople.structuralHits(users.get(i), users.get(j));
                 insert(best, users.get(j).userId(), hits);
@@ -137,9 +148,9 @@ public final class GlobalCandidateGraphBuilder {
                 for (int j = i + 1; j < users.size(); j++) {
                     PairKey key = PairKey.of(users.get(i).userId(), users.get(j).userId());
                     if (chosen.contains(key)) continue;
-                    String block = precheck(input, users.get(i), users.get(j));
+                    String block = precheck(input, users.get(i), users.get(j), counters);
                     if (block == null) block = "RECALL_TRUNCATED";
-                    remember(diagnostic, excluded(users.get(i), users.get(j), "F_SHORTLIST", block), true);
+                    remember(diagnostic, excluded(users.get(i), users.get(j), "F_SHORTLIST", block), true, counters);
                 }
             }
         }
@@ -160,10 +171,10 @@ public final class GlobalCandidateGraphBuilder {
             low = high;
             high = swap;
         }
-        String block = precheck(input, low, high);
+        String block = precheck(input, low, high, counters);
         if (block != null) {
             countBlock(counters, block);
-            remember(diagnostic, excluded(low, high, "PRECHECK", block), retainAll);
+            remember(diagnostic, excluded(low, high, "PRECHECK", block), retainAll, counters);
             return;
         }
         if (!score) return;
@@ -180,9 +191,11 @@ public final class GlobalCandidateGraphBuilder {
             solver.add(edge);
         } else {
             counters.notEligible++;
+            counters.note(low.userId(), "NO_RECOMMENDATION_ELIGIBLE_EDGE");
+            counters.note(high.userId(), "NO_RECOMMENDATION_ELIGIBLE_EDGE");
             if (decision.pair().hardFilterResult().stream().anyMatch(code -> code.startsWith("HARD_"))) counters.hardBlocked++;
         }
-        remember(diagnostic, edge, retainAll || edge.solverEligible());
+        remember(diagnostic, edge, retainAll || edge.solverEligible(), counters);
     }
 
     private static PreparedEdge fromDecision(CompatibilitySubject low, CompatibilitySubject high, CompatibilityDecision decision) {
@@ -213,19 +226,37 @@ public final class GlobalCandidateGraphBuilder {
                 false, false, reason, List.of(reason));
     }
 
-    private static String precheck(GlobalMatchingInput input, CompatibilitySubject left, CompatibilitySubject right) {
-        if (!input.profileSnapshotVersions().get(left.userId()).equals(left.profileVersion())
-                || !input.profileSnapshotVersions().get(right.userId()).equals(right.profileVersion())
-                || !input.lifecycleGenerations().get(left.userId()).equals(left.generation())
-                || !input.lifecycleGenerations().get(right.userId()).equals(right.generation())) {
-            return "VERSION_MISMATCH";
+    private static String precheck(GlobalMatchingInput input, CompatibilitySubject left, CompatibilitySubject right, Counters counters) {
+        boolean versionBad = !input.profileSnapshotVersions().get(left.userId()).equals(left.profileVersion())
+                || !input.profileSnapshotVersions().get(right.userId()).equals(right.profileVersion());
+        boolean generationBad = !input.lifecycleGenerations().get(left.userId()).equals(left.generation())
+                || !input.lifecycleGenerations().get(right.userId()).equals(right.generation());
+        if (versionBad) {
+            counters.note(left.userId(), "VERSION_MISMATCH");
+            counters.note(right.userId(), "VERSION_MISMATCH");
         }
+        if (generationBad) {
+            counters.note(left.userId(), "GENERATION_MISMATCH");
+            counters.note(right.userId(), "GENERATION_MISMATCH");
+        }
+        if (versionBad) return "VERSION_MISMATCH";
+        if (generationBad) return "GENERATION_MISMATCH";
         if (!"GRANTED".equals(input.consentSnapshot().get(left.userId()))
                 || !"GRANTED".equals(input.consentSnapshot().get(right.userId()))) {
+            if (!"GRANTED".equals(input.consentSnapshot().get(left.userId()))) counters.note(left.userId(), "CONSENT_REVOKED");
+            if (!"GRANTED".equals(input.consentSnapshot().get(right.userId()))) counters.note(right.userId(), "CONSENT_REVOKED");
             return "CONSENT_REVOKED";
         }
-        if (left.withdrawn() || right.withdrawn()) return "PROFILE_WITHDRAWN";
-        if (!left.current() || !right.current()) return "PROFILE_STALE";
+        if (left.withdrawn() || right.withdrawn()) {
+            if (left.withdrawn()) counters.note(left.userId(), "PROFILE_WITHDRAWN");
+            if (right.withdrawn()) counters.note(right.userId(), "PROFILE_WITHDRAWN");
+            return "PROFILE_WITHDRAWN";
+        }
+        if (!left.current() || !right.current()) {
+            if (!left.current()) counters.note(left.userId(), "PROFILE_STALE");
+            if (!right.current()) counters.note(right.userId(), "PROFILE_STALE");
+            return "PROFILE_STALE";
+        }
         PairKey key = PairKey.of(left.userId(), right.userId());
         if (input.blockedPairs().contains(key)) return "BLOCKED";
         if (input.forbiddenPairs().contains(key)) return "FORBIDDEN";
@@ -242,8 +273,12 @@ public final class GlobalCandidateGraphBuilder {
         }
     }
 
-    private static void remember(List<PreparedEdge> diagnostic, PreparedEdge edge, boolean retain) {
-        if (retain && diagnostic.size() < GlobalBudgets.MAX_DIAGNOSTIC_EDGES) diagnostic.add(edge);
+    private static void remember(List<PreparedEdge> diagnostic, PreparedEdge edge, boolean retain, Counters counters) {
+        if (!retain || diagnostic.size() >= GlobalBudgets.MAX_DIAGNOSTIC_EDGES) {
+            counters.diagnosticOmitted++;
+            return;
+        }
+        diagnostic.add(edge);
     }
 
     private static CompatibilitySubject subject(List<CompatibilitySubject> users, long id) {
@@ -265,9 +300,9 @@ public final class GlobalCandidateGraphBuilder {
 
     private static GlobalMatchingGraph capped(GlobalMatchingInput input, Strategy strategy, int users, String detail, long started) {
         long ms = (System.nanoTime() - started) / 1_000_000L;
-        return new GlobalMatchingGraph(input, strategy.name(), strategy.name(), true, List.of(), List.of(),
+        return new GlobalMatchingGraph(input, strategy.name(), strategy.name(), GlobalMatchingGraph.Coverage.ABORTED, List.of(), List.of(),
                 new GraphStats(users, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ms, 0, 0, 0),
-                GlobalMatchingGraph.CAP_REACHED, detail);
+                GlobalMatchingGraph.CAP_REACHED, detail, Map.of());
     }
 
     private static final class Counters {
@@ -282,8 +317,15 @@ public final class GlobalCandidateGraphBuilder {
         int historicalPairs;
         long scoreNanos;
         long filterMs;
+        int diagnosticOmitted;
         boolean capped;
         String detail = "";
+        final java.util.Map<Long, List<String>> notes = new java.util.LinkedHashMap<>();
+
+        void note(long userId, String code) {
+            List<String> codes = notes.computeIfAbsent(userId, ignored -> new ArrayList<>());
+            if (codes.size() < 8 && !codes.contains(code)) codes.add(code);
+        }
 
         long scoreMs() {
             return scoreNanos / 1_000_000L;

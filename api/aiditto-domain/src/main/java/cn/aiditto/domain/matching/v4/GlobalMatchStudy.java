@@ -99,7 +99,7 @@ public final class GlobalMatchStudy {
             GlobalMatchingInput input = GlobalMatchFixture.scale(users);
             GlobalMatchingGraph graph = GlobalCandidateGraphBuilder.build(input, GlobalCandidateGraphBuilder.Strategy.E_FULL_POOL, deadline,
                     GlobalBudgets.MAX_SOLVER_EDGES);
-            GlobalMatchingResult result = V4GlobalMatchingEngine.solve(graph, Objective.SELECTED);
+            GlobalMatchingResult result = V4GlobalMatchingEngine.solve(graph, Objective.SELECTED, deadline);
             if (graph.stats().consideredPairs() > 0 && graph.stats().scoreMs() > 0) {
                 perPair = graph.stats().scoreMs() / (double) graph.stats().consideredPairs();
             }
@@ -119,13 +119,13 @@ public final class GlobalMatchStudy {
             if (graph.complete()) {
                 for (int k : new int[]{10, 20, 50}) {
                     GlobalMatchingGraph top = GlobalCandidateGraphBuilder.topK(graph, k);
-                    GlobalMatchingResult topResult = V4GlobalMatchingEngine.solve(top, Objective.SELECTED);
+                    GlobalMatchingResult topResult = V4GlobalMatchingEngine.solve(top, Objective.SELECTED, deadline);
                     detail.append(" top").append(k).append("=").append(topResult.pairs().size())
                             .append("/").append(topResult.totalFitCenti());
                 }
                 GlobalMatchingGraph shortlist = GlobalCandidateGraphBuilder.build(input,
                         GlobalCandidateGraphBuilder.Strategy.F_SHORTLIST, deadline, GlobalBudgets.MAX_SOLVER_EDGES);
-                GlobalMatchingResult shortResult = V4GlobalMatchingEngine.solve(shortlist, Objective.SELECTED);
+                GlobalMatchingResult shortResult = V4GlobalMatchingEngine.solve(shortlist, Objective.SELECTED, deadline);
                 detail.append(" Fedges=").append(shortlist.stats().solverEdges())
                         .append(" FscoreMs=").append(shortlist.stats().scoreMs())
                         .append(" Fpairs=").append(shortResult.pairs().size())

@@ -18,9 +18,26 @@ import java.util.Set;
 public final class V4GlobalMatchingEngine {
     private V4GlobalMatchingEngine() {}
 
+    public static final String SAFETY_REJECTED = "SAFETY_REJECTED";
+    public static final String MATH_ONLY = "MATH_ONLY";
+
     public static GlobalMatchingResult solve(GlobalMatchingGraph graph, Objective objective) {
+        return solve(graph, objective, System.nanoTime() + GlobalBudgets.WALL_MS * 1_000_000L);
+    }
+
+    /**
+     * {@code deadlineNanos} is the shared build-and-solve budget.
+     * Blossom cannot be cancelled by interrupting the thread. The solver starts only when the
+     * graph is complete and the budget is still open, and only inside the frozen edge cap.
+     * If it returns after the deadline, the pairs are discarded.
+     */
+    public static GlobalMatchingResult solve(GlobalMatchingGraph graph, Objective objective, long deadlineNanos) {
         long wallStart = System.nanoTime();
-        if (!graph.complete()) return aborted(graph, objective, wallStart, "graph " + graph.statusDetail());
+        if (!graph.complete() || graph.abortedGraph()) return aborted(graph, objective, wallStart, "graph " + graph.statusDetail());
+        if (System.nanoTime() > deadlineNanos) return aborted(graph, objective, wallStart, "solve not started: wall budget exhausted");
+        if (graph.solver().size() > GlobalBudgets.MAX_SOLVER_EDGES) {
+            return aborted(graph, objective, wallStart, "solver edge cap " + GlobalBudgets.MAX_SOLVER_EDGES);
+        }
         long solveStart = System.nanoTime();
         List<PreparedEdge> pool = new ArrayList<>();
         for (PreparedEdge edge : graph.solver()) {
@@ -30,6 +47,9 @@ public final class V4GlobalMatchingEngine {
         }
         List<PairKey> keys = V4MatchingAdapter.match(graph.input(), pool, objective, objective == Objective.G0_GREEDY);
         long solveMs = (System.nanoTime() - solveStart) / 1_000_000L;
+        if (System.nanoTime() > deadlineNanos) {
+            return aborted(graph, objective, wallStart, "solver returned after the wall budget; pairs discarded");
+        }
         long planStart = System.nanoTime();
         Map<PairKey, PreparedEdge> byKey = new LinkedHashMap<>();
         for (PreparedEdge edge : pool) byKey.put(edge.key(), edge);
@@ -48,7 +68,7 @@ public final class V4GlobalMatchingEngine {
                     edge.fitScore() == null ? edge.fitCenti() / 100.0 : edge.fitScore(), edge.fitCenti(),
                     edge.scoreLowToHigh(), edge.scoreHighToLow(), edge.coverageLowToHigh(), edge.coverageHighToLow(),
                     edge.minDirection(), edgeWeight, OptimizationWeight.components(objective, edge.fitCenti(), fairness, edgeWeight),
-                    edge.mathAdmitted() || (edge.decision() != null && edge.decision().recommendationEligible())));
+                    !edge.mathAdmitted() && edge.decision() != null && edge.decision().recommendationEligible()));
             fit += edge.fitCenti();
             weight += edgeWeight;
             matched.add(edge.lowId());
@@ -58,14 +78,29 @@ public final class V4GlobalMatchingEngine {
         List<GlobalMatchingResult.UnmatchedPerson> unmatched = explain(graph, pool, matched);
         long planMs = (System.nanoTime() - planStart) / 1_000_000L;
         long auditStart = System.nanoTime();
-        Map<String, Integer> safety = GlobalSafetyAudit.audit(graph, keys);
+        Map<String, Integer> safety = graph.mathFixture()
+                ? GlobalSafetyAudit.auditMath(graph, keys)
+                : GlobalSafetyAudit.auditProfile(graph, keys);
         long auditMs = (System.nanoTime() - auditStart) / 1_000_000L;
         Map<String, Integer> reasons = new LinkedHashMap<>();
         for (GlobalMatchingResult.UnmatchedPerson person : unmatched) reasons.merge(person.finalReason(), 1, Integer::sum);
         long heap = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-        return new GlobalMatchingResult(graph.input().matchingRunId(), objective, graph.scope(), true, graph.fullPopulation(),
-                pairs, unmatched, fit, weight, GlobalSafetyAudit.total(safety), reasons, safety,
-                GlobalMatchingGraph.COMPLETE, graph.statusDetail(), solveMs, planMs, auditMs,
+        int violations = GlobalSafetyAudit.total(safety);
+        if (violations > 0 || graph.mathFixture()) {
+            boolean keepMathPairs = violations == 0 && graph.mathFixture();
+            String detail = graph.statusDetail() + " safety=" + safety;
+            return new GlobalMatchingResult(graph.input().matchingRunId(), objective, graph.scope(),
+                    keepMathPairs, false, false,
+                    keepMathPairs ? pairs : List.of(), unmatched, keepMathPairs ? fit : 0, keepMathPairs ? weight : 0,
+                    violations, reasons, safety,
+                    violations > 0 ? SAFETY_REJECTED : MATH_ONLY, detail, solveMs, planMs, auditMs,
+                    (System.nanoTime() - wallStart) / 1_000_000L, heap);
+        }
+        String status = graph.fullEligibleGraph() ? GlobalMatchingGraph.COMPLETE : "TRUNCATED";
+        return new GlobalMatchingResult(graph.input().matchingRunId(), objective, graph.scope(),
+                true, graph.fullEligibleGraph(), true,
+                pairs, unmatched, fit, weight, 0, reasons, safety,
+                status, graph.statusDetail(), solveMs, planMs, auditMs,
                 (System.nanoTime() - wallStart) / 1_000_000L, heap);
     }
 
@@ -86,10 +121,12 @@ public final class V4GlobalMatchingEngine {
         for (CompatibilitySubject user : graph.input().eligibleUsers()) {
             if (matched.contains(user.userId())) continue;
             List<String> diagnostics = new ArrayList<>();
+            diagnostics.addAll(graph.userDiagnostics().getOrDefault(user.userId(), List.of()));
             if (user.withdrawn()) diagnostics.add("PROFILE_WITHDRAWN");
             if (!"GRANTED".equals(graph.input().consentSnapshot().get(user.userId()))) diagnostics.add("CONSENT_REVOKED");
             if (!user.current()) diagnostics.add("PROFILE_STALE");
             if (!graph.input().profileSnapshotVersions().get(user.userId()).equals(user.profileVersion())) diagnostics.add("VERSION_MISMATCH");
+            if (!graph.input().lifecycleGenerations().get(user.userId()).equals(user.generation())) diagnostics.add("GENERATION_MISMATCH");
             boolean droppedByScope = false;
             boolean ineligibleScore = false;
             boolean insufficient = false;
@@ -128,6 +165,9 @@ public final class V4GlobalMatchingEngine {
     private static String finalReason(List<String> diagnostics, boolean droppedByScope, boolean ineligible, boolean insufficient, boolean noUsable) {
         if (diagnostics.contains("PROFILE_WITHDRAWN")) return "PROFILE_WITHDRAWN";
         if (diagnostics.contains("CONSENT_REVOKED")) return "CONSENT_REVOKED";
+        if (diagnostics.contains("PROFILE_STALE")) return "PROFILE_STALE";
+        if (diagnostics.contains("VERSION_MISMATCH")) return "VERSION_MISMATCH";
+        if (diagnostics.contains("GENERATION_MISMATCH")) return "GENERATION_MISMATCH";
         if (diagnostics.contains("GLOBAL_COMPETITION")) return "GLOBAL_COMPETITION";
         if (diagnostics.contains("OPTIMIZATION_NOT_SELECTED")) return "OPTIMIZATION_NOT_SELECTED";
         if (droppedByScope && noUsable) return "RECALL_TRUNCATED";
@@ -145,7 +185,7 @@ public final class V4GlobalMatchingEngine {
         for (CompatibilitySubject user : graph.input().eligibleUsers()) {
             unmatched.add(new GlobalMatchingResult.UnmatchedPerson(user.userId(), "RUN_ABORTED", List.of("RUN_ABORTED")));
         }
-        return new GlobalMatchingResult(graph.input().matchingRunId(), objective, graph.scope(), false, graph.fullPopulation(),
+        return new GlobalMatchingResult(graph.input().matchingRunId(), objective, graph.scope(), false, false, false,
                 List.of(), unmatched, 0, 0, 0, Map.of("RUN_ABORTED", unmatched.size()), Map.of(),
                 GlobalMatchingGraph.CAP_REACHED, detail, 0, 0, 0,
                 (System.nanoTime() - wallStart) / 1_000_000L, 0);

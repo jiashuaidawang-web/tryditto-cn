@@ -11,12 +11,15 @@ public record GlobalMatchingGraph(
         GlobalMatchingInput input,
         String strategy,
         String scope,
-        boolean fullPopulation,
+        Coverage coverage,
         List<PreparedEdge> diagnostic,
         List<PreparedEdge> solver,
         GraphStats stats,
         String status,
-        String statusDetail) {
+        String statusDetail,
+        Map<Long, List<String>> userDiagnostics) {
+
+    public enum Coverage { FULL_ELIGIBLE, TRUNCATED, ABORTED, MATH }
 
     public static final String COMPLETE = "COMPLETE";
     public static final String CAP_REACHED = "CAP_REACHED";
@@ -24,9 +27,41 @@ public record GlobalMatchingGraph(
     public GlobalMatchingGraph {
         diagnostic = List.copyOf(diagnostic);
         solver = List.copyOf(solver);
-        if (input == null || strategy == null || scope == null || stats == null || status == null) {
+        if (input == null || strategy == null || scope == null || coverage == null || stats == null || status == null) {
             throw new IllegalArgumentException("graph");
         }
+        Map<Long, List<String>> notes = new LinkedHashMap<>();
+        if (userDiagnostics != null) {
+            userDiagnostics.forEach((id, codes) -> notes.put(id, List.copyOf(codes)));
+        }
+        userDiagnostics = Map.copyOf(notes);
+    }
+
+    /** Every requested user stayed in the finished run. An aborted run is not a finished user pool. */
+    public boolean fullUserPool() {
+        return coverage == Coverage.FULL_ELIGIBLE || coverage == Coverage.TRUNCATED;
+    }
+
+    /** Every recommendation-eligible edge among those users is in the solver graph. */
+    public boolean fullEligibleGraph() {
+        return coverage == Coverage.FULL_ELIGIBLE;
+    }
+
+    public boolean truncatedGraph() {
+        return coverage == Coverage.TRUNCATED;
+    }
+
+    public boolean abortedGraph() {
+        return coverage == Coverage.ABORTED;
+    }
+
+    public boolean mathFixture() {
+        return coverage == Coverage.MATH;
+    }
+
+    /** Kept for callers that mean the full eligible graph. A full user pool is not enough. */
+    public boolean fullPopulation() {
+        return fullEligibleGraph();
     }
 
     public boolean complete() {
@@ -56,8 +91,8 @@ public record GlobalMatchingGraph(
             diagnostic.add(edge);
             if (edge.solverEligible()) solver.add(edge);
         }
-        return new GlobalMatchingGraph(input, "MATH", name, true, diagnostic, solver,
+        return new GlobalMatchingGraph(input, "MATH", name, Coverage.MATH, diagnostic, solver,
                 new GraphStats(ids.size(), edges.size(), diagnostic.size(), solver.size(), 0, 0, solver.size(), 0, 0, 0, 0,
-                        0, 0, 0, 0), COMPLETE, "");
+                        0, 0, 0, 0), COMPLETE, "math fixture", Map.of());
     }
 }

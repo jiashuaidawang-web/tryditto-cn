@@ -388,4 +388,17 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 
 小规模求解正确性和冻结标签门槛上的离线全局匹配记为 GO。候选图性能、端到端合成匹配质量、生产启用和最终匹配算法质量是 NO-GO。真实关系质量是 NOT_RUN。数字见 `V4-M04-eval-report.md`。实现提交 `e26c45ef0b323220530e9e2b72e9ec36b961efa2`。第一次 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46040944018 在集成测试开始前失败：Maven 没有解析到 Spring Boot 父 POM。领域测试和 Qdrant 隔离那次已经成功。
 
-完整运行是提交 `a786df884ac8fa8e894c25659235855f73467587` 的 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46041537210 。四个作业都是 success。工程质量按这次运行记为 GO。
+完整运行是提交 `a786df884ac8fa8e894c25659235855f73467587` 的 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46041537210 。四个作业都是 success。工程质量按这次运行记为 GO。分支尖端文档提交 `e011f5e618f05f4255b5d127de33bde9187d66ef` 的 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46042020081 也是四个作业 success。
+
+## V4-M04-FINAL（2026-11-28）
+
+四项收口留在 `feature/v4-global-matching`，随后并入 `master_agent_v4`。没有改生产求解、评分、发布闸门，也没有改 E + G2 的冻结实验结果。
+
+已收口：
+
+- 安全审计有违规时状态是 `SAFETY_REJECTED`，配对列表为空，不能当成可执行计划。
+- 画像审计与数学测试入口分开。`mathAdmitted` 不能跳过身份、授权、池快照、版本、代次、硬约束、限制和推荐资格。
+- 构建和求解共用墙钟。Blossom 不能靠中断取消；超时返回的配对被丢弃。50,000 条边的上限不变。过期和代次不一致在诊断边被省略后仍能解释。
+- F 和 Top-K 是截断图。截断图最优不再写成完整合法图最优。
+
+候选图性能、端到端合成匹配质量、生产启用和最终匹配算法质量继续 NO-GO。真实关系质量继续 NOT_RUN。细节见 `V4-M04-final-audit.md`。
