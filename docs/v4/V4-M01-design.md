@@ -22,7 +22,9 @@ flowchart TD
   budget --> metrics["RecallMetrics"]
 ```
 
-B0 不走这些路线。它把已经通过资格的人按固定种子打乱，再截到同一预算。这对应今天生产侧「合法池里没有每人语义排序」这件事。无预算的合法全集只用来报覆盖上限，不拿去和 Top-K 比 Precision。
+B0 现在明确叫随机合法池。它把已经通过资格的人按固定种子打乱，再截到同一预算。另外三份对照使用同一批人、同一套资格、同一个 Top-K 和同一份标签：B1 用未改动的生产 `Scorer.score`，B2 只走 R1，B3 走冻结的 R1–R5。`StructuredRecallService` 没有拿来当 B2，因为它要查 PostgreSQL 的 profile 行，并使用 V3 的单向过滤。无预算的合法全集只用来报覆盖上限，不拿去和 Top-K 比 Precision。
+
+分数相同的时候，V4 路线和生产规则分都按较小的 `userId` 排在前面。这会让同一批小号用户长期占住名额。生产 `MatchingSolver` 里的种子 tie-break 没有被复制，也没有被修改。100 人回归的排序因此保持原样。
 
 ## 冻结规则
 

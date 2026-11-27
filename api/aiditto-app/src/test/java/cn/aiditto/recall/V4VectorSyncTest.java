@@ -27,10 +27,44 @@ class V4VectorSyncTest {
         assertThat(V4VectorSync.sync(index, current, embedding)).isEqualTo(VersionedVectorIndex.Put.IDEMPOTENT);
         RecallSubject older = new RecallSubject(current.userId(), current.split(), 1, true, false, current.fixtureSource(),
                 current.candidate(), current.applicant(), current.consent(), current.selfEnums(), current.hobbies(),
-                current.preferenceEnums());
+                current.preferenceEnums(), current.generation(), current.ingress());
         assertThat(V4VectorSync.sync(index, older, embedding)).isEqualTo(VersionedVectorIndex.Put.REJECT_STALE);
         assertThat(index.search(VersionedVectorIndex.Kind.SELF, embedding.embed(RecallVectorText.self(current)), 3, embedding.version()))
                 .isNotEmpty();
+    }
+
+    @Test
+    void aFailedPreferenceEmbeddingDoesNotPublishTheSelfVector() {
+        VersionedVectorIndex index = new VersionedVectorIndex();
+        EmbeddingService embedding = new HashingEmbeddingService(32);
+        RecallSubject current = RecallBench.load().subjects().stream().filter(subject -> subject.userId() == 4).findFirst().orElseThrow();
+        EmbeddingService failing = new EmbeddingService() {
+            private int calls;
+            public String version() { return embedding.version(); }
+            public int dimension() { return embedding.dimension(); }
+            public float[] embed(String text) {
+                if (++calls == 2) throw new IllegalStateException("timeout");
+                return embedding.embed(text);
+            }
+        };
+        assertThat(V4VectorSync.sync(index, current, failing)).isEqualTo(VersionedVectorIndex.Put.REJECT_PARTIAL);
+        assertThat(index.size()).isZero();
+        assertThat(V4VectorSync.sync(index, current, embedding)).isEqualTo(VersionedVectorIndex.Put.STORED);
+        EmbeddingService withdrawing = new EmbeddingService() {
+            private int calls;
+            public String version() { return embedding.version(); }
+            public int dimension() { return embedding.dimension(); }
+            public float[] embed(String text) {
+                if (++calls == 2) index.withdraw(current.userId(), current.generation(), current.profileVersion());
+                return embedding.embed(text);
+            }
+        };
+        RecallSubject next = new RecallSubject(current.userId(), current.split(), current.profileVersion() + 1, true, false,
+                current.fixtureSource(), current.candidate(), current.applicant(), current.consent(),
+                current.selfEnums(), current.hobbies(), current.preferenceEnums(), current.generation(), current.ingress());
+        assertThat(V4VectorSync.sync(index, next, withdrawing)).isEqualTo(VersionedVectorIndex.Put.REJECT_WITHDRAWN);
+        assertThat(index.search(VersionedVectorIndex.Kind.SELF, embedding.embed(RecallVectorText.self(current)), 3, embedding.version()))
+                .isEmpty();
     }
 
     @Test
@@ -41,7 +75,7 @@ class V4VectorSyncTest {
         V4VectorSync.sync(index, current, embedding);
         RecallSubject withdrawn = new RecallSubject(current.userId(), current.split(), current.profileVersion(), true, true,
                 current.fixtureSource(), current.candidate(), current.applicant(), current.consent(),
-                current.selfEnums(), current.hobbies(), current.preferenceEnums());
+                current.selfEnums(), current.hobbies(), current.preferenceEnums(), current.generation(), current.ingress());
         assertThat(V4VectorSync.sync(index, withdrawn, embedding)).isEqualTo(VersionedVectorIndex.Put.DELETED);
         assertThat(index.size()).isZero();
     }

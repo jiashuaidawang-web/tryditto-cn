@@ -59,21 +59,21 @@ class V4RecallContractTest {
     void vectorVersionsAreIdempotentAndStaleWritesLose() throws Exception {
         VersionedVectorIndex index = new VersionedVectorIndex();
         float[] vector = {1f, 0f};
-        VersionedVectorIndex.Point newer = new VersionedVectorIndex.Point(7, VersionedVectorIndex.Kind.SELF, 2, "hash-test", "aa", vector);
-        VersionedVectorIndex.Point older = new VersionedVectorIndex.Point(7, VersionedVectorIndex.Kind.SELF, 1, "hash-test", "bb", vector);
-        assertThat(index.put(newer)).isEqualTo(VersionedVectorIndex.Put.STORED);
-        assertThat(index.put(newer)).isEqualTo(VersionedVectorIndex.Put.IDEMPOTENT);
-        assertThat(index.put(older)).isEqualTo(VersionedVectorIndex.Put.REJECT_STALE);
+        VersionedVectorIndex.Snapshot newer = snapshot(7, 1, 2, "aa", "cc", vector);
+        VersionedVectorIndex.Snapshot older = snapshot(7, 1, 1, "bb", "dd", vector);
+        assertThat(index.commit(newer)).isEqualTo(VersionedVectorIndex.Put.STORED);
+        assertThat(index.commit(newer)).isEqualTo(VersionedVectorIndex.Put.IDEMPOTENT);
+        assertThat(index.commit(older)).isEqualTo(VersionedVectorIndex.Put.REJECT_STALE);
         CountDownLatch start = new CountDownLatch(1);
         AtomicReference<VersionedVectorIndex.Put> left = new AtomicReference<>();
         AtomicReference<VersionedVectorIndex.Put> right = new AtomicReference<>();
         Thread first = new Thread(() -> {
             await(start);
-            left.set(index.put(older));
+            left.set(index.commit(older));
         });
         Thread second = new Thread(() -> {
             await(start);
-            right.set(index.put(newer));
+            right.set(index.commit(newer));
         });
         first.start();
         second.start();
@@ -82,8 +82,14 @@ class V4RecallContractTest {
         second.join();
         assertThat(List.of(left.get(), right.get())).contains(VersionedVectorIndex.Put.REJECT_STALE);
         assertThat(index.search(VersionedVectorIndex.Kind.SELF, vector, 5, "hash-test").get(0).profileVersion()).isEqualTo(2);
+        assertThat(index.search(VersionedVectorIndex.Kind.PREFERENCE, vector, 5, "hash-test").get(0).profileVersion()).isEqualTo(2);
         index.delete(7);
         assertThat(index.search(VersionedVectorIndex.Kind.SELF, vector, 5, "hash-test")).isEmpty();
+        assertThat(index.commit(newer)).isEqualTo(VersionedVectorIndex.Put.REJECT_WITHDRAWN);
+    }
+
+    private static VersionedVectorIndex.Snapshot snapshot(long userId, long generation, long version, String self, String preference, float[] vector) {
+        return new VersionedVectorIndex.Snapshot(userId, generation, version, "hash-test", self, vector, preference, vector);
     }
 
     @Test

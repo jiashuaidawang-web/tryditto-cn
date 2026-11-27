@@ -197,7 +197,8 @@ public final class RecallBench {
         Candidate candidate = Candidate.builder(id).build();
         RecallSubject subject = subject(split, id, candidate, true, true, ConsentStatus.GRANTED, true, Set.of(), Map.of(), Map.of());
         PoolGate.Applicant applicant = new PoolGate.Applicant(candidate.birthday(), false, true, false, 2, false, false, null, false);
-        return new RecallSubject(id, split, 2, true, false, SOURCE, candidate, applicant, subject.consent(), Map.of(), Set.of(), Map.of());
+        return new RecallSubject(id, split, 2, true, false, SOURCE, candidate, applicant, subject.consent(),
+                Map.of(), Set.of(), Map.of(), 1, RecallIngress.SYNTHETIC_FIXTURE);
     }
 
     private static RecallSubject person(String split, long id, Set<String> hobbies, Map<String, String> self,
@@ -219,7 +220,7 @@ public final class RecallBench {
         MatchingConsent matching = new MatchingConsent(id, consent, consent == ConsentStatus.UNKNOWN ? 0 : 1,
                 granted, revoked, consent == ConsentStatus.GRANTED ? ConsentPolicy.POLICY_VERSION : null, NOW);
         return new RecallSubject(id, split, current ? 2 : 1, current, !notWithdrawn, SOURCE, candidate, applicant,
-                matching, self, hobbies, preference);
+                matching, self, hobbies, preference, 1, RecallIngress.SYNTHETIC_FIXTURE);
     }
 
     private static List<RecallSubject> withBlock(List<RecallSubject> people) {
@@ -235,6 +236,6 @@ public final class RecallBench {
     private static RecallSubject rebuild(RecallSubject subject, Candidate candidate) {
         return new RecallSubject(subject.userId(), subject.split(), subject.profileVersion(), subject.current(),
                 subject.withdrawn(), subject.fixtureSource(), candidate, subject.applicant(), subject.consent(),
-                subject.selfEnums(), subject.hobbies(), subject.preferenceEnums());
+                subject.selfEnums(), subject.hobbies(), subject.preferenceEnums(), subject.generation(), subject.ingress());
     }
 }

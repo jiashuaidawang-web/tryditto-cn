@@ -16,6 +16,15 @@ import java.util.Set;
 public final class RecallMetrics {
     public record Label(long seeker, long candidate, String split, String kind, String direction, int grade) {}
 
+    public record DirectedPair(long seeker, long candidate) {}
+
+    /**
+     * Ratios keep a fixed relevant-label denominator.
+     * {@code labeledPrecisionAt20} uses only slots that are relevant or irrelevant.
+     * {@code slotPrecisionAt20} uses every returned slot in the denominator. Unlabeled slots are not
+     * confirmed negatives; {@code unlabeledAt20} counts them. MRR uses the full returned rank.
+     * HitRate and NDCG use the top 20. All three exclude seekers who have no relevant label.
+     */
     public record Summary(
             Double recallAt10,
             Double recallAt20,
@@ -35,12 +44,41 @@ public final class RecallMetrics {
             int hardViolations,
             int expiredReturned,
             int withdrawnReturned,
-            Map<String, Integer> routeFound) {}
+            Map<String, Integer> routeFound,
+            int recallHitsAt10,
+            int recallHitsAt20,
+            int recallHitsAt50,
+            Double labeledPrecisionAt20,
+            Double slotPrecisionAt20,
+            int labeledRelevantAt20,
+            int labeledIrrelevantAt20,
+            int unlabeledAt20,
+            int labelCoverageSlots,
+            int inspectedSlotsAt20,
+            Double labelCoverage,
+            Double queryBidirectionalCoverage,
+            int queryMutualEdges,
+            int queryDirectedEdges,
+            int poolMutualEdges,
+            int poolDirectedEdges,
+            int zeroIneligible,
+            int zeroNoLegal,
+            int zeroSparse,
+            int zeroRecallFailure,
+            int safetyAuditViolations,
+            int mrrSeekers,
+            int hitRateSeekers,
+            int missingResultPositives) {}
 
     private RecallMetrics() {}
 
     public static Summary summarize(List<RecallSubject> seekers, Map<Long, V4RecallEngine.Result> results,
                                     List<Label> labels) {
+        return summarize(seekers, results, labels, seekers, null);
+    }
+
+    public static Summary summarize(List<RecallSubject> seekers, Map<Long, V4RecallEngine.Result> results,
+                                    List<Label> labels, List<RecallSubject> pool, cn.aiditto.domain.matching.MatchingInput input) {
         Map<Long, Map<Long, Label>> bySeeker = new HashMap<>();
         for (Label label : labels) {
             bySeeker.computeIfAbsent(label.seeker(), ignored -> new HashMap<>()).put(label.candidate(), label);
@@ -68,29 +106,59 @@ public final class RecallMetrics {
         int withdrawn = 0;
         List<Integer> sizes = new ArrayList<>();
         int zeros = 0;
+        int zeroIneligible = 0;
+        int zeroNoLegal = 0;
+        int zeroSparse = 0;
+        int zeroRecallFailure = 0;
+        int missingPositives = 0;
+        int irrelevantAt20 = 0;
+        int unlabeledAt20 = 0;
+        int labeledSlots = 0;
         Map<String, Integer> routeFound = new HashMap<>();
-        Set<Long> returnedPairs = new HashSet<>();
+        Set<DirectedPair> returnedPairs = new HashSet<>();
+        Set<Long> queryIds = new HashSet<>();
+        for (RecallSubject seeker : seekers) queryIds.add(seeker.userId());
+        for (V4RecallEngine.Result result : results.values()) {
+            for (V4RecallEngine.Hit hit : result.hits()) {
+                returnedPairs.add(new DirectedPair(hit.userId(), hit.candidateId()));
+            }
+        }
         for (RecallSubject seeker : seekers) {
             V4RecallEngine.Result result = results.get(seeker.userId());
-            if (result == null) continue;
-            violations += result.hardViolations();
-            expired += result.expiredReturned();
-            withdrawn += result.withdrawnReturned();
-            sizes.add(result.hits().size());
-            if (result.hits().isEmpty()) zeros++;
-            if (result.legalCount() > 0) {
-                coverBase++;
-                if (!result.hits().isEmpty()) covered++;
-            }
-            for (V4RecallEngine.Hit hit : result.hits()) {
-                returnedPairs.add(pair(hit.userId(), hit.candidateId()));
-            }
             Map<Long, Label> mine = bySeeker.getOrDefault(seeker.userId(), Map.of());
             List<Label> positives = new ArrayList<>();
             for (Label label : mine.values()) {
                 if ("RELEVANT".equals(label.kind())) positives.add(label);
             }
             eligible += positives.size();
+            if (result == null) {
+                zeros++;
+                zeroRecallFailure++;
+                missingPositives += positives.size();
+                sizes.add(0);
+                if (!positives.isEmpty()) {
+                    seekersWithPositive++;
+                    ndcgSeekers++;
+                }
+                continue;
+            }
+            violations += result.hardViolations();
+            expired += result.expiredReturned();
+            withdrawn += result.withdrawnReturned();
+            sizes.add(result.hits().size());
+            if (result.hits().isEmpty()) {
+                zeros++;
+                switch (result.gap()) {
+                    case INELIGIBLE -> zeroIneligible++;
+                    case NO_LEGAL_PARTNER -> zeroNoLegal++;
+                    case SPARSE -> zeroSparse++;
+                    default -> zeroRecallFailure++;
+                }
+            }
+            if (result.legalCount() > 0) {
+                coverBase++;
+                if (!result.hits().isEmpty()) covered++;
+            }
             Set<Long> top10 = ids(result, 10);
             Set<Long> top20 = ids(result, 20);
             Set<Long> top50 = ids(result, 50);
@@ -104,10 +172,11 @@ public final class RecallMetrics {
                     if (top20.contains(positive.candidate())) {
                         hit20++;
                         any = true;
-                        first = Math.min(first, rankOf(result, positive.candidate()));
                         String route = reasonOf(result, positive.candidate());
                         routeFound.merge(route, 1, Integer::sum);
                     }
+                    int rank = rankOf(result, positive.candidate());
+                    if (rank < first) first = rank;
                     if (top50.contains(positive.candidate())) hit50++;
                     if (returned.contains(positive.candidate())) hitAll++;
                     if (top50.contains(positive.candidate()) && !top10.contains(positive.candidate())) budgetLoss++;
@@ -117,33 +186,46 @@ public final class RecallMetrics {
                 ndcg += ndcg(result, positives, 20);
                 ndcgSeekers++;
             }
-            int labeledHere = 0;
-            int relevantHere = 0;
             int slots = Math.min(20, result.hits().size());
             for (int i = 0; i < slots; i++) {
                 Label label = mine.get(result.hits().get(i).candidateId());
-                if (label == null || "UNKNOWN".equals(label.kind())) continue;
+                if (label == null || "UNKNOWN".equals(label.kind())) {
+                    unlabeledAt20++;
+                    continue;
+                }
+                labeledSlots++;
                 if ("HARD_VETO".equals(label.kind())) continue;
-                labeledHere++;
-                if ("RELEVANT".equals(label.kind())) relevantHere++;
+                if ("IRRELEVANT".equals(label.kind())) irrelevantAt20++;
+                if ("RELEVANT".equals(label.kind())) precisionHits++;
             }
             precisionSlots += slots;
-            precisionLabeled += labeledHere;
-            precisionHits += relevantHere;
         }
-        for (long key : returnedPairs) {
-            long seeker = key >>> 32;
-            long candidate = key & 0xffffffffL;
+        int queryDirected = 0;
+        int queryMutual = 0;
+        for (DirectedPair edge : returnedPairs) {
+            if (!queryIds.contains(edge.seeker())) continue;
             directed++;
-            if (returnedPairs.contains(pair(candidate, seeker))) mutual++;
+            if (returnedPairs.contains(new DirectedPair(edge.candidate(), edge.seeker()))) mutual++;
+            if (queryIds.contains(edge.candidate())) {
+                queryDirected++;
+                if (returnedPairs.contains(new DirectedPair(edge.candidate(), edge.seeker()))) queryMutual++;
+            }
         }
+        int corpusLabels = 0;
+        for (Label label : labels) {
+            if (queryIds.contains(label.seeker()) && !"UNKNOWN".equals(label.kind())) corpusLabels++;
+        }
+        int corpusSlots = seekers.size() * Math.max((pool == null ? seekers.size() : pool.size()) - 1, 0);
+        int safety = input == null || pool == null ? 0 : RecallSafetyAudit.violations(index(pool), input, results.values());
         sizes.sort(Comparator.naturalOrder());
+        Double labeledPrecision = precisionHits + irrelevantAt20 == 0 ? null
+                : precisionHits / (double) (precisionHits + irrelevantAt20);
         return new Summary(
                 ratio(hit10, eligible),
                 ratio(hit20, eligible),
                 ratio(hit50, eligible),
                 ratio(hitAll, eligible),
-                precision(precisionHits, precisionLabeled, precisionSlots),
+                precision(precisionHits, precisionHits + irrelevantAt20, precisionSlots),
                 ratio(seekersHit, seekersWithPositive),
                 ratioDouble(reciprocal, seekersWithPositive),
                 ratioDouble(ndcg, ndcgSeekers),
@@ -157,7 +239,37 @@ public final class RecallMetrics {
                 violations,
                 expired,
                 withdrawn,
-                Map.copyOf(routeFound));
+                Map.copyOf(routeFound),
+                hit10,
+                hit20,
+                hit50,
+                labeledPrecision,
+                ratio(precisionHits, precisionSlots),
+                precisionHits,
+                irrelevantAt20,
+                unlabeledAt20,
+                labeledSlots,
+                precisionSlots,
+                ratio(corpusLabels, corpusSlots),
+                ratio(queryMutual, queryDirected),
+                queryMutual,
+                queryDirected,
+                mutual,
+                directed,
+                zeroIneligible,
+                zeroNoLegal,
+                zeroSparse,
+                zeroRecallFailure,
+                safety,
+                seekersWithPositive,
+                seekersWithPositive,
+                missingPositives);
+    }
+
+    private static Map<Long, RecallSubject> index(List<RecallSubject> pool) {
+        Map<Long, RecallSubject> byId = new HashMap<>();
+        for (RecallSubject subject : pool) byId.put(subject.userId(), subject);
+        return byId;
     }
 
     private static Set<Long> ids(V4RecallEngine.Result result, int k) {
@@ -198,10 +310,6 @@ public final class RecallMetrics {
             idcg += (Math.pow(2, ideal.get(i)) - 1) / (Math.log(i + 2) / Math.log(2));
         }
         return idcg == 0 ? 0 : dcg / idcg;
-    }
-
-    private static long pair(long seeker, long candidate) {
-        return (seeker << 32) ^ (candidate & 0xffffffffL);
     }
 
     public static Double ratio(int numerator, int denominator) {

@@ -173,6 +173,65 @@ public final class QdrantRestClient {
                 Json.write(Map.of("points", ids)));
     }
 
+    public void createV4Collection(String collection, int dimension) {
+        cn.aiditto.domain.recall.v4.V4IndexNames.refuseUnlessIsolated(collection);
+        Map<String, Object> vectors = new LinkedHashMap<>();
+        vectors.put("self", Map.of("size", dimension, "distance", "Cosine"));
+        vectors.put("preference", Map.of("size", dimension, "distance", "Cosine"));
+        request("PUT", "/collections/" + collection, Json.write(Map.of("vectors", vectors)));
+        for (String field : new String[] {"visible", "authorized", "withdrawn"}) {
+            try {
+                request("PUT", "/collections/" + collection + "/index?wait=true",
+                        Json.write(Map.of("field_name", field, "field_schema", "bool")));
+            } catch (RuntimeException ignored) {
+                // A small isolated collection can still filter without the index.
+            }
+        }
+        try {
+            request("PUT", "/collections/" + collection + "/index?wait=true",
+                    Json.write(Map.of("field_name", "model_version", "field_schema", "keyword")));
+        } catch (RuntimeException ignored) {
+            // Same as above.
+        }
+    }
+
+    public void upsertV4(String collection, long id, float[] self, float[] preference, Map<String, Object> payload) {
+        cn.aiditto.domain.recall.v4.V4IndexNames.refuseUnlessIsolated(collection);
+        Map<String, Object> point = new LinkedHashMap<>();
+        point.put("id", id);
+        point.put("vector", Map.of("self", toList(self), "preference", toList(preference)));
+        point.put("payload", payload);
+        request("PUT", "/collections/" + collection + "/points?wait=true", Json.write(Map.of("points", List.of(point))));
+    }
+
+    public JsonNode retrieveV4(String collection, long id) {
+        cn.aiditto.domain.recall.v4.V4IndexNames.refuseUnlessIsolated(collection);
+        JsonNode result = request("POST", "/collections/" + collection + "/points",
+                Json.write(Map.of("ids", List.of(id), "with_payload", true, "with_vector", false))).get("result");
+        if (result == null || !result.isArray() || result.isEmpty()) return null;
+        return result.get(0);
+    }
+
+    public List<Long> searchV4(String collection, String vectorName, float[] vector, String modelVersion, int limit) {
+        cn.aiditto.domain.recall.v4.V4IndexNames.refuseUnlessIsolated(collection);
+        Map<String, Object> filter = Map.of("must", List.of(
+                Map.of("key", "visible", "match", Map.of("value", true)),
+                Map.of("key", "authorized", "match", Map.of("value", true)),
+                Map.of("key", "withdrawn", "match", Map.of("value", false)),
+                Map.of("key", "model_version", "match", Map.of("value", modelVersion))));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("vector", Map.of("name", vectorName, "vector", toList(vector)));
+        body.put("filter", filter);
+        body.put("limit", limit);
+        body.put("with_payload", true);
+        JsonNode result = request("POST", "/collections/" + collection + "/points/search", Json.write(body)).get("result");
+        List<Long> hits = new ArrayList<>();
+        if (result != null) {
+            for (JsonNode node : result) hits.add(node.get("id").asLong());
+        }
+        return hits;
+    }
+
     public void deleteCollection(String collection) {
         request("DELETE", "/collections/" + collection, null);
     }

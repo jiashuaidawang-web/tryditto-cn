@@ -5,6 +5,7 @@ import cn.aiditto.domain.matching.EligibilityGate;
 import cn.aiditto.domain.matching.HardFilter;
 import cn.aiditto.domain.matching.MatchingInput;
 import cn.aiditto.domain.matching.PoolGate;
+import cn.aiditto.domain.matching.Scorer;
 import cn.aiditto.domain.recall.RrfFusion;
 
 import java.time.Instant;
@@ -57,11 +58,14 @@ public final class V4RecallEngine {
         }
     }
 
+    public enum Gap { NONE, INELIGIBLE, NO_LEGAL_PARTNER, SPARSE, NO_ROUTE_HIT }
+
     public record Result(List<Hit> hits, List<Rejection> rejected, int legalCount,
-                         int hardViolations, int expiredReturned, int withdrawnReturned) {
+                         int hardViolations, int expiredReturned, int withdrawnReturned, Gap gap) {
         public Result {
             hits = List.copyOf(hits);
             rejected = List.copyOf(rejected);
+            if (gap == null) gap = Gap.NONE;
         }
     }
 
@@ -71,11 +75,22 @@ public final class V4RecallEngine {
 
     public static Result recall(RecallSubject seeker, List<RecallSubject> pool, MatchingInput input,
                                 Instant now, int budget, Set<RecallRoute> routes, long exploreSeed) {
+        return recall(seeker, pool, input, now, budget, routes, exploreSeed, false);
+    }
+
+    /** Production {@link Scorer#score} over the same legal pool. Zero scores stay in the ranking. */
+    public static Result ruleBaseline(RecallSubject seeker, List<RecallSubject> pool, MatchingInput input,
+                                      Instant now, int budget) {
+        return recall(seeker, pool, input, now, budget, Set.of(), 0, true);
+    }
+
+    private static Result recall(RecallSubject seeker, List<RecallSubject> pool, MatchingInput input,
+                                 Instant now, int budget, Set<RecallRoute> routes, long exploreSeed, boolean scorer) {
         Map<Long, RecallSubject> byId = new LinkedHashMap<>();
         for (RecallSubject subject : pool) byId.put(subject.userId(), subject);
         List<Rejection> rejected = new ArrayList<>();
         if (!seeker.searchable() || !individualOk(seeker, input.weekStart(), now)) {
-            return new Result(List.of(), rejected, 0, 0, 0, 0);
+            return new Result(List.of(), rejected, 0, 0, 0, 0, Gap.INELIGIBLE);
         }
         List<RecallSubject> legal = new ArrayList<>();
         for (RecallSubject other : pool) {
@@ -108,9 +123,9 @@ public final class V4RecallEngine {
             }
             rankedRoutes.add(ranked);
         }
-        List<RrfFusion.Fused> fused = routes.isEmpty()
-                ? baseline(seeker, legal, exploreSeed)
-                : RrfFusion.merge(rankedRoutes, WEIGHTS, RRF_K);
+        List<RrfFusion.Fused> fused = !routes.isEmpty()
+                ? RrfFusion.merge(rankedRoutes, WEIGHTS, RRF_K)
+                : scorer ? scorerRank(seeker, legal, input) : baseline(seeker, legal, exploreSeed);
         List<Hit> hits = new ArrayList<>();
         int violations = 0;
         int expired = 0;
@@ -127,11 +142,13 @@ public final class V4RecallEngine {
             if (other.withdrawn()) withdrawn++;
             List<RouteHit> routesHit = detail.getOrDefault(row.userId(), List.of());
             RouteHit best = routesHit.stream().min(Comparator.comparingInt(RouteHit::rank)).orElse(null);
-            String reason = routesHit.isEmpty() ? "B0_LEGAL_POOL" : routesHit.size() == 1 ? routesHit.get(0).route() : "FUSED";
+            String reason = routesHit.isEmpty()
+                    ? (scorer ? "B1_SCORER" : "B0_RANDOM")
+                    : routesHit.size() == 1 ? routesHit.get(0).route() : "FUSED";
             hits.add(new Hit(
                     seeker.userId(),
                     row.userId(),
-                    routesHit.isEmpty() ? "B0" : String.join("+", row.sources()),
+                    routesHit.isEmpty() ? (scorer ? "B1" : "B0") : String.join("+", row.sources()),
                     best == null ? i + 1 : best.rank(),
                     best == null ? 0 : best.rawScore(),
                     i + 1,
@@ -141,7 +158,11 @@ public final class V4RecallEngine {
                     reason,
                     routesHit));
         }
-        return new Result(hits, rejected, legal.size(), violations, expired, withdrawn);
+        Gap gap = Gap.NONE;
+        if (legal.isEmpty()) gap = Gap.NO_LEGAL_PARTNER;
+        else if (hits.isEmpty() && seeker.sparse()) gap = Gap.SPARSE;
+        else if (hits.isEmpty()) gap = Gap.NO_ROUTE_HIT;
+        return new Result(hits, rejected, legal.size(), violations, expired, withdrawn, gap);
     }
 
     public static Set<RecallRoute> through(RecallRoute last) {
@@ -151,6 +172,18 @@ public final class V4RecallEngine {
             if (route == last) break;
         }
         return set;
+    }
+
+    private static List<RrfFusion.Fused> scorerRank(RecallSubject seeker, List<RecallSubject> legal, MatchingInput input) {
+        List<Scored> scored = new ArrayList<>();
+        for (RecallSubject other : legal) {
+            int score = Scorer.score(seeker.candidate(), other.candidate(), input.weekStart(), input.weights()).score();
+            scored.add(new Scored(other.userId(), score));
+        }
+        scored.sort(Comparator.comparingDouble(Scored::score).reversed().thenComparingLong(Scored::id));
+        List<RrfFusion.Fused> out = new ArrayList<>();
+        for (Scored item : scored) out.add(new RrfFusion.Fused(item.id(), item.score(), List.of("B1")));
+        return out;
     }
 
     private static List<RrfFusion.Fused> baseline(RecallSubject seeker, List<RecallSubject> legal, long seed) {

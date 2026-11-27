@@ -1,6 +1,6 @@
 # V4-M01 测试报告
 
-领域测试在工作区 `/Users/null/IdeaProjects/AI/tryditto-cn-v4-recall` 执行：`mvn -pl aiditto-domain test`。退出码 0。既有匹配、硬约束、画像和 P02 测试一起通过。新增测试也通过。
+领域测试在工作区 `/Users/null/IdeaProjects/AI/tryditto-cn-v4-recall` 执行：`mvn -pl aiditto-domain test`。退出码 0。本次是 511 项，其中原有 506 项仍在，另加 5 项审计测试。200 人仿真仍是 83 对、34 人未匹配、822 条边、0 条硬约束违规。`V4VectorSyncTest` 6 个方法通过。
 
 | 测试 | 结果 | 覆盖 |
 | --- | --- | --- |
@@ -9,7 +9,9 @@
 | `RecallCasesTest` | 通过 | 6 个案例的路线、融合、年龄拒绝、预算和方向 |
 | `RecallAblationTest` | 通过 | 选定路线优于 B0，保留集门槛，安全计数为 0，合法全集上限 1 |
 | `V4VectorSyncTest` | 通过 | 哈希同步幂等、旧版本拒绝、撤回后索引为空、200 人人口摘要未变 |
-| `V4QdrantIsolationIT` | NOT_RUN | 需要 `AIDITTO_QDRANT_IT=1`。本次没有启动隔离 Qdrant |
+| `RecallAuditTest` | 通过 | 代次水位、延迟写入、矛盾特征、缺结果分母、64 位有向对、挑战集安全计数 |
+| `V4VectorSyncTest` 新增方法 | 通过 | 第二次 embedding 失败不发布；写入中途撤回后旧向量不可见 |
+| `V4QdrantIsolationIT` | 见 CI 的 qdrant-isolation | 本地未启动 Qdrant。作业使用 `v4_it_` 集合 |
 | `RecallEvalIT` | NOT_RUN | 仍不在 CI 过滤列表里，且需要 Qdrant 变量 |
 | `RecallExperimentIT` | NOT_RUN | 需要 `AIDITTO_RECALL_MATRIX=1` |
 | `QdrantClientIT` | NOT_RUN | 需要 `AIDITTO_QDRANT_IT=1` |
@@ -26,7 +28,7 @@
 | 项 | 结论 |
 | --- | --- |
 | 工程质量 | GO |
-| 离线召回质量 | GO，仅限这批合成标注和冻结门槛 |
+| 离线召回质量 | GO，按冻结门槛：100 人回归仍达标，挑战集开发集 B3 高于随机池且不低于生产 Scorer。绝对覆盖是 67/158，保留集 7/45 没有优于随机池 |
 | 真实向量能力 | NOT_RUN |
 | 生产启用 | NO-GO |
 | 最终匹配算法质量 | NO-GO |

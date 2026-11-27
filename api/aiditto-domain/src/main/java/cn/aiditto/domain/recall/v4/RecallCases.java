@@ -71,7 +71,8 @@ public final class RecallCases {
         V4RecallEngine.Result forward = run(bao, List.of(ada, bao), Set.of(RecallRoute.R3), 10);
         V4RecallEngine.Result reverse = run(ada, List.of(ada, bao), Set.of(RecallRoute.R3), 10);
         RecallSubject withdrawn = new RecallSubject(ada.userId(), "case", ada.profileVersion(), true, true, SOURCE,
-                ada.candidate(), ada.applicant(), ada.consent(), ada.selfEnums(), ada.hobbies(), ada.preferenceEnums());
+                ada.candidate(), ada.applicant(), ada.consent(), ada.selfEnums(), ada.hobbies(), ada.preferenceEnums(),
+                ada.generation(), ada.ingress());
         V4RecallEngine.Result after = run(bao, List.of(withdrawn, bao), Set.of(RecallRoute.R3), 10);
         String note = "正向列表 " + forward.hits().size() + "，反向列表 " + reverse.hits().size()
                 + "，撤回后列表 " + after.hits().size();
@@ -93,6 +94,7 @@ public final class RecallCases {
                                       Map<String, String> preference, boolean current) {
         PoolGate.Applicant applicant = new PoolGate.Applicant(candidate.birthday(), true, true, false, 2, false, false, null, false);
         MatchingConsent consent = new MatchingConsent(id, ConsentStatus.GRANTED, 1, NOW, null, ConsentPolicy.POLICY_VERSION, NOW);
-        return new RecallSubject(id, "case", current ? 2 : 1, current, false, SOURCE, candidate, applicant, consent, self, hobbies, preference);
+        return new RecallSubject(id, "case", current ? 2 : 1, current, false, SOURCE, candidate, applicant, consent,
+                self, hobbies, preference, 1, RecallIngress.SYNTHETIC_FIXTURE);
     }
 }

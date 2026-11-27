@@ -14,7 +14,11 @@
 | UNBOUNDED、WITHHELD | 不写入，也不能当成「和谁都匹配」 |
 | 自由文本、职业、开场白 | 门控直接丢掉，向量文本里也不出现 |
 
-合成画像的 `fixtureSource` 必须以 `synthetic-fixture:` 开头。构造函数拒绝空来源。这些对象不写入生产确认表。
+合成夹具的入口是 `RecallIngress.SYNTHETIC_FIXTURE`，来源必须以 `synthetic-fixture:` 开头。未来生产入口是 `RecallIngress.FUTURE_PRODUCTION`，来源必须以 `recall-contract:` 开头。后者只是契约，不连接用户库。
+
+`RecallProfileContract` 复用 `FeatureRegistry` 和 `MatchingFeatureGate`。它检查特征码、值域、自身或偏好分节、证据来源和语义状态。同一特征码的两个不同确定值整组丢弃，不按 Map 的最后一次写入当成事实。无语义支持的模型推断和反馈观察不能进入。身份上，`userId`、`Candidate.id` 和 `MatchingConsent.userId` 必须相同。
+
+向量同步除了 `searchable()`，还要求代次、匹配同意为 `GRANTED`，以及 `PoolGate` 通过。撤回、过期和未授权的人只会留下水位，不会被检索。
 
 模型推断不能在召回阶段变成硬约束。硬约束只来自既有的账户、同意和 `HardFilter`。
 

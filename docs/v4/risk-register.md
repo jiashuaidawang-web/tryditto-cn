@@ -254,6 +254,21 @@ P02 只增加有证据的画像提取。阶段实现 `ef08182426d414c117d22ebf90
 - 账户清除仍未调用 `erase`。匹配同意撤回仍未调用 `revokeProcessing`。
 - 2026-11-27 在独立目录用服务器现有 LongCat 与 DeepSeek 额度跑了合成评估。60 条调用都有结构化响应，6 条隐私样本未发送。原始 Recall 分别是 3/6 和 1/6，校验后都是 0/6。门槛未改。生产启用继续 NO-GO。
 
+## V4-M01-FINAL（2026-11-27）
+
+召回修复留在 `feature/v4-recall`。生产 `WeekRunner`、`Scorer`、`MatchingSolver`、Blossom 和 S01 没有改。
+
+已关闭的审计项：撤回后的向量水位、自身与偏好的一次提交、召回特征准入、挑战集、B0/B1/B2/B3 对照、固定正例分母和独立安全复查。
+
+仍开放：
+
+- 挑战集开发集 Recall@20 是 67/158，labeled precision 是 67/307。保留集 Recall@20 是 7/45，和随机池相同。权重没有按这个结果调整。
+- 分数相同时较小 `userId` 总是排在前面。寻求者 101 的规则分并列有 204 对，全部由较小 id 获胜。生产 tie-break 没有改。
+- `StructuredRecallService` 仍依赖生产 profile SQL，没有当成 B2。
+- 真实 embedding 没有跑。哈希向量只证明隔离 Qdrant 的写入和删除。
+- V3 的 `RecallEvalIT`、`RecallExperimentIT`、`QdrantClientIT`、`VectorSyncIT` 仍是 NOT_RUN。
+- 召回没有进入 `WeekRunner`。生产启用和最终匹配质量继续 NO-GO。
+
 ## V4-INFRA-001（2026-11-25）
 
 本地不再安装 PostgreSQL。集成测试改到 GitHub Actions：`.github/workflows/v4-ci.yml`，一次性 PostgreSQL 16，库名只能是 `aiditto_s01_test`。`TestDatabaseGuard` 在 `flyway.clean()` 之前拒绝其它库名、其它主机，以及缺少 `TEST_DB_URL` 的情况。没有生产凭证，没有 LLM API Key。

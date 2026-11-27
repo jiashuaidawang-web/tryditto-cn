@@ -23,7 +23,8 @@ public final class RecallAblation {
                     && holdout.recallAt20() >= HOLDOUT_RECALL_GATE
                     && holdout.hardViolations() == 0
                     && holdout.expiredReturned() == 0
-                    && holdout.withdrawnReturned() == 0;
+                    && holdout.withdrawnReturned() == 0
+                    && holdout.safetyAuditViolations() == 0;
         }
     }
 
@@ -32,7 +33,7 @@ public final class RecallAblation {
     public static Report run() {
         RecallBench bench = RecallBench.load();
         List<Stage> stages = new ArrayList<>();
-        stages.add(measure("B0", Set.of(), bench));
+        stages.add(measure("B0-random", Set.of(), bench));
         stages.add(measure("R1", V4RecallEngine.through(RecallRoute.R1), bench));
         stages.add(measure("R1-R2", V4RecallEngine.through(RecallRoute.R2), bench));
         stages.add(measure("R1-R3", V4RecallEngine.through(RecallRoute.R3), bench));
@@ -70,6 +71,6 @@ public final class RecallAblation {
             results.put(seeker.userId(), V4RecallEngine.recall(
                     seeker, bench.subjects(), bench.input(), RecallBench.NOW, budget, routes, RecallBench.SEED));
         }
-        return RecallMetrics.summarize(bench.split(split), results, bench.labels(split));
+        return RecallMetrics.summarize(bench.split(split), results, bench.labels(split), bench.subjects(), bench.input());
     }
 }
