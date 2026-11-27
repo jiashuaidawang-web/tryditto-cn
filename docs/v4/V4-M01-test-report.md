@@ -11,7 +11,7 @@
 | `V4VectorSyncTest` | 通过 | 哈希同步幂等、旧版本拒绝、撤回后索引为空、200 人人口摘要未变 |
 | `RecallAuditTest` | 通过 | 代次水位、延迟写入、矛盾特征、缺结果分母、64 位有向对、挑战集安全计数 |
 | `V4VectorSyncTest` 新增方法 | 通过 | 第二次 embedding 失败不发布；写入中途撤回后旧向量不可见 |
-| `V4QdrantIsolationIT` | 见 CI 的 qdrant-isolation | 本地未启动 Qdrant。作业使用 `v4_it_` 集合 |
+| `V4QdrantIsolationIT` | CI 通过 | `qdrant-isolation` 成功。本地没有单独启动 Qdrant。哈希向量不是语义评估 |
 | `RecallEvalIT` | NOT_RUN | 仍不在 CI 过滤列表里，且需要 Qdrant 变量 |
 | `RecallExperimentIT` | NOT_RUN | 需要 `AIDITTO_RECALL_MATRIX=1` |
 | `QdrantClientIT` | NOT_RUN | 需要 `AIDITTO_QDRANT_IT=1` |
@@ -19,7 +19,11 @@
 
 `V4VectorSyncTest` 已写进 `.github/workflows/v4-ci.yml` 的必跑清单。领域新测试由 `mvn -pl aiditto-domain test` 全量执行，不靠名单点名。
 
-实现提交 `6156669736cfcdd61c4c430c52133b4f874d3f13`。对应工作流 [V4 CI run 15](https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45959918120) 已完成，结论 success。`domain-tests`、`integration-tests`、`test-reports` 都成功。这条 CI 仍然不跑 `V4QdrantIsolationIT`、`RecallEvalIT`、`RecallExperimentIT`、`QdrantClientIT`、`VectorSyncIT`，它们保持 NOT_RUN。
+上一阶段实现提交是 `6156669736cfcdd61c4c430c52133b4f874d3f13`，工作流 [V4 CI run 15](https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45959918120)。
+
+本轮修复提交 `9e13512a75463a94ed54fae1f41a6184150d02d5`。工作流 [V4 CI run 16](https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45966591316) 结论 success。`domain-tests`、`integration-tests`、`qdrant-isolation`、`test-reports` 都成功。`qdrant-isolation` 使用 `qdrant/qdrant:v1.12.5`，集合名以 `v4_it_` 开头。它的「Reject a skipped Qdrant test」步骤成功，所以 `V4QdrantIsolationIT` 不是跳过。哈希向量只证明写入、过滤和撤回，不证明语义近邻。
+
+`RecallEvalIT`、`RecallExperimentIT`、`QdrantClientIT`、`VectorSyncIT` 仍不在 CI 名单里，保持 NOT_RUN。
 
 哈希同步测试断言版本号以 `hash-` 开头。通过只说明工程链路，不说明语义近邻。
 
@@ -29,8 +33,9 @@
 | --- | --- |
 | 工程质量 | GO |
 | 离线召回质量 | GO，按冻结门槛：100 人回归仍达标，挑战集开发集 B3 高于随机池且不低于生产 Scorer。绝对覆盖是 67/158，保留集 7/45 没有优于随机池 |
-| 真实向量能力 | NOT_RUN |
+| Qdrant 工程集成 | GO。隔离集合上的哈希向量写入、检索和撤回通过。不是语义质量 |
+| 真实语义向量质量 | NOT_RUN |
 | 生产启用 | NO-GO |
 | 最终匹配算法质量 | NO-GO |
 
-剩余风险：V3 的 taste 覆盖写和反馈先验还在原实验链里，只是没有接进 V4。隔离 Qdrant 集成这次没有跑。保留集 Precision 因未标注跨集命中而为空。互补规则只有两条，换一批关系就不会有 R5 的增益。生产 `WeekRunner` 仍然扫描全城，本轮没有把召回接进去。
+剩余风险：V3 的 taste 覆盖写和反馈先验还在原实验链里，只是没有接进 V4。挑战集保留集 Recall@20 是 7/45，和随机池相同。分数相同时较小 `userId` 会长期占住名额。互补规则只有两条。生产 `WeekRunner` 仍然扫描全城，本轮没有把召回接进去。
