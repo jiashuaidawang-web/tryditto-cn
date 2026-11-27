@@ -21,11 +21,13 @@
 
 ## 本地验证
 
-`mvn -B -pl aiditto-domain test` 为 532 项通过，其中包括四项收口反例。随后补上的不公开目标决策反例单独通过，`M02FinalTest` 为 5 项通过。B5 仍是 264/264 和 99/99。CI 地址在推送之后记录，推送前不填写。
+`mvn -B -pl aiditto-domain test` 为 532 项通过，其中包括四项收口反例。随后补上的不公开目标决策反例单独通过，`M02FinalTest` 为 5 项通过。B5 仍是 264/264 和 99/99。
+
+GitHub Actions：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/45990401708 。提交 `fbb83a5e576de711680d9a07aeb73b62a65c6e18`。domain-tests、integration-tests、qdrant-isolation、test-reports 都是 success。
 
 ## 结论
 
-M02-FINAL 工程验收：本地反例和冻结基线通过。CI 未回写之前，不把这一项写成已经在 GitHub Actions 上通过。
+M02-FINAL 工程验收：GO。四项安全反例和 CI 都通过。冻结基线没有移动。
 
 召回端到端质量：NO-GO。
 
