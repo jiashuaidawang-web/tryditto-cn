@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -289,7 +290,7 @@ public final class GlobalCandidateGraphBuilder {
     private static List<List<PreparedEdge>> groups(GlobalMatchingGraph graph) {
         List<List<PreparedEdge>> groups = new ArrayList<>();
         for (int i = 0; i < graph.input().eligibleUsers().size(); i++) groups.add(new ArrayList<>());
-        java.util.Map<Long, Integer> index = new java.util.LinkedHashMap<>();
+        Map<Long, Integer> index = new java.util.LinkedHashMap<>();
         for (var user : graph.input().eligibleUsers()) index.put(user.userId(), index.size());
         for (PreparedEdge edge : graph.solver()) {
             groups.get(index.get(edge.lowId())).add(edge);
@@ -320,7 +321,7 @@ public final class GlobalCandidateGraphBuilder {
         int diagnosticOmitted;
         boolean capped;
         String detail = "";
-        final java.util.Map<Long, List<String>> notes = new java.util.LinkedHashMap<>();
+        final Map<Long, List<String>> notes = new java.util.LinkedHashMap<>();
 
         void note(long userId, String code) {
             List<String> codes = notes.computeIfAbsent(userId, ignored -> new ArrayList<>());
