@@ -1,9 +1,11 @@
 package cn.aiditto.feedback;
 
 import cn.aiditto.domain.feedback.v4.FeedbackCommand;
+import cn.aiditto.domain.feedback.v4.FeedbackConsumption;
 import cn.aiditto.domain.feedback.v4.FeedbackFacts;
 import cn.aiditto.domain.feedback.v4.FeedbackLedger;
 import cn.aiditto.domain.feedback.v4.FeedbackEventType;
+import cn.aiditto.domain.feedback.v4.FeedbackRejection;
 import cn.aiditto.domain.feedback.v4.MatchFeedbackContext;
 import cn.aiditto.domain.feedback.v4.RelationshipFeedbackEvent;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,15 +30,82 @@ public class RelationshipFeedbackStore {
         this.jdbc = jdbc;
     }
 
+    /**
+     * Future account deletion calls this after its user lock and before commit.
+     * It is not called by AccountService in this round.
+     */
+    public static final String FUTURE_ACCOUNT_DELETION =
+            "AccountService.requestDelete locks the user, calls eraseActor, and commits. It does not run a learner.";
+
     @Transactional
     public RelationshipFeedbackEvent append(MatchFeedbackContext context, FeedbackCommand command, Instant recordedAt) {
-        lock(context.matchId());
+        lockUsersThenMatch(context);
+        if (erased(context)) throw new FeedbackRejection("ERASED");
         FeedbackLedger ledger = loadLocked(context);
         int before = ledger.events().size();
         RelationshipFeedbackEvent event = ledger.append(command, recordedAt);
         List<RelationshipFeedbackEvent> events = ledger.events();
-        for (int i = before; i < events.size(); i++) insert(events.get(i));
+        for (int i = before; i < events.size(); i++) {
+            insert(events.get(i));
+            if (events.get(i).eventType() == FeedbackEventType.FEEDBACK_PROCESSING_REVOKED) {
+                revokeApplied(events.get(i).actorUserId(), recordedAt);
+            }
+        }
         return event;
+    }
+
+    @Transactional
+    public FeedbackConsumption claim(MatchFeedbackContext context, String eventId, FeedbackConsumption.Consumer consumer,
+                                     String policyVersion, Instant consumedAt, String derivedArtifactId) {
+        lockUsersThenMatch(context);
+        FeedbackLedger ledger = loadLocked(context);
+        FeedbackConsumption prepared = FeedbackConsumption.prepare(ledger, eventId, consumer, policyVersion, consumedAt, derivedArtifactId);
+        String status = jdbc.query("""
+                SELECT processing_status FROM relationship_feedback_consumption
+                WHERE event_id = ? AND consumer_type = ? AND policy_version = ?
+                """, rs -> rs.next() ? rs.getString(1) : null, eventId, consumer.name(), policyVersion);
+        if ("APPLIED".equals(status) || "REVOKED".equals(status)) throw new FeedbackRejection("DUPLICATE_CONSUMPTION");
+        if ("FAILED".equals(status)) {
+            jdbc.update("""
+                    UPDATE relationship_feedback_consumption
+                    SET processing_status = 'APPLIED', consumed_at = ?, derived_artifact_id = ?,
+                        lifecycle_generation = ?, authorization_epoch = ?
+                    WHERE event_id = ? AND consumer_type = ? AND policy_version = ? AND processing_status = 'FAILED'
+                    """, Timestamp.from(consumedAt), derivedArtifactId, prepared.lifecycleGeneration(),
+                    prepared.authorizationEpoch(), eventId, consumer.name(), policyVersion);
+            return prepared;
+        }
+        jdbc.update("""
+                INSERT INTO relationship_feedback_consumption (
+                    event_id, consumer_type, policy_version, lifecycle_generation, authorization_epoch,
+                    processing_status, consumed_at, derived_artifact_id
+                ) VALUES (?, ?, ?, ?, ?, 'APPLIED', ?, ?)
+                """, eventId, consumer.name(), policyVersion, prepared.lifecycleGeneration(),
+                prepared.authorizationEpoch(), Timestamp.from(consumedAt), derivedArtifactId);
+        return prepared;
+    }
+
+    @Transactional
+    public void markClaimFailed(String eventId, FeedbackConsumption.Consumer consumer, String policyVersion, Instant consumedAt) {
+        jdbc.update("""
+                INSERT INTO relationship_feedback_consumption (
+                    event_id, consumer_type, policy_version, lifecycle_generation, authorization_epoch,
+                    processing_status, consumed_at
+                ) VALUES (?, ?, ?, 1, 1, 'FAILED', ?)
+                ON CONFLICT (event_id, consumer_type, policy_version) DO NOTHING
+                """, eventId, consumer.name(), policyVersion, Timestamp.from(consumedAt));
+    }
+
+    @Transactional
+    public void claimThenRollback(MatchFeedbackContext context, String eventId, Instant consumedAt) {
+        claim(context, eventId, FeedbackConsumption.Consumer.PROFILE_LEARNING, "rollback", consumedAt, "gone");
+        throw new FeedbackRejection("ROLLBACK");
+    }
+
+    @Transactional
+    public int revokeDerived(long userId, Instant revokedAt) {
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) userId);
+        return revokeApplied(userId, revokedAt);
     }
 
     public FeedbackLedger load(MatchFeedbackContext context) {
@@ -55,12 +124,14 @@ public class RelationshipFeedbackStore {
 
     @Transactional
     public void eraseActor(long userId, Instant erasedAt) {
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) userId);
         Timestamp when = Timestamp.from(erasedAt);
         jdbc.update("""
                 INSERT INTO relationship_feedback_erasure (user_id, erased_at)
                 VALUES (?, ?)
                 ON CONFLICT (user_id) DO NOTHING
                 """, userId, when);
+        revokeApplied(userId, erasedAt);
         jdbc.update("DELETE FROM relationship_feedback_event WHERE actor_user_id = ?", userId);
         jdbc.update("""
                 UPDATE relationship_feedback_event
@@ -69,8 +140,28 @@ public class RelationshipFeedbackStore {
                 """, when, userId);
     }
 
-    private void lock(long matchId) {
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(?)", matchId);
+    private int revokeApplied(long userId, Instant revokedAt) {
+        return jdbc.update("""
+                UPDATE relationship_feedback_consumption
+                SET processing_status = 'REVOKED', consumed_at = ?
+                WHERE processing_status = 'APPLIED'
+                  AND event_id IN (
+                    SELECT event_id FROM relationship_feedback_event WHERE actor_user_id = ?
+                  )
+                """, Timestamp.from(revokedAt), userId);
+    }
+
+    private void lockUsersThenMatch(MatchFeedbackContext context) {
+        long first = Math.min(context.userA(), context.userB());
+        long second = Math.max(context.userA(), context.userB());
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) first);
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) second);
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(12, ?::int)", (int) context.matchId());
+    }
+
+    private boolean erased(MatchFeedbackContext context) {
+        return count("SELECT COUNT(*) FROM relationship_feedback_erasure WHERE user_id IN (?, ?)",
+                context.userA(), context.userB()) > 0;
     }
 
     private FeedbackLedger loadLocked(MatchFeedbackContext context) {
@@ -115,6 +206,10 @@ public class RelationshipFeedbackStore {
         ), context.matchId());
         boolean blocked = erased || rows.stream().anyMatch(StoredEvent::learningBlocked);
         FeedbackLedger ledger = FeedbackLedger.replay(context, rows.stream().map(StoredEvent::event).toList(), blocked);
+        if (erased) {
+            ledger.markErased(context.userA());
+            ledger.markErased(context.userB());
+        }
         for (StoredEvent row : rows) {
             if (row.consumedAt() != null) ledger.restoreConsumed(row.event().eventId());
         }

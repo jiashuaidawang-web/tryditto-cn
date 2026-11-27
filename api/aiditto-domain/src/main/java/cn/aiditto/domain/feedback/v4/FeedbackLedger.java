@@ -18,6 +18,7 @@ public final class FeedbackLedger {
     private final List<RelationshipFeedbackEvent> events = new ArrayList<>();
     private final Map<String, RelationshipFeedbackEvent> byKey = new LinkedHashMap<>();
     private final Set<String> consumed = new LinkedHashSet<>();
+    private final Set<Long> erasedActors = new LinkedHashSet<>();
     private boolean learningBlocked;
     private boolean duplicateConsumption;
 
@@ -41,6 +42,12 @@ public final class FeedbackLedger {
         learningBlocked = true;
     }
 
+    /** A deletion mark blocks later writes by that person. It does not revive an old event. */
+    public synchronized void markErased(long userId) {
+        erasedActors.add(userId);
+        learningBlocked = true;
+    }
+
     /** Reloads a claim that was already stored. It does not count as a second claim. */
     public synchronized void restoreConsumed(String eventId) {
         consumed.add(eventId);
@@ -61,7 +68,10 @@ public final class FeedbackLedger {
         RelationshipFeedbackEvent existing = byKey.get(command.idempotencyKey());
         if (existing != null) {
             long actor = command.type().system() ? 0 : command.actorUserId();
-            if (existing.eventType() != command.type() || existing.actorUserId() != actor) {
+            if (existing.eventType() != command.type() || existing.actorUserId() != actor
+                    || !java.util.Objects.equals(existing.reasonCode(), command.reasonCode())
+                    || !java.util.Objects.equals(existing.supersedesEventId(), command.supersedesEventId())
+                    || !existing.occurredAt().equals(command.occurredAt())) {
                 throw new FeedbackRejection("IDEMPOTENCY_CONFLICT");
             }
             return existing;
@@ -126,7 +136,6 @@ public final class FeedbackLedger {
                 }
                 case MATCH_EXPIRED -> expired = true;
                 case MUTUAL_ACCEPTANCE_REACHED -> {
-                    mutual = true;
                     if (event.causationEventId() != null) {
                         for (String cause : event.causationEventId().split(",")) {
                             if (!cause.isBlank()) mutualCauses.add(cause);
@@ -158,10 +167,23 @@ public final class FeedbackLedger {
                 }
             }
         }
-        if (mutual && mutualCauses.size() < 2) {
-            long accepts = events.stream().filter(event -> event.eventType() == FeedbackEventType.MATCH_ACCEPTED
-                    && !superseded.contains(event.eventId())).count();
-            if (accepts < 2) mutual = false;
+        java.util.Set<String> effectiveAccepts = new java.util.LinkedHashSet<>();
+        for (RelationshipFeedbackEvent event : events) {
+            if (superseded.contains(event.eventId())) continue;
+            if (event.eventType() == FeedbackEventType.MATCH_ACCEPTED) effectiveAccepts.add(event.eventId());
+        }
+        mutual = false;
+        for (RelationshipFeedbackEvent event : events) {
+            if (superseded.contains(event.eventId()) || event.eventType() != FeedbackEventType.MUTUAL_ACCEPTANCE_REACHED) {
+                continue;
+            }
+            java.util.Set<String> causes = new java.util.LinkedHashSet<>();
+            if (event.causationEventId() != null) {
+                for (String cause : event.causationEventId().split(",")) {
+                    if (!cause.isBlank()) causes.add(cause);
+                }
+            }
+            if (causes.size() == 2 && causes.equals(effectiveAccepts)) mutual = true;
         }
         boolean contested = attendedA != null && attendedB != null && !attendedA.equals(attendedB);
         List<String> unknown = new ArrayList<>();
@@ -195,6 +217,7 @@ public final class FeedbackLedger {
         if (!context.published() || !published) reasons.add("NOT_PUBLISHED");
         if (learningBlocked) reasons.add("ERASED");
         if (!context.feedbackConsentA() || !context.feedbackConsentB()) reasons.add("NO_FEEDBACK_CONSENT");
+        if (!context.learningConsentA() || !context.learningConsentB()) reasons.add("NO_LEARNING_CONSENT");
         if (!consumed.isEmpty()) reasons.add("ALREADY_CONSUMED");
         if (duplicateConsumption) reasons.add("DUPLICATE_CONSUMPTION");
         boolean revoked = events.stream().anyMatch(event -> event.eventType() == FeedbackEventType.FEEDBACK_PROCESSING_REVOKED);
@@ -247,8 +270,9 @@ public final class FeedbackLedger {
         if (retracted) return FeedbackFacts.AttendanceState.WITHHELD;
         if (contested) return FeedbackFacts.AttendanceState.CONTESTED;
         if (Boolean.TRUE.equals(a) && Boolean.TRUE.equals(b)) return FeedbackFacts.AttendanceState.BOTH_REPORTED_ATTENDED;
+        if (Boolean.FALSE.equals(a) && Boolean.FALSE.equals(b)) return FeedbackFacts.AttendanceState.BOTH_REPORTED_NOT_ATTENDED;
         if (Boolean.TRUE.equals(a) || Boolean.TRUE.equals(b)) return FeedbackFacts.AttendanceState.ONE_REPORTED_ATTENDED;
-        if (Boolean.FALSE.equals(a) || Boolean.FALSE.equals(b)) return FeedbackFacts.AttendanceState.NOT_OCCURRED;
+        if (Boolean.FALSE.equals(a) || Boolean.FALSE.equals(b)) return FeedbackFacts.AttendanceState.ONE_REPORTED_NOT_ATTENDED;
         return FeedbackFacts.AttendanceState.UNKNOWN;
     }
 
@@ -273,16 +297,10 @@ public final class FeedbackLedger {
                 throw new FeedbackRejection("FORGED_COUNTERPART");
             }
         }
-        if (command.supersedesEventId() != null) {
-            RelationshipFeedbackEvent target = events.stream()
-                    .filter(event -> event.eventId().equals(command.supersedesEventId()))
-                    .findFirst()
-                    .orElseThrow(() -> new FeedbackRejection("UNKNOWN_SUPERSEDED"));
-            if (target.eventType() == FeedbackEventType.FEEDBACK_RETRACTED
-                    || target.eventType() == FeedbackEventType.FEEDBACK_PROCESSING_REVOKED) {
-                throw new FeedbackRejection("REVOCATION_STANDS");
-            }
+        if (erasedActors.contains(context.userA()) || erasedActors.contains(context.userB())) {
+            throw new FeedbackRejection("ERASED");
         }
+        if (command.supersedesEventId() != null) checkSupersedes(command);
         if ((command.type() == FeedbackEventType.FEEDBACK_CORRECTED
                 || command.type() == FeedbackEventType.PREFERENCE_CORRECTION_SUBMITTED)
                 && command.supersedesEventId() == null) {
@@ -290,6 +308,30 @@ public final class FeedbackLedger {
         }
         boolean published = events.stream().anyMatch(event -> event.eventType() == FeedbackEventType.MATCH_PUBLISHED);
         if (command.type() != FeedbackEventType.MATCH_PUBLISHED && !published) throw new FeedbackRejection("NOT_PUBLISHED");
+        boolean expired = events.stream().anyMatch(event -> event.eventType() == FeedbackEventType.MATCH_EXPIRED
+                && !supersededIds().contains(event.eventId()));
+        if (expired && command.supersedesEventId() == null
+                && (command.type() == FeedbackEventType.MATCH_ACCEPTED
+                || command.type() == FeedbackEventType.MATCH_DECLINED
+                || command.type() == FeedbackEventType.DATE_SCHEDULED
+                || command.type() == FeedbackEventType.DATE_CANCELLED)) {
+            throw new FeedbackRejection("EXPIRED");
+        }
+        if (command.type() == FeedbackEventType.DATE_SCHEDULED
+                && !active(context.userA(), FeedbackEventType.MATCH_ACCEPTED)
+                && !active(context.userB(), FeedbackEventType.MATCH_ACCEPTED)) {
+            throw new FeedbackRejection("ILLEGAL_SCHEDULE");
+        }
+        if (command.type() == FeedbackEventType.DATE_SCHEDULED
+                && !(active(context.userA(), FeedbackEventType.MATCH_ACCEPTED)
+                && active(context.userB(), FeedbackEventType.MATCH_ACCEPTED))) {
+            throw new FeedbackRejection("ILLEGAL_SCHEDULE");
+        }
+        if (command.type() == FeedbackEventType.DATE_CANCELLED
+                && !active(context.userA(), FeedbackEventType.DATE_SCHEDULED)
+                && !active(context.userB(), FeedbackEventType.DATE_SCHEDULED)) {
+            throw new FeedbackRejection("ILLEGAL_SCHEDULE");
+        }
         if (!command.type().system()
                 && command.type() != FeedbackEventType.MATCH_VIEWED
                 && command.type() != FeedbackEventType.DATE_SCHEDULED
@@ -304,6 +346,51 @@ public final class FeedbackLedger {
                 && command.type() != FeedbackEventType.FEEDBACK_CORRECTED
                 && command.type() != FeedbackEventType.PREFERENCE_CORRECTION_SUBMITTED) {
             throw new FeedbackRejection("DUPLICATE_EFFECT");
+        }
+    }
+
+    private void checkSupersedes(FeedbackCommand command) {
+        RelationshipFeedbackEvent target = events.stream()
+                .filter(event -> event.eventId().equals(command.supersedesEventId()))
+                .findFirst()
+                .orElseThrow(() -> new FeedbackRejection("UNKNOWN_SUPERSEDED"));
+        if (target.eventType() == FeedbackEventType.FEEDBACK_RETRACTED
+                || target.eventType() == FeedbackEventType.FEEDBACK_PROCESSING_REVOKED) {
+            throw new FeedbackRejection("REVOCATION_STANDS");
+        }
+        if (target.eventType().system()) throw new FeedbackRejection("CANNOT_CORRECT_SYSTEM");
+        if (command.type().system()) throw new FeedbackRejection("FORGED_SYSTEM_EVENT");
+        if (target.actorUserId() != command.actorUserId()) throw new FeedbackRejection("NOT_EVENT_OWNER");
+        if (supersededIds().contains(target.eventId())) throw new FeedbackRejection("NOT_EFFECTIVE");
+        boolean response = target.eventType() == FeedbackEventType.MATCH_ACCEPTED
+                || target.eventType() == FeedbackEventType.MATCH_DECLINED
+                || target.eventType() == FeedbackEventType.DATE_REPORTED_ATTENDED
+                || target.eventType() == FeedbackEventType.DATE_REPORTED_NOT_ATTENDED
+                || target.eventType() == FeedbackEventType.CONTINUE_INTEREST_EXPRESSED
+                || target.eventType() == FeedbackEventType.CONTINUE_INTEREST_DECLINED
+                || target.eventType() == FeedbackEventType.DATE_SCHEDULED
+                || target.eventType() == FeedbackEventType.DATE_CANCELLED
+                || target.eventType() == FeedbackEventType.PREFERENCE_CORRECTION_SUBMITTED
+                || target.eventType() == FeedbackEventType.FEEDBACK_CORRECTED;
+        if (command.type() == FeedbackEventType.FEEDBACK_CORRECTED && !response) {
+            throw new FeedbackRejection("ILLEGAL_REPLACEMENT");
+        }
+        if (command.type() == FeedbackEventType.PREFERENCE_CORRECTION_SUBMITTED
+                && target.eventType() != FeedbackEventType.MATCH_DECLINED
+                && target.eventType() != FeedbackEventType.CONTINUE_INTEREST_DECLINED
+                && target.eventType() != FeedbackEventType.CONTINUE_INTEREST_EXPRESSED
+                && target.eventType() != FeedbackEventType.PREFERENCE_CORRECTION_SUBMITTED) {
+            throw new FeedbackRejection("ILLEGAL_REPLACEMENT");
+        }
+        if (command.type() == FeedbackEventType.MATCH_DECLINED
+                && target.eventType() != FeedbackEventType.MATCH_ACCEPTED
+                && target.eventType() != FeedbackEventType.FEEDBACK_CORRECTED) {
+            throw new FeedbackRejection("ILLEGAL_REPLACEMENT");
+        }
+        if (command.type() == FeedbackEventType.MATCH_ACCEPTED
+                && target.eventType() != FeedbackEventType.MATCH_DECLINED
+                && target.eventType() != FeedbackEventType.FEEDBACK_CORRECTED) {
+            throw new FeedbackRejection("ILLEGAL_REPLACEMENT");
         }
     }
 
@@ -348,8 +435,6 @@ public final class FeedbackLedger {
     }
 
     private void deriveMutual(Instant recordedAt) {
-        String key = "match:" + context.matchId() + ":mutual-acceptance";
-        if (byKey.containsKey(key)) return;
         boolean acceptA = active(context.userA(), FeedbackEventType.MATCH_ACCEPTED);
         boolean acceptB = active(context.userB(), FeedbackEventType.MATCH_ACCEPTED);
         if (!acceptA || !acceptB) return;
@@ -360,6 +445,9 @@ public final class FeedbackLedger {
                 .map(RelationshipFeedbackEvent::eventId)
                 .reduce((left, right) -> left + "," + right)
                 .orElse("");
+        if (causes.isBlank() || !causes.contains(",")) return;
+        String key = "match:" + context.matchId() + ":mutual-acceptance:" + causes;
+        if (byKey.containsKey(key)) return;
         RelationshipFeedbackEvent derived = materialize(new FeedbackCommand(FeedbackEventType.MUTUAL_ACCEPTANCE_REACHED, 0,
                 FeedbackFacts.SourceType.SYSTEM, key, recordedAt, null, null, null), recordedAt, causes);
         events.add(derived);

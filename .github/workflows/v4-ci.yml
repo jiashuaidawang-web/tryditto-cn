@@ -248,6 +248,10 @@ jobs:
                   "concurrentAcceptsKeepOne",
                   "acceptAndRetractBothRemainAndLearningStops",
                   "secondConsumptionDoesNotClaimAgain",
+                  "erasedUserCannotAppendLater",
+                  "failedClaimRetriesAndASecondPolicyIsSeparate",
+                  "claimRollsBackAndRevokeKeepsTheArtifactTrace",
+                  "eraseRacesAppendAndRevokeRacesClaim",
               ],
           }
           surefire_required = {

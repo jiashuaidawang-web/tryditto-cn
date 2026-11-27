@@ -256,6 +256,11 @@ class FeedbackLedgerTest {
         assertThat(fraction(cohort, "retract_rate")).isEqualTo("0/10");
         assertThat(fraction(cohort, "processing_revoked_rate")).isEqualTo("1/10");
         assertThat(fraction(cohort, "learning_eligible_rate")).isEqualTo("7/10");
+        assertThat(fraction(cohort, "either_response_rate")).isEqualTo("10/10");
+        assertThat(fraction(cohort, "both_response_rate")).isEqualTo("9/10");
+        assertThat(fraction(cohort, "user_accept_rate")).isEqualTo("17/20");
+        assertThat(fraction(cohort, "date_report_coverage")).isEqualTo("2/10");
+        assertThat(fraction(cohort, "continue_coverage")).isEqualTo("2/10");
         assertThat(cohort.immature()).isZero();
         Files.createDirectories(Path.of("target"));
         Files.writeString(Path.of("target/f01-match-lab-cases.json"), json(labs, cohort));
@@ -484,7 +489,7 @@ class FeedbackLedgerTest {
     }
 
     private static MatchFeedbackContext context(long matchId, boolean published, boolean consentA, boolean consentB) {
-        return new MatchFeedbackContext(matchId, "run-f01", LocalDate.of(2026, 11, 23),
+        return MatchFeedbackContext.experiment(matchId, "run-f01", LocalDate.of(2026, 11, 23),
                 81001, 81002, published, 7, 9, "policy-1", "objective-g2-1", "strategy-e-1", consentA, consentB);
     }
 

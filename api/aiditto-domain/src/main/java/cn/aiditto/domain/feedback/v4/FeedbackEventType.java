@@ -8,7 +8,7 @@ public enum FeedbackEventType {
     MATCH_DECLINED(false, FeedbackFacts.EvidenceStatus.SELF_REPORTED),
     MATCH_EXPIRED(true, FeedbackFacts.EvidenceStatus.SYSTEM_VERIFIED),
     MUTUAL_ACCEPTANCE_REACHED(true, FeedbackFacts.EvidenceStatus.SYSTEM_VERIFIED),
-    DATE_SCHEDULED(false, FeedbackFacts.EvidenceStatus.SYSTEM_VERIFIED),
+    DATE_SCHEDULED(false, FeedbackFacts.EvidenceStatus.SELF_REPORTED),
     DATE_CANCELLED(false, FeedbackFacts.EvidenceStatus.SELF_REPORTED),
     DATE_REPORTED_ATTENDED(false, FeedbackFacts.EvidenceStatus.SELF_REPORTED),
     DATE_REPORTED_NOT_ATTENDED(false, FeedbackFacts.EvidenceStatus.SELF_REPORTED),

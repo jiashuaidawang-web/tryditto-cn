@@ -427,3 +427,16 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - 真实关系质量和生产启用是 NOT_RUN / NO-GO。最终匹配算法质量仍是 NO-GO。
 
 细节见 `V4-F01-audit.md` 和 `V4-F01-test-report.md`。分支 `feature/v4-feedback-events` 的实现提交 `1180943cca705718694d86919353f4cf5c466540`，CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46050654255 ，四个作业 success。
+
+## V4-F01-FINAL（2026-11-28）
+
+收口的是更正权限、删除并发、按用途消费、服务端快照、状态机和指标。V18 没有改。消费凭证在 V19。
+
+仍开放：
+
+- `AccountService.requestDelete` 仍不调用 `eraseActor`。约定写在 `RelationshipFeedbackStore.FUTURE_ACCOUNT_DELETION`：注销先锁用户，再调用 `eraseActor`，提交时不跑学习器。
+- 生产匹配快照没有接入。`MatchFeedbackContext.production()` 抛出 `PRODUCTION_CONTEXT_NOT_WIRED`。
+- `GROUP_EVALUATION` 只有用途名。构造消费凭证会抛出 `F03_NOT_IMPLEMENTED`。
+- 反馈学习质量和真实关系质量仍是 NOT_RUN。生产启用和最终匹配算法质量仍是 NO-GO。
+
+本地领域测试 576 项，失败 0，异常 0，跳过 0。其中原有 569 项仍在，新增 7 项在 `FeedbackLedgerFinalTest`。PostgreSQL 反例在 `FeedbackEventIT`，只在 CI 的 Postgres 16 上执行。CI 地址在推送后补记。

@@ -1,6 +1,7 @@
 package cn.aiditto.it;
 
 import cn.aiditto.domain.feedback.v4.FeedbackCommand;
+import cn.aiditto.domain.feedback.v4.FeedbackConsumption;
 import cn.aiditto.domain.feedback.v4.FeedbackEventType;
 import cn.aiditto.domain.feedback.v4.FeedbackFacts;
 import cn.aiditto.domain.feedback.v4.FeedbackLedger;
@@ -8,6 +9,7 @@ import cn.aiditto.domain.feedback.v4.FeedbackRejection;
 import cn.aiditto.domain.feedback.v4.MatchFeedbackContext;
 import cn.aiditto.domain.feedback.v4.RelationshipFeedbackEvent;
 import cn.aiditto.feedback.RelationshipFeedbackStore;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,6 +34,11 @@ class FeedbackEventIT extends ApiIT {
 
     @Autowired RelationshipFeedbackStore store;
     @Autowired JdbcTemplate jdbc;
+
+    @AfterEach
+    void releaseSharedActors() {
+        jdbc.update("DELETE FROM relationship_feedback_erasure WHERE user_id IN (81001, 81002)");
+    }
 
     @Test
     void sameKeyIsOneRow() {
@@ -144,6 +151,138 @@ class FeedbackEventIT extends ApiIT {
     }
 
     @Test
+    void erasedUserCannotAppendLater() {
+        MatchFeedbackContext context = context(72007);
+        store.append(context, system(FeedbackEventType.MATCH_PUBLISHED, "it-pub-72007"), T0);
+        store.append(context, person(FeedbackEventType.MATCH_ACCEPTED, 81001, "it-acc-72007"), T0);
+        store.eraseActor(81001, T0.plusSeconds(1));
+        assertThatThrownBy(() -> store.append(context, person(FeedbackEventType.MATCH_VIEWED, 81001, "it-late-72007"), T0.plusSeconds(2)))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("ERASED");
+    }
+
+    @Test
+    void failedClaimRetriesAndASecondPolicyIsSeparate() {
+        MatchFeedbackContext context = context(72008);
+        store.append(context, system(FeedbackEventType.MATCH_PUBLISHED, "it-pub-72008"), T0);
+        RelationshipFeedbackEvent accept = store.append(context, person(FeedbackEventType.MATCH_ACCEPTED, 81001, "it-acc-72008"), T0);
+        store.markClaimFailed(accept.eventId(), FeedbackConsumption.Consumer.PROFILE_LEARNING, "learn-1", T0);
+        FeedbackConsumption retried = store.claim(context, accept.eventId(), FeedbackConsumption.Consumer.PROFILE_LEARNING,
+                "learn-1", T0.plusSeconds(1), "artifact-1");
+        assertThat(retried.derivedArtifactId()).isEqualTo("artifact-1");
+        store.claim(context, accept.eventId(), FeedbackConsumption.Consumer.PROFILE_LEARNING,
+                "learn-2", T0.plusSeconds(2), "artifact-2");
+        Integer rows = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM relationship_feedback_consumption WHERE event_id = ?
+                """, Integer.class, accept.eventId());
+        assertThat(rows).isEqualTo(2);
+        assertThatThrownBy(() -> store.claim(context, accept.eventId(), FeedbackConsumption.Consumer.PROFILE_LEARNING,
+                "learn-1", T0.plusSeconds(3), "artifact-3"))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("DUPLICATE_CONSUMPTION");
+    }
+
+    @Test
+    void claimRollsBackAndRevokeKeepsTheArtifactTrace() {
+        MatchFeedbackContext context = context(72009);
+        store.append(context, system(FeedbackEventType.MATCH_PUBLISHED, "it-pub-72009"), T0);
+        RelationshipFeedbackEvent accept = store.append(context, person(FeedbackEventType.MATCH_ACCEPTED, 81001, "it-acc-72009"), T0);
+        assertThatThrownBy(() -> store.claimThenRollback(context, accept.eventId(), T0))
+                .isInstanceOf(FeedbackRejection.class);
+        Integer before = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM relationship_feedback_consumption WHERE event_id = ?", Integer.class, accept.eventId());
+        assertThat(before).isZero();
+        store.claim(context, accept.eventId(), FeedbackConsumption.Consumer.PROFILE_LEARNING, "learn-1", T0, "artifact-9");
+        store.append(context, person(FeedbackEventType.FEEDBACK_PROCESSING_REVOKED, 81001, "it-revoke-72009"), T0.plusSeconds(1));
+        assertThat(store.revokeDerived(81001, T0.plusSeconds(2))).isZero();
+        String status = jdbc.queryForObject("""
+                SELECT processing_status FROM relationship_feedback_consumption WHERE event_id = ?
+                """, String.class, accept.eventId());
+        String artifact = jdbc.queryForObject("""
+                SELECT derived_artifact_id FROM relationship_feedback_consumption WHERE event_id = ?
+                """, String.class, accept.eventId());
+        assertThat(status).isEqualTo("REVOKED");
+        assertThat(artifact).isEqualTo("artifact-9");
+        assertThatThrownBy(() -> store.claim(context, accept.eventId(), FeedbackConsumption.Consumer.PROFILE_LEARNING,
+                "learn-9", T0.plusSeconds(3), "again"))
+                .isInstanceOf(FeedbackRejection.class);
+    }
+
+    @Test
+    void eraseRacesAppendAndRevokeRacesClaim() throws Exception {
+        MatchFeedbackContext eraseContext = context(72010);
+        store.append(eraseContext, system(FeedbackEventType.MATCH_PUBLISHED, "it-pub-72010"), T0);
+        store.append(eraseContext, person(FeedbackEventType.MATCH_ACCEPTED, 81001, "it-acc-72010"), T0);
+        CountDownLatch eraseStart = new CountDownLatch(1);
+        ExecutorService erasePool = Executors.newFixedThreadPool(2);
+        Future<?> erase = erasePool.submit(() -> {
+            eraseStart.await();
+            store.eraseActor(81001, T0.plusSeconds(3));
+            return null;
+        });
+        Future<?> late = erasePool.submit(() -> {
+            eraseStart.await();
+            try {
+                store.append(eraseContext, person(FeedbackEventType.MATCH_VIEWED, 81001, "it-late-72010"), T0.plusSeconds(3));
+            } catch (FeedbackRejection rejection) {
+                if (!"ERASED".equals(rejection.code())) throw rejection;
+            }
+            return null;
+        });
+        eraseStart.countDown();
+        erase.get(20, TimeUnit.SECONDS);
+        late.get(20, TimeUnit.SECONDS);
+        erasePool.shutdownNow();
+        Integer actorRows = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM relationship_feedback_event WHERE actor_user_id = 81001 AND match_id = 72010
+                """, Integer.class);
+        Integer erasures = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM relationship_feedback_erasure WHERE user_id = 81001", Integer.class);
+        assertThat(actorRows).isZero();
+        assertThat(erasures).isEqualTo(1);
+
+        MatchFeedbackContext revokeContext = context(72011);
+        store.append(revokeContext, system(FeedbackEventType.MATCH_PUBLISHED, "it-pub-72011"), T0);
+        RelationshipFeedbackEvent accept = store.append(revokeContext,
+                person(FeedbackEventType.MATCH_ACCEPTED, 81001, "it-acc-72011"), T0);
+        CountDownLatch revokeStart = new CountDownLatch(1);
+        ExecutorService revokePool = Executors.newFixedThreadPool(2);
+        AtomicInteger refused = new AtomicInteger();
+        Future<?> claim = revokePool.submit(() -> {
+            revokeStart.await();
+            try {
+                store.claim(revokeContext, accept.eventId(), FeedbackConsumption.Consumer.PROFILE_LEARNING,
+                        "learn-race", T0.plusSeconds(2), "artifact-race");
+            } catch (FeedbackRejection rejection) {
+                refused.incrementAndGet();
+            }
+            return null;
+        });
+        Future<?> revoke = revokePool.submit(() -> {
+            revokeStart.await();
+            store.append(revokeContext, person(FeedbackEventType.FEEDBACK_PROCESSING_REVOKED, 81001, "it-revoke-72011"),
+                    T0.plusSeconds(2));
+            return null;
+        });
+        revokeStart.countDown();
+        claim.get(20, TimeUnit.SECONDS);
+        revoke.get(20, TimeUnit.SECONDS);
+        revokePool.shutdownNow();
+        Integer applied = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM relationship_feedback_consumption
+                WHERE event_id = ? AND processing_status = 'APPLIED'
+                """, Integer.class, accept.eventId());
+        assertThat(applied).isZero();
+        jdbc.update("UPDATE relationship_feedback_event SET learning_blocked = FALSE WHERE match_id = 72011");
+        assertThatThrownBy(() -> store.claim(revokeContext, accept.eventId(), FeedbackConsumption.Consumer.PROFILE_LEARNING,
+                "learn-open", T0.plusSeconds(4), "artifact-open"))
+                .isInstanceOf(FeedbackRejection.class);
+        assertThat(refused.get()).isBetween(0, 1);
+    }
+
+    @Test
     void secondConsumptionDoesNotClaimAgain() {
         MatchFeedbackContext context = context(72006);
         store.append(context, system(FeedbackEventType.MATCH_PUBLISHED, "it-pub-72006"), T0);
@@ -174,7 +313,7 @@ class FeedbackEventIT extends ApiIT {
     }
 
     private static MatchFeedbackContext context(long matchId) {
-        return new MatchFeedbackContext(matchId, "run-f01", LocalDate.of(2026, 11, 23),
+        return MatchFeedbackContext.experiment(matchId, "run-f01", LocalDate.of(2026, 11, 23),
                 81001, 81002, true, 7, 9, "policy-1", "objective-g2-1", "strategy-e-1", true, true);
     }
 
