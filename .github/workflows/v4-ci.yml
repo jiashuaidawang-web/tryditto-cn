@@ -3,7 +3,7 @@ name: V4 CI
 
 on:
   push:
-    branches: [master_agent_v4, feature/v4-recall, feature/v4-bidirectional]
+    branches: [master_agent_v4, feature/v4-recall, feature/v4-bidirectional, feature/v4-ai-reasoning]
   pull_request:
     branches: [master_agent_v4]
   workflow_dispatch:
