@@ -9,6 +9,13 @@ import java.util.Map;
  */
 public final class ReasoningLivePlan {
     public static final List<String> MODELS = List.of("LongCat-2.5", "deepseek-flash", "hy4-flash", "qwen4-max");
+    public static final int FULL_DIRECTION_CALLS = 224;
+    public static final int SMOKE_RELATIONS = 10;
+    public static final int CHALLENGE_RELATIONS = 36;
+    public static final int MODEL_CALL_CAP = 320;
+    public static final int MODEL_TOKEN_CAP = 1_500_000;
+    /** Budget gate fixed before any live result. It is not the quality gate. */
+    public static final double SMOKE_ENTRY_LEGAL_RATE = 0.80;
 
     private ReasoningLivePlan() {}
 

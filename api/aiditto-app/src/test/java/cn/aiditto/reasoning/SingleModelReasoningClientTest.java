@@ -7,6 +7,8 @@ import cn.aiditto.domain.reasoning.v4.ReasoningModel;
 import cn.aiditto.domain.reasoning.v4.ReasoningPrompt;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SingleModelReasoningClientTest {
@@ -21,5 +23,11 @@ class SingleModelReasoningClientTest {
         assertThat(result.failed()).isTrue();
         assertThat(result.content()).isNull();
         assertThat(result.modelName()).isEqualTo("deepseek-flash");
+    }
+
+    @Test
+    void aMissingExperimentCredentialStaysNotRun() {
+        assertThat(ReasoningLiveRunner.run(new String[]{"preflight"}, Map.of())).isEqualTo(2);
+        assertThat(ReasoningLiveRunner.run(new String[]{"preflight"}, Map.of("LLM_FALLBACK_API_KEY", "present"))).isEqualTo(2);
     }
 }

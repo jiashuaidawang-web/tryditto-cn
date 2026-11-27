@@ -8,7 +8,9 @@ import cn.aiditto.domain.compatibility.v4.FeatureAlignmentRegistry;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * M02 stays the deterministic baseline. Scheme C may move a score by at most ten points,
@@ -16,6 +18,7 @@ import java.util.List;
  */
 public final class ReasoningExperiment {
     public static final String POLICY = "reasoning-experiment-1";
+    public static final String POLICY_C2 = "reasoning-experiment-2";
     public static final int MAX_ADJUSTMENT = 10;
     public static final int STEP = 2;
     public static final double EVIDENCE_PRECISION_GATE = 0.90;
@@ -43,10 +46,12 @@ public final class ReasoningExperiment {
         DirectionalReasoning ba = one(snapshot, "BA", right, left, model, budget);
         Double m02 = decision.pair().harmonicWithCoverage();
         int delta = adjustment(ab, ba);
+        Ledger ledger = ledger(ab, ba);
         return new PairResult(decision, snapshot, ab, ba,
                 rank("A", m02, 0, false, "M02_ONLY"),
                 rank("B", m02, 0, false, explanationStatus(ab, ba)),
-                schemeC(decision, m02, delta, ab, ba));
+                schemeC(decision, m02, delta, ab, ba),
+                schemeC2(decision, m02, ab, ba, ledger), ledger);
     }
 
     public List<PairResult> runFair(List<CompatibilitySubject> left, List<CompatibilitySubject> right,
@@ -84,10 +89,12 @@ public final class ReasoningExperiment {
         for (int i = 0; i < left.size(); i++) {
             Double m02 = decisions.get(i).pair().harmonicWithCoverage();
             int delta = adjustment(agentA.get(i), agentB.get(i));
+            Ledger ledger = ledger(agentA.get(i), agentB.get(i));
             out.add(new PairResult(decisions.get(i), snapshots.get(i), agentA.get(i), agentB.get(i),
                     rank("A", m02, 0, false, "M02_ONLY"),
                     rank("B", m02, 0, false, explanationStatus(agentA.get(i), agentB.get(i))),
-                    schemeC(decisions.get(i), m02, delta, agentA.get(i), agentB.get(i))));
+                    schemeC(decisions.get(i), m02, delta, agentA.get(i), agentB.get(i)),
+                    schemeC2(decisions.get(i), m02, agentA.get(i), agentB.get(i), ledger), ledger));
         }
         return out;
     }
@@ -117,6 +124,59 @@ public final class ReasoningExperiment {
             return rank("C", m02, 0, false, "GATE_HELD");
         }
         return rank("C", m02, delta, true, "ADJUSTED");
+    }
+
+    private static Rank schemeC2(CompatibilityDecision decision, Double m02,
+                                 DirectionalReasoning ab, DirectionalReasoning ba, Ledger ledger) {
+        if (!complete(ab) || !complete(ba)) return rank("C2", m02, 0, false, incomplete(ab, ba));
+        if (!decision.reasoningEligible() || m02 == null || !decision.recommendationEligible()
+                || decision.reasons().contains("STRONG_PREFERENCE_UNEVALUABLE")) {
+            return rank("C2", m02, 0, false, "GATE_HELD");
+        }
+        int delta = Math.max(-MAX_ADJUSTMENT, Math.min(MAX_ADJUSTMENT, STEP * (ledger.uniqueSupported() - ledger.uniqueConflicts())));
+        double raw = m02 + delta;
+        double clamped = Math.max(0, Math.min(100, raw));
+        int shown = (int) Math.round(clamped - m02);
+        String status = Double.compare(raw, clamped) != 0 ? "CLAMPED" : shown == 0 ? "UNCHANGED" : "ADJUSTED";
+        return new Rank("C2", m02, clamped, shown, shown != 0, status);
+    }
+
+    private static Ledger ledger(DirectionalReasoning ab, DirectionalReasoning ba) {
+        Set<String> seen = new HashSet<>();
+        int explanations = 0;
+        int duplicates = 0;
+        int supported = 0;
+        int conflicts = 0;
+        int hypotheses = 0;
+        int findings = 0;
+        for (DirectionalReasoning reasoning : List.of(ab, ba)) {
+            findings += reasoning.experimentFindings().size();
+            for (ReasoningClaim claim : reasoning.usable()) {
+                if (claim.category() == ReasoningCategory.POTENTIAL_COMPLEMENT) hypotheses++;
+                if (claim.category() != ReasoningCategory.SUPPORTED_COMPATIBILITY
+                        && claim.category() != ReasoningCategory.POTENTIAL_CONFLICT) continue;
+                String key = reasoning.direction() + "|" + claim.preferenceCode() + "|"
+                        + claim.targetFeatureCode() + "|" + claim.category();
+                if (!seen.add(key)) {
+                    duplicates++;
+                    continue;
+                }
+                explanations++;
+                if (claim.category() == ReasoningCategory.SUPPORTED_COMPATIBILITY) supported++;
+                else conflicts++;
+            }
+        }
+        return new Ledger(explanations, hypotheses, findings, duplicates, supported, conflicts);
+    }
+
+    private static boolean complete(DirectionalReasoning reasoning) {
+        return reasoning.status() == ReasoningStatus.COMPLETED;
+    }
+
+    private static String incomplete(DirectionalReasoning ab, DirectionalReasoning ba) {
+        if (ab.status() == ReasoningStatus.MODEL_FAILED || ba.status() == ReasoningStatus.MODEL_FAILED) return "MODEL_FAILED";
+        if (ab.status() == ReasoningStatus.REJECTED || ba.status() == ReasoningStatus.REJECTED) return "REJECTED";
+        return "INCOMPLETE";
     }
 
     private static int adjustment(DirectionalReasoning ab, DirectionalReasoning ba) {
@@ -150,7 +210,12 @@ public final class ReasoningExperiment {
         }
     }
 
+    public record Ledger(int m02Explanations, int hypotheses, int newFindings, int duplicates,
+                         int uniqueSupported, int uniqueConflicts) {}
+
     public record PairResult(CompatibilityDecision decision, RelationshipReasoningContext context,
                              DirectionalReasoning agentA, DirectionalReasoning agentB,
-                             Rank schemeA, Rank schemeB, Rank schemeC) {}
+                             Rank schemeA, Rank schemeB, Rank schemeC, Rank schemeC2, Ledger ledger) {
+        public Rank schemeC1() { return schemeC; }
+    }
 }

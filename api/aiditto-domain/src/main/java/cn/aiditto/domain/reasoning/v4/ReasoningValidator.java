@@ -46,16 +46,17 @@ public final class ReasoningValidator {
         List<ReasoningClaim> missing = new ArrayList<>();
         List<ReasoningClaim> contradictions = new ArrayList<>();
         List<ReasoningClaim> unsupported = new ArrayList<>();
+        List<ReasoningClaim> findings = new ArrayList<>();
         route(context, view, alignments, object, "supportedMatches", ReasoningCategory.SUPPORTED_COMPATIBILITY,
-                supported, unsupported);
+                supported, unsupported, findings);
         route(context, view, alignments, object, "potentialComplements", ReasoningCategory.POTENTIAL_COMPLEMENT,
-                complements, unsupported);
+                complements, unsupported, findings);
         route(context, view, alignments, object, "possibleConflicts", ReasoningCategory.POTENTIAL_CONFLICT,
-                conflicts, unsupported);
+                conflicts, unsupported, findings);
         route(context, view, alignments, object, "missingInformation", ReasoningCategory.INSUFFICIENT_EVIDENCE,
-                missing, unsupported);
+                missing, unsupported, findings);
         route(context, view, alignments, object, "contradictions", ReasoningCategory.CONTRADICTION,
-                contradictions, unsupported);
+                contradictions, unsupported, findings);
         for (ReasoningClaim claim : claims(object, "unsupportedClaims")) {
             unsupported.add(new ReasoningClaim(ReasoningCategory.UNSUPPORTED_INFERENCE, claim.preferenceCode(),
                     claim.targetFeatureCode(), claim.evidenceRefs(), claim.statement()));
@@ -67,16 +68,18 @@ public final class ReasoningValidator {
         }
         return new DirectionalReasoning(view.chooserId(), view.targetId(), direction, supported, complements, conflicts,
                 missing, contradictions, unsupported, refs, confidence, ReasoningStatus.COMPLETED,
-                confidence == null && object.get("confidence") != null ? "CONFIDENCE_DISCARDED" : null);
+                confidence == null && object.get("confidence") != null ? "CONFIDENCE_DISCARDED" : null, findings);
     }
 
     private static void route(RelationshipReasoningContext context, RelationshipReasoningContext.View view,
                               FeatureAlignmentRegistry alignments, Map<String, Object> object, String field,
-                              ReasoningCategory category, List<ReasoningClaim> accepted, List<ReasoningClaim> rejected) {
+                              ReasoningCategory category, List<ReasoningClaim> accepted, List<ReasoningClaim> rejected,
+                              List<ReasoningClaim> findings) {
         for (ReasoningClaim claim : claims(object, field)) {
             ReasoningClaim tagged = new ReasoningClaim(category, claim.preferenceCode(), claim.targetFeatureCode(),
                     claim.evidenceRefs(), claim.statement());
             if (accept(context, view, alignments, tagged)) accepted.add(tagged);
+            else if (newFinding(context, view, alignments, tagged)) findings.add(tagged);
             else rejected.add(new ReasoningClaim(ReasoningCategory.UNSUPPORTED_INFERENCE, tagged.preferenceCode(),
                     tagged.targetFeatureCode(), tagged.evidenceRefs(), tagged.statement()));
         }
@@ -94,6 +97,7 @@ public final class ReasoningValidator {
         if (blocked(claim.statement())) return false;
         if (claim.evidenceRefs().isEmpty() || claim.evidenceRefs().stream().anyMatch(ref -> !view.allows(ref))) return false;
         if (inventedValue(claim, view)) return false;
+        if (relevance(view, claim) != EvidenceRelevance.RELEVANT) return false;
         RelationshipReasoningContext.ItemView item = view.items().stream()
                 .filter(row -> row.preferenceCode().equals(claim.preferenceCode())).findFirst().orElse(null);
         return switch (claim.category()) {
@@ -162,7 +166,68 @@ public final class ReasoningValidator {
 
     private static DirectionalReasoning rejected(RelationshipReasoningContext.View view, List<ReasoningClaim> claims) {
         return new DirectionalReasoning(view.chooserId(), view.targetId(), view.direction(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), claims, List.of(), null, ReasoningStatus.REJECTED, "IDENTITY");
+                List.of(), List.of(), List.of(), claims, List.of(), null, ReasoningStatus.REJECTED, "IDENTITY", List.of());
+    }
+
+    /**
+     * A citation that exists is not enough. It has to name this preference and this target feature.
+     * Passing the word list does not make the sentence supported.
+     */
+    public static EvidenceRelevance relevance(RelationshipReasoningContext.View view, ReasoningClaim claim) {
+        if (claim.evidenceRefs().isEmpty()) return EvidenceRelevance.INCOMPLETE;
+        boolean preference = false;
+        boolean self = false;
+        boolean selfPresent = view.evidence().stream().anyMatch(item -> "self".equals(item.role())
+                && item.userId() == view.targetId() && item.code().equals(claim.targetFeatureCode()));
+        for (String ref : claim.evidenceRefs()) {
+            RelationshipReasoningContext.EvidenceItem item = view.evidence().stream()
+                    .filter(candidate -> candidate.ref().equals(ref)).findFirst().orElse(null);
+            if (item == null) return EvidenceRelevance.ABSENT;
+            boolean preferenceRef = "preference".equals(item.role()) && item.userId() == view.chooserId()
+                    && item.code().equals(claim.preferenceCode());
+            boolean selfRef = "self".equals(item.role()) && item.userId() == view.targetId()
+                    && item.code().equals(claim.targetFeatureCode());
+            if (!preferenceRef && !selfRef) return EvidenceRelevance.UNRELATED;
+            preference = preference || preferenceRef;
+            self = self || selfRef;
+        }
+        if (!preference) return EvidenceRelevance.INCOMPLETE;
+        boolean needsSelf = claim.category() == ReasoningCategory.SUPPORTED_COMPATIBILITY
+                || claim.category() == ReasoningCategory.POTENTIAL_CONFLICT
+                || claim.category() == ReasoningCategory.POTENTIAL_COMPLEMENT;
+        if (needsSelf && !selfPresent) return EvidenceRelevance.INCOMPLETE;
+        if (needsSelf && selfPresent && !self) return EvidenceRelevance.INCOMPLETE;
+        if (missingAsFact(view, claim)) return EvidenceRelevance.MISSING_AS_FACT;
+        return EvidenceRelevance.RELEVANT;
+    }
+
+    private static boolean newFinding(RelationshipReasoningContext context, RelationshipReasoningContext.View view,
+                                      FeatureAlignmentRegistry alignments, ReasoningClaim claim) {
+        if (claim.category() != ReasoningCategory.SUPPORTED_COMPATIBILITY) return false;
+        if (blocked(claim.statement()) || inventedValue(claim, view)) return false;
+        if (relevance(view, claim) != EvidenceRelevance.RELEVANT) return false;
+        if (alignments.find(claim.preferenceCode()) != null) return false;
+        RelationshipReasoningContext.ItemView item = view.items().stream()
+                .filter(row -> row.preferenceCode().equals(claim.preferenceCode())).findFirst().orElse(null);
+        if (item != null && !"NOT_APPLICABLE".equals(item.satisfaction())) return false;
+        String actual = value(view, "self", claim.targetFeatureCode());
+        String expected = value(view, "preference", claim.preferenceCode());
+        return !actual.isBlank() && actual.equals(expected) && context.semanticLimits() != null;
+    }
+
+    private static boolean missingAsFact(RelationshipReasoningContext.View view, ReasoningClaim claim) {
+        if (claim.category() == ReasoningCategory.INSUFFICIENT_EVIDENCE
+                || claim.category() == ReasoningCategory.CONTRADICTION) return false;
+        RelationshipReasoningContext.ItemView item = view.items().stream()
+                .filter(row -> row.preferenceCode().equals(claim.preferenceCode())).findFirst().orElse(null);
+        if (item != null && "UNKNOWN".equals(item.satisfaction())) return true;
+        return value(view, "self", claim.targetFeatureCode()).isBlank();
+    }
+
+    private static String value(RelationshipReasoningContext.View view, String role, String code) {
+        return view.evidence().stream()
+                .filter(item -> role.equals(item.role()) && item.code().equals(code))
+                .map(RelationshipReasoningContext.EvidenceItem::value).findFirst().orElse("");
     }
 
     private static FeatureDefinition find(FeatureRegistry registry, String code) {

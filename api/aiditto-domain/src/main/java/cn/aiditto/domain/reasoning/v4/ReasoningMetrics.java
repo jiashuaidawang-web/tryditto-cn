@@ -64,7 +64,7 @@ public final class ReasoningMetrics {
         return summarize(relations, results, model.latencies());
     }
 
-    static Report summarize(List<ReasoningDataset.Relation> relations, List<ReasoningExperiment.PairResult> results, List<Long> latency) {
+    public static Report summarize(List<ReasoningDataset.Relation> relations, List<ReasoningExperiment.PairResult> results, List<Long> latency) {
         int directionCorrect = 0;
         int directionAttempted = 0;
         int refusals = 0;

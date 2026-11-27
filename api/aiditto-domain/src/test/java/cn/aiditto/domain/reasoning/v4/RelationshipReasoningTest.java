@@ -132,6 +132,13 @@ class RelationshipReasoningTest {
         ReasoningExperiment.PairResult failed = experiment.reason(mutual.seeker(), mutual.candidate(), context(mutual), failing, budget);
         assertThat(failed.schemeC().status()).isEqualTo("MODEL_FAILED");
         assertThat(failed.schemeC().experimentalScore()).isEqualTo(failed.schemeA().m02Score());
+        assertThat(failed.schemeC2().status()).isEqualTo("MODEL_FAILED");
+        assertThat(failed.schemeC2().experimentalScore()).isEqualTo(failed.schemeA().m02Score());
+        assertThat(failed.schemeC2().applied()).isFalse();
+        assertThat(echoed.agentA().experimentFindings()).isEmpty();
+        assertThat(echoed.agentA().supportedMatches()).isNotEmpty();
+        assertThat(ReasoningRoles.of(echoed.context().view("AB"), echoed.agentA().supportedMatches().get(0)))
+                .isEqualTo(ClaimRole.STRUCTURED_EXPLANATION);
         assertThat(failed.agentA().confidence()).isNull();
         experiment.reason(mutual.seeker(), mutual.candidate(), context(mutual), failing, budget);
         assertThat(calls).hasValue(2);
@@ -165,8 +172,11 @@ class RelationshipReasoningTest {
         assertThat(all).hasSize(120);
         assertThat(all.stream().filter(item -> "dev".equals(item.split())).count()).isEqualTo(90);
         assertThat(all.stream().filter(item -> "holdout".equals(item.split())).count()).isEqualTo(30);
-        assertThat(ReasoningDataset.hash()).isEqualTo(ReasoningDataset.hash());
+        assertThat(ReasoningDataset.hash()).isEqualTo("ad3ac66b5aa1e4735bb034fbc231a90de4e26ef8f2a6e305a575f79a892b8944");
+        assertThat(ReasoningPrompt.hash()).isEqualTo("a675b35e4002fb35b10868dd8530dc34f04b68927ba1be3f6f4ee41a042792fc");
         assertThat(ReasoningLivePlan.status(Map.of())).isEqualTo("NOT_RUN");
+        assertThat(ReasoningLivePlan.FULL_DIRECTION_CALLS).isEqualTo(224);
+        assertThat(ReasoningChallenge.all()).hasSize(36);
         assertThat(ReasoningExperiment.EVIDENCE_PRECISION_GATE).isEqualTo(0.90);
         assertThat(ReasoningExperiment.UNSUPPORTED_USABLE_GATE).isEqualTo(0.02);
         ReasoningMetrics.Report report = ReasoningMetrics.fixture();
@@ -180,6 +190,88 @@ class RelationshipReasoningTest {
         assertThat(lab).doesNotContain(ReasoningDataset.MALICIOUS_TEXT);
         assertThat(lab).contains("MUTUAL").contains("HARD_VETO").contains("NOT_RUN");
         assertThat(countCases(lab)).isEqualTo(8);
+    }
+
+    @Test
+    void repeatedClaimsDoNotScoreTwiceUnderC2() {
+        ReasoningDataset.Relation mutual = relation(ReasoningDataset.Kind.MUTUAL);
+        ReasoningExperiment.PairResult echoed = experiment.reason(mutual.seeker(), mutual.candidate(), context(mutual),
+                new RuleEchoModel(), ReasoningBudget.experiment());
+        ReasoningModel repeating = prompt -> {
+            ReasoningModel.ReasoningCompletion once = new RuleEchoModel().complete(prompt);
+            String content = once.content().replace("\"supportedMatches\":[",
+                    "\"supportedMatches\":[" + firstObject(once.content(), "supportedMatches"));
+            return ReasoningModel.ReasoningCompletion.ok(content, "repeat", 1);
+        };
+        ReasoningExperiment.PairResult doubled = experiment.reason(mutual.seeker(), mutual.candidate(), context(mutual),
+                repeating, ReasoningBudget.experiment());
+        assertThat(doubled.ledger().duplicates()).isPositive();
+        assertThat(doubled.schemeC1().appliedDelta()).isGreaterThanOrEqualTo(doubled.schemeC2().appliedDelta());
+        assertThat(doubled.schemeC2().experimentalScore()).isBetween(0.0, 100.0);
+        assertThat(echoed.schemeC().experimentalScore()).isGreaterThan(100.0);
+        assertThat(echoed.schemeC2().experimentalScore()).isEqualTo(100.0);
+        assertThat(echoed.schemeC2().status()).isEqualTo("CLAMPED");
+        DirectionalReasoning plain = StructuredExplanation.explain(echoed.context(), "AB");
+        assertThat(plain.supportedMatches()).hasSameSizeAs(echoed.agentA().supportedMatches());
+    }
+
+    @Test
+    void anUnrelatedCitationIsNotSemanticSupport() {
+        ReasoningDataset.Relation mutual = relation(ReasoningDataset.Kind.MUTUAL);
+        ReasoningExperiment.PairResult result = experiment.reason(mutual.seeker(), mutual.candidate(), context(mutual),
+                new RuleEchoModel(), ReasoningBudget.experiment());
+        String pace = result.context().view("AB").evidence().stream()
+                .filter(item -> "preference".equals(item.role()) && "partner.pace".equals(item.code())).findFirst().orElseThrow().ref();
+        String communication = result.context().view("AB").evidence().stream()
+                .filter(item -> "self".equals(item.role()) && "self.communication".equals(item.code())).findFirst().orElseThrow().ref();
+        DirectionalReasoning validated = ReasoningValidator.validate(result.context(), "AB", claim(
+                mutual.seeker().userId(), mutual.candidate().userId(), "AB", "partner.pace", "self.pace",
+                List.of(pace, communication), "slow"), cn.aiditto.domain.compatibility.v4.FeatureAlignmentRegistry.v1());
+        assertThat(validated.supportedMatches()).isEmpty();
+        assertThat(validated.experimentFindings()).isEmpty();
+        List<ReasoningChallenge.Case> cases = ReasoningChallenge.all();
+        List<ReasoningExperiment.PairResult> judged = new ArrayList<>();
+        for (ReasoningChallenge.Case item : cases) {
+            judged.add(experiment.reason(item.seeker(), item.candidate(), CompatibilityContext.experiment(
+                    BidirectionalCompatibilityEngine.WEEK, BidirectionalCompatibilityEngine.NOW,
+                    List.of(item.seeker(), item.candidate())), new RuleEchoModel(), ReasoningBudget.experiment()));
+        }
+        ReasoningJudgmentMetrics.Report report = ReasoningJudgmentMetrics.evaluate(cases, judged);
+        assertThat(unmatched(cases, judged)).isEmpty();
+        assertThat(report.dev().supportPrecision()).isEqualTo(1.0);
+        assertThat(report.holdout().supportPrecision()).isEqualTo(1.0);
+        assertThat(report.dev().mustRejectAccepted()).isZero();
+        assertThat(report.dev().hypothesisConfused()).isZero();
+        assertThat(report.dev().judgments()).isPositive();
+        assertThat(report.holdout().judgments()).isPositive();
+    }
+
+    private static String unmatched(List<ReasoningChallenge.Case> cases, List<ReasoningExperiment.PairResult> results) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < cases.size(); i++) {
+            if (!"dev".equals(cases.get(i).split())) continue;
+            ReasoningExperiment.PairResult result = results.get(i);
+            for (DirectionalReasoning reasoning : List.of(result.agentA(), result.agentB())) {
+                for (ReasoningClaim claim : reasoning.supportedMatches()) {
+                    boolean hit = cases.get(i).judgments().stream().anyMatch(judgment ->
+                            judgment.direction().equals(reasoning.direction())
+                                    && judgment.preferenceCode().equals(claim.preferenceCode())
+                                    && judgment.targetFeatureCode().equals(claim.targetFeatureCode())
+                                    && judgment.disposition() == ReasoningChallenge.Disposition.SUPPORT
+                                    && judgment.expectedCategory() == ReasoningCategory.SUPPORTED_COMPATIBILITY);
+                    if (!hit) out.append(cases.get(i).id()).append(' ').append(reasoning.direction()).append(' ')
+                            .append(claim.preferenceCode()).append(' ').append(claim.targetFeatureCode()).append(';');
+                }
+            }
+        }
+        return out.toString();
+    }
+
+    private static String firstObject(String json, String field) {
+        int from = json.indexOf("\"" + field + "\":[");
+        int start = json.indexOf('{', from);
+        int end = json.indexOf('}', start);
+        return json.substring(start, end + 1) + ",";
     }
 
     private static int countCases(String json) {

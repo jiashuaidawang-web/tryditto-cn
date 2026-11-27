@@ -17,7 +17,8 @@ public record DirectionalReasoning(
         List<String> evidenceRefs,
         Double confidence,
         ReasoningStatus status,
-        String failure) {
+        String failure,
+        List<ReasoningClaim> experimentFindings) {
 
     public DirectionalReasoning {
         supportedMatches = copy(supportedMatches);
@@ -27,6 +28,7 @@ public record DirectionalReasoning(
         contradictions = copy(contradictions);
         unsupportedClaims = copy(unsupportedClaims);
         evidenceRefs = evidenceRefs == null ? List.of() : List.copyOf(evidenceRefs);
+        experimentFindings = copy(experimentFindings);
         if (direction == null || status == null) throw new IllegalArgumentException("reasoning");
     }
 
@@ -51,7 +53,7 @@ public record DirectionalReasoning(
     private static DirectionalReasoning empty(long chooserId, long targetId, String direction,
                                               ReasoningStatus status, String reason) {
         return new DirectionalReasoning(chooserId, targetId, direction, List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), null, status, reason);
+                List.of(), List.of(), List.of(), List.of(), null, status, reason, List.of());
     }
 
     private static List<ReasoningClaim> copy(List<ReasoningClaim> claims) {
