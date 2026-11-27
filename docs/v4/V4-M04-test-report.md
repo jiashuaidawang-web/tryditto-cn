@@ -30,4 +30,6 @@ PostgreSQL 集成测试、应用层单元测试和真实 Qdrant 集成测试没�
 
 ## CI
 
-分支 `feature/v4-global-matching` 已加入 `.github/workflows/v4-ci.yml` 的 push 触发列表。CI 地址在推送并完成后补进本文件和风险登记。完成本地领域测试时，CI 尚未对 M04 提交运行。
+分支 `feature/v4-global-matching` 已加入 `.github/workflows/v4-ci.yml` 的 push 触发列表。
+
+实现提交 `e26c45ef0b323220530e9e2b72e9ec36b961efa2` 的运行是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46040944018 。领域测试和 Qdrant 隔离成功。集成测试没有执行：Maven 解析不到 `spring-boot-starter-parent:4.1.1`，构建在读 POM 时停止。因此集成报告缺失，这次运行是 failure。这不是断言失败。下一次推送重新排队。
