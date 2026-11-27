@@ -14,10 +14,12 @@ import cn.aiditto.domain.relationship.ProfileVersionPolicy;
 import cn.aiditto.domain.relationship.RelationshipTypes.Importance;
 import cn.aiditto.domain.relationship.RelationshipTypes.Operator;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +48,8 @@ public class ProfileLearningStore {
                     evidence_status, proposal_reason, policy_version, status, created_at, expires_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, proposal.proposalId(), proposal.userId(), proposal.profileVersion(), proposal.lifecycleGeneration(),
-                proposal.featureCode(), proposal.profileSection().name(), proposal.oldValue(), proposal.proposedValue(),
+                proposal.featureCode(), proposal.profileSection().name(),
+                new SqlParameterValue(Types.VARCHAR, proposal.oldValue()), proposal.proposedValue(),
                 proposal.operator().name(), proposal.importance().name(), String.join(",", proposal.sourceEventIds()),
                 proposal.evidenceType(), proposal.evidenceStatus(), proposal.proposalReason(), proposal.policyVersion(),
                 proposal.status().name(), Timestamp.from(proposal.createdAt()), Timestamp.from(proposal.expiresAt()));
@@ -131,7 +134,8 @@ public class ProfileLearningStore {
                     command_id, user_id, feature_code, old_value, new_value, operator_name, importance,
                     profile_version, lifecycle_generation, authorization_epoch, source_event_ids, retracted, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?)
-                """, command.commandId(), command.userId(), command.featureCode(), command.oldValue(), command.newValue(),
+                """, command.commandId(), command.userId(), command.featureCode(),
+                new SqlParameterValue(Types.VARCHAR, command.oldValue()), command.newValue(),
                 command.operator().name(), command.importance().name(), command.profileVersion(),
                 command.lifecycleGeneration(), command.authorizationEpoch(), String.join(",", command.sourceEventIds()),
                 Timestamp.from(command.confirmedAt()));
