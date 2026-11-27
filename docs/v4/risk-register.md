@@ -402,3 +402,5 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - F 和 Top-K 是截断图。截断图最优不再写成完整合法图最优。
 
 候选图性能、端到端合成匹配质量、生产启用和最终匹配算法质量继续 NO-GO。真实关系质量继续 NOT_RUN。细节见 `V4-M04-final-audit.md`。
+
+收口 CI：提交 `543512bbe8ed4645c84dd4865c151c881050c42f`，https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46046888609 ，四个作业 success。同一提交本地领域测试 558 项，失败 0。CI 日志需要管理员权限，没有另附一份远程 Surefire 总数。

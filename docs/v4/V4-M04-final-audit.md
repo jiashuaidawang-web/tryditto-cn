@@ -38,3 +38,13 @@ Blossom 不能靠线程中断安全停下。隔离方式是：只在预算仍开
 F 以前被标成完整图。现在是 `TRUNCATED`，即使这 17 人的短名单碰巧没有丢掉合格边。完整用户池不等于完整候选图。
 
 原实验结论不变：候选图性能、端到端合成匹配质量、生产启用和最终匹配算法质量仍是 NO-GO。真实关系质量仍是 NOT_RUN。
+
+## 收口 CI
+
+实现提交是 `b7acb6da1e7ff5bd098cd396ee0565558298f236`。干净编译还要 `543512bbe8ed4645c84dd4865c151c881050c42f`，补上 `GlobalCandidateGraphBuilder` 缺的 `Map` 导入。
+
+https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46046888609
+
+四个作业都是 success：`domain-tests`、`integration-tests`、`qdrant-isolation`、`test-reports`。GitHub 的日志接口需要仓库管理员权限，这次没有从页面拉到 Surefire 原文。同一提交在本地复跑 `mvn -pl aiditto-domain test` 是 558 项，失败 0，错误 0。上一轮基线是 555 项。增加的 3 项在 `GlobalMatchStudyTest`，对应收口的安全拒绝、数学入口、代次和截断图。
+
+这次没有改集成测试。集成作业和 Qdrant 隔离作业都成功。生产 V4 匹配仍然关闭。
