@@ -54,4 +54,4 @@
 
 `mvn -B -pl aiditto-domain test` 的 Surefire XML 合计 576 项，失败 0，异常 0，跳过 0。相对验收时的 569 项，新增 7 项在 `FeedbackLedgerFinalTest`。`aiditto-app` 测试编译通过。本机没有 PostgreSQL，新增的 `FeedbackEventIT` 方法只在 CI 执行。方法名已经写进 `.github/workflows/v4-ci.yml` 的必需清单。
 
-CI 地址在这次提交推送并完成后补记。
+实现提交 `2e6f5932815add1069925167acd6edaf8c55573f`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46056460384 ，四个作业 success。`master_agent_v4` 已快进到这个提交。推送时 `origin/master_agent_v4` 仍是 `bbc092e8b0120f18032432dc22d1e56c7636b6cb`，没有并行提交。

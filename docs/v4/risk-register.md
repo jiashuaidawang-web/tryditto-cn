@@ -439,4 +439,18 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - `GROUP_EVALUATION` 只有用途名。构造消费凭证会抛出 `F03_NOT_IMPLEMENTED`。
 - 反馈学习质量和真实关系质量仍是 NOT_RUN。生产启用和最终匹配算法质量仍是 NO-GO。
 
-本地领域测试 576 项，失败 0，异常 0，跳过 0。其中原有 569 项仍在，新增 7 项在 `FeedbackLedgerFinalTest`。PostgreSQL 反例在 `FeedbackEventIT`，只在 CI 的 Postgres 16 上执行。CI 地址在推送后补记。
+本地领域测试 576 项，失败 0，异常 0，跳过 0。其中原有 569 项仍在，新增 7 项在 `FeedbackLedgerFinalTest`。PostgreSQL 反例在 `FeedbackEventIT`，只在 CI 的 Postgres 16 上执行。
+
+实现提交 `2e6f5932815add1069925167acd6edaf8c55573f`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46056460384 ，四个作业 success。`master_agent_v4` 已快进到这个提交，推送前没有并行提交。
+
+## V4-F02（2026-11-28）
+
+新增的是离线学习提案和用户自己确认后的画像版本。没有调用 `FeedbackLearningService`、`TasteRewriter` 或真实模型。拒绝、超时、未见面和对方评价不写进本人画像。
+
+仍开放：
+
+- 重复次数 3 次、窗口 30 天是未验证参数，没有写进特征权重。
+- 合成契约通过不等于真实用户学习质量。真实反馈学习和真实关系质量是 NOT_RUN。
+- 生产启用和最终匹配算法质量是 NO-GO。
+- F03 群体评估没有实现。
+- `AccountService.requestDelete` 仍不调用反馈删除或画像删除。
