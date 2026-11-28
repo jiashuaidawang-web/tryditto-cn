@@ -36,14 +36,9 @@ class ShadowMatchingIT extends ShadowCase {
 
     @Test
     void oneWayIntentProducesNoLegalEdge() {
-        jdbc.update("""
-                INSERT INTO place (id, kind, city, name_zh, name_en, lat, lng)
-                VALUES ('shadowlab', 'area', 'lab', '影子实验室', 'Shadow Lab', 31.230000, 121.470000)
-                ON CONFLICT (id) DO NOTHING
-                """);
-        enroll("shadowlab", "man", List.of("men"), true, true);
-        enroll("shadowlab", "woman", List.of("men"), true, true);
-        ShadowView view = runner.run(request("shadow.intent.one", "lab"));
+        enroll("fudan", "man", List.of("men"), true, true);
+        enroll("fudan", "woman", List.of("men"), true, true);
+        ShadowView view = runner.run(request("shadow.intent.one", "sh"));
         assertThat(view.status()).isEqualTo("COMPLETE");
         assertThat(view.legalEdges()).isZero();
         assertThat(view.matchedPairs()).isZero();
