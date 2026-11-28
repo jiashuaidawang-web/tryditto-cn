@@ -14,6 +14,14 @@ test('match lab sandbox session', async ({ page, request }) => {
   await page.locator('input[type="checkbox"]').check();
   await page.locator('form button[type="submit"]').click();
   await page.waitForURL(/\/(onboarding|home)/);
+  await page.evaluate(async () => {
+    const raw = localStorage.getItem('jym-auth-v1');
+    const token = raw ? JSON.parse(raw).state.token as string : '';
+    await fetch('/api/match-lab/workspace/reset', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+    });
+  });
 
   await page.goto('/match-lab');
   await expect(page.getByRole('heading', { name: '实验总览' })).toBeVisible();
