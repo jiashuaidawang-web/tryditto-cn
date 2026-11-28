@@ -37,3 +37,7 @@
 - 真实关系质量：NOT_RUN。
 - 生产启用：NO-GO。
 - 最终匹配算法质量：NO-GO。
+
+## 合并后核实
+
+定位修正 `f7bdcdc44c43d8081336788e62c169e625091cce` 的 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 五个作业 success，包括 `match-lab-e2e`。该提交已快进到 `master_agent_v4`。上面“写成时”的等待状态不再代表当前集成基准。真实关系质量、生产启用和最终匹配算法质量的判定不变。

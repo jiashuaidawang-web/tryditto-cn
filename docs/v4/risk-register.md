@@ -525,7 +525,7 @@ Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-l
 
 本地领域测试 605 项，失败 0，异常 0，跳过 0。`MatchLabFilterTest` 5 项通过。前端生产构建通过。细节见 `V4-L01-final-audit.md`。
 
-第一次浏览器作业 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46126626515 的 `match-lab-e2e` 失败。领域、集成和 Qdrant 作业成功。失败步骤是浏览器会话。修正提交 `f7bdcdc` 让重复出现的状态文字不再让 Playwright 的严格定位失败。修正作业未绿之前不合并。
+第一次浏览器作业 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46126626515 的 `match-lab-e2e` 失败。领域、集成和 Qdrant 作业成功。失败步骤是浏览器会话。修正提交 `f7bdcdc44c43d8081336788e62c169e625091cce` 让重复出现的状态文字不再让 Playwright 的严格定位失败。该提交的 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 五个作业 success，并已快进到 `master_agent_v4`。
 
 ## V4-L02（2026-11-28）
 
@@ -533,7 +533,7 @@ Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-l
 
 仍开放：
 
-- 浏览器闭环和 L01 浏览器修正都还要等 `match-lab-e2e`。作业失败时不能写成通过。
+- 浏览器闭环已由 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46129223021 的 `match-lab-e2e` 执行。更早两次闭环作业的浏览器步骤失败，不能拿来代替这次。前端构建成功仍然不能单独代替浏览器作业。
 - 工作区仍是进程内存，重启后丢失。
 - 分数变化不是真实关系质量。真实关系质量 NOT_RUN。
 - 生产启用和最终匹配算法质量继续 NO-GO。

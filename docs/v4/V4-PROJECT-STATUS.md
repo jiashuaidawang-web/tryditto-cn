@@ -23,7 +23,7 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 | F01 / F02 反馈与学习 | 离线工程通过。真实反馈学习未启用。 |
 | F03 群体评估 | 离线工程通过。F03-FINAL 收口观察来源、标签口径和校准。真实校准 NOT_RUN。 |
 | Match Lab L01 | 已快进到 `master_agent_v4` 的 `f7bdcdc44c43d8081336788e62c169e625091cce`。浏览器作业 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 ，五个作业 success。第一次失败记录是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46126626515 。 |
-| Match Lab L02 | `feature/v4-match-lab-loop` 尖端继续修浏览器闭环。不自动合并。 |
+| Match Lab L02 | `feature/v4-match-lab-loop` 的浏览器证据是 `5b71e16720a2c4c787d6dd1afd03f7d1de1ff4a0`，CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46129223021 ，五个作业 success。不自动合并。 |
 
 ## 冻结策略
 
@@ -51,7 +51,7 @@ F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试
 
 ## 下一阶段
 
-L01-FINAL 已快进到 `master_agent_v4`。`feature/v4-match-lab-loop` 承载 L02，不自动合并。不实现 L03 和 M05。
+L01-FINAL 已快进到 `master_agent_v4`。`feature/v4-match-lab-loop` 承载 L02，浏览器证据见上表，不自动合并。不实现 L03 和 M05。
 
 ## 接手
 
