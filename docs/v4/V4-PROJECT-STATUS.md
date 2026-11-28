@@ -32,7 +32,8 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 
 ## 集成基准
 
-- `master_agent_v4`：`767d65fbb3d67d17f6c3c7608e01b00fc918b115`。L03-FINAL 从 `3f822f86820f7e90710ba710a899938a1e4b94ea` 快进。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46137692591 。合并前远程仍是 L02-FINAL，没有并行提交。没有合并 `master_agent_v3`。
+- `master_agent_v4`：`c101a04bbc5b75c5ca255297e92a7271ebdc8dce`。I01-FINAL 从 `767d65fbb3d67d17f6c3c7608e01b00fc918b115` 快进。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46150970883 ，domain-tests、integration-tests、qdrant-isolation、match-lab-e2e、test-reports 都是 success。合并前远程仍是 `767d65f`，没有并行提交。
+- 此前的离线引擎基准是 `767d65fbb3d67d17f6c3c7608e01b00fc918b115`。L03-FINAL 从 `3f822f86820f7e90710ba710a899938a1e4b94ea` 快进。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46137692591 。没有合并 `master_agent_v3`。
 - L01-FINAL 浏览器 CI 仍是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 。
 - F02-FINAL 实现：`c74e9c1b5db1aa2c5c985da4a0984fd5521e0325`
 - F03 实现：`094e161c20198aef5a23a8dce76cf0b58e77d858`
@@ -49,9 +50,9 @@ F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试
 
 ## 下一阶段
 
-L03-FINAL 已快进到 `master_agent_v4`。离线引擎里程碑的提交是 `767d65fbb3d67d17f6c3c7608e01b00fc918b115`。
+I01 已快进到 `master_agent_v4` 的 `c101a04bbc5b75c5ca255297e92a7271ebdc8dce`。实现从 `9229f14ba58b4416438c11ec0898221018c673da` 到锁顺序提交 `8f3ee57e34ff0018f17e96a80d0fdcd39e87ad7e`。`46145461882` 里群体观察误拒绝了不存在的合成用户，入驻脚本也按 button 去点 radio。随后的修复是 `c48cb54a548d07936946ff728ed11f905a341dbc`、`fa04a1f302b2afa6c8e20b9c30181b9fe28a713b`、`d93795526ca741173156298bfda2b1e03b6419b4` 和 `c101a04bbc5b75c5ca255297e92a7271ebdc8dce`。绿的五作业是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46150970883 。用户端浏览器作业这次 success。外部擦除执行器仍是 NOT_RUN。
 
-I01 实现提交是 `9229f14ba58b4416438c11ec0898221018c673da`。I01-FINAL 是 `8f3ee57e34ff0018f17e96a80d0fdcd39e87ad7e`，收口锁顺序、隔离环境闸门，并停止用调用方标志宣称外部擦除完成。分支是 `feature/v4-product-profile-integration`。CI 地址在推送后补记。生产启用保持 NO-GO。
+I02 在 `feature/v4-shadow-matching`，从上面的 `master_agent_v4` 拉出。它只在 `V4_SHADOW_TEST` 连接隔离合成用户和冻结的 E、B5、G2。本地领域测试 620 项，失败 0。其中新增的资源预算测试 3 项。22 个已映射特征与 4 个 M02 对齐目标的重叠是 0，特征覆盖质量 NO-GO。PostgreSQL 影子集成随这次推送进入 CI，结果以该作业为准。Blossom 仍不能取消线程。生产启用保持 NO-GO。
 
 ## 未解决的生产风险
 

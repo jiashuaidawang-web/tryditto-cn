@@ -1,0 +1,9 @@
+{
+  "source": "ShadowResourceBudgetTest.mappedOnboardingDoesNotOverlapTheFrozenAlignmentTargets",
+  "mappedFeatures": 22,
+  "alignmentTargets": 4,
+  "overlap": 0,
+  "sampleScoreableAlignments": 0,
+  "quality": "NO-GO",
+  "reason": "The 22 mapped onboarding features do not intersect FeatureAlignmentRegistry.v1."
+}
