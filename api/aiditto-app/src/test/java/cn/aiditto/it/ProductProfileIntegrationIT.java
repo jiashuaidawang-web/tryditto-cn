@@ -87,7 +87,7 @@ class ProductProfileIntegrationIT extends ApiIT {
         RelationshipFeedbackEvent accept = feedback.append(context, new FeedbackCommand(FeedbackEventType.MATCH_ACCEPTED,
                 ready.userId, FeedbackFacts.SourceType.PARTICIPANT, "acc-" + matchId, T0, null, null, null), T0);
         int snapshotVersion = profiles.current(ready.userId).orElseThrow().version();
-        learning.confirm(context, new ExplicitPreferenceCommand("keep" + ready.userId, ready.userId, "partner.communication",
+        learning.confirm(context, new ExplicitPreferenceCommand("keep.edit", ready.userId, "partner.communication",
                 null, "quiet", Importance.KINDA, Operator.EQ, ExplicitPreferenceCommand.Action.CONFIRM,
                 snapshotVersion, ready.generation, 1, true, true, List.of(accept.eventId()), T0));
         answer(ready.token, "hobbies", List.of("music"));
@@ -157,7 +157,7 @@ class ProductProfileIntegrationIT extends ApiIT {
                 start.await();
                 try {
                     learning.confirm(context, LearningActor.synthetic(ready.userId), new ExplicitPreferenceCommand(
-                            "race" + ready.userId, ready.userId, "partner.communication", null, "quiet",
+                            "race.edit", ready.userId, "partner.communication", null, "quiet",
                             Importance.KINDA, Operator.EQ, ExplicitPreferenceCommand.Action.CONFIRM,
                             snapshotVersion, ready.generation, 1, true, true, List.of(accept.eventId()), T0));
                 } catch (RuntimeException ignored) {

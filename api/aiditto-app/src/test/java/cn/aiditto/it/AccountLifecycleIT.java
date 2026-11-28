@@ -223,7 +223,7 @@ class AccountLifecycleIT extends ApiIT {
     }
 
     private ExplicitPreferenceCommand command(Ready ready, boolean learning) {
-        return new ExplicitPreferenceCommand("late" + ready.userId, ready.userId, "partner.communication", null, "quiet",
+        return new ExplicitPreferenceCommand("late.task", ready.userId, "partner.communication", null, "quiet",
                 Importance.KINDA, Operator.EQ, ExplicitPreferenceCommand.Action.CONFIRM,
                 1, ready.generation, 1, true, learning, List.of("missing-event"), T0);
     }
