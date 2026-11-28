@@ -6,19 +6,30 @@ export type CatalogEntry = {
   title: string;
   description: string;
   datasetVersion: string;
+  datasetHash: string;
+  commitSha: string;
+  policyVersion: string;
   sourceType: string;
   executionMode: string;
+  executionStatus: string;
   qualityStatus: string;
   limitations: string;
   metrics: string[];
+  caseIds: string[];
 };
+
+export type PolicyNote = { policy: string; experimentId: string; note: string };
 
 export type Overview = {
   environment: string;
   enabled: boolean;
   commitSha: string;
+  frozenCommit: string;
+  ciIndex: string;
+  statusDocument: string;
   production: string;
   realRelationshipQuality: string;
+  policies: PolicyNote[];
   catalog: CatalogEntry[];
   profiles: number;
   runs: number;
@@ -101,11 +112,23 @@ export type RecallRow = {
   miss: string;
 };
 
+export type PoolPerson = {
+  userId: number;
+  label: string;
+  legality: string;
+  routes: string;
+  miss: string;
+};
+
 export type Recall = {
   runId: string;
   executionMode: string;
   dataset: string;
   people: number;
+  seekerId: number;
+  legalPool: number;
+  hardBlocked: number;
+  pool: PoolPerson[];
   schemes: { scheme: string; recommended: number; insufficient: number; hardRejected: number; safetyViolations: number; rows: RecallRow[] }[];
 };
 
@@ -131,6 +154,7 @@ export type AgentSide = {
   conflicts: string[];
   unknown: string[];
   rejected: string[];
+  unsupported: string[];
   evidence: string[];
 };
 
@@ -142,6 +166,6 @@ export const labApi = {
   update: (userId: number, body: unknown) => http<Profile>('PUT', `/api/match-lab/profiles/${userId}`, body as object),
   diff: (left: number, right: number) => http<{ featureCode: string; section: string; left: string; right: string }[]>('GET', `/api/match-lab/diff?left=${left}&right=${right}`),
   score: (userA: number, userB: number) => http<Score>('POST', '/api/match-lab/score', { userA, userB }),
-  recall: () => http<Recall>('POST', '/api/match-lab/recall'),
+  recall: (split: string) => http<Recall>('POST', '/api/match-lab/recall', { split }),
   reasoning: () => http<Reasoning>('POST', '/api/match-lab/reasoning'),
 };

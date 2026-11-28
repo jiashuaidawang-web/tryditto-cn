@@ -35,6 +35,10 @@
 }
 .lab-form { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 .lab-error { color: #ffb4b4; }
+.lab-note { color: #9fb0c0; }
+.lab a { color: #9fd0ff; }
+.lab pre { white-space: pre-wrap; font-size: 12px; }
+.lab-drawer { margin-top: 12px; }
 .lab h2 { font-size: 16px; margin: 0 0 8px; }
 @media (max-width: 800px) {
   .lab, .lab-split, .lab-cards { grid-template-columns: 1fr; }

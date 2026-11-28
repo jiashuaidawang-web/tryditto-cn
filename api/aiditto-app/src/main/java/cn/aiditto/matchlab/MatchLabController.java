@@ -36,8 +36,12 @@ public class MatchLabController {
         body.put("environment", "SYNTHETIC_SANDBOX");
         body.put("enabled", properties.isEnabled());
         body.put("commitSha", properties.getCommitSha());
+        body.put("frozenCommit", LabWorkbench.FROZEN_COMMIT);
+        body.put("ciIndex", "https://github.com/jiashuaidawang-web/tryditto-cn/actions?query=branch%3Afeature%2Fv4-match-lab");
+        body.put("statusDocument", "docs/v4/V4-PROJECT-STATUS.md");
         body.put("production", "NO-GO");
         body.put("realRelationshipQuality", "NOT_RUN");
+        body.put("policies", lab.policies());
         body.put("catalog", lab.catalog());
         body.put("profiles", lab.profiles().size());
         body.put("runs", lab.runs().size());
@@ -65,12 +69,12 @@ public class MatchLabController {
 
     @PostMapping("/profiles")
     ResponseEntity<Object> create(@RequestBody WriteBody body) {
-        return guard(() -> lab.create(body.name(), writes(body.self()), writes(body.preferences())));
+        return guard(() -> lab.create(body.name(), writes(body.self()), writes(body.preferences()), writes(body.behavior())));
     }
 
     @PutMapping("/profiles/{userId}")
     ResponseEntity<Object> update(@PathVariable long userId, @RequestBody WriteBody body) {
-        return guard(() -> lab.update(userId, body.name(), writes(body.self()), writes(body.preferences())));
+        return guard(() -> lab.update(userId, body.name(), writes(body.self()), writes(body.preferences()), writes(body.behavior())));
     }
 
     @GetMapping("/diff")
@@ -84,8 +88,9 @@ public class MatchLabController {
     }
 
     @PostMapping("/recall")
-    ResponseEntity<Object> recall() {
-        return guard(() -> lab.recall(properties.getCommitSha()));
+    ResponseEntity<Object> recall(@RequestBody(required = false) RecallBody body) {
+        String split = body == null || body.split() == null || body.split().isBlank() ? "dev" : body.split();
+        return guard(() -> lab.recall(split, properties.getCommitSha()));
     }
 
     @PostMapping("/reasoning")
@@ -115,7 +120,8 @@ public class MatchLabController {
 
     private interface SupplierCall { Object get(); }
 
-    record WriteBody(String name, List<FeatureBody> self, List<FeatureBody> preferences) {}
+    record WriteBody(String name, List<FeatureBody> self, List<FeatureBody> preferences, List<FeatureBody> behavior) {}
+    record RecallBody(String split) {}
     record FeatureBody(String code, String value, String status, String importance, String operator) {}
     record ScoreBody(long userA, long userB) {}
 }

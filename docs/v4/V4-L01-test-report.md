@@ -1,10 +1,10 @@
 # V4-L01 测试报告
 
-本地 `mvn -B -pl aiditto-domain test`：603 项，失败 0，异常 0，跳过 0。其中 `LabWorkbenchTest` 4 项，覆盖非法特征、双向评分、软偏好修改、单向和证据不足拒绝、硬约束、四方案召回，以及推理回放不加分。
+本地 `mvn -B -pl aiditto-domain clean test`：603 项，失败 0，异常 0，跳过 0。其中 `LabWorkbenchTest` 仍是 4 项。这一轮把目录字段、非法特征状态、行为层、开发集与保留集召回、合法池、`NO_ROUTE_SIGNAL` 和推理的无依据列表补进了原有用例。
 
 `mvn -B -pl aiditto-app -am test -Dtest=MatchLabFilterTest`：2 项通过。开关关闭时请求不会进入后续链路。
 
-`cd web && npm run build`：`tsc -b && vite build` 通过。
+`cd web && npm run build`：`tsc -b && vite build` 再次通过。
 
 `MatchLabIT` 覆盖未登录、普通用户、管理员评分，以及评分后 `relationship_profile_version`、`matching_observation`、`relationship_feedback_event` 行数不变。本机没有 PostgreSQL，也没有 Docker，所以这项集成测试本地是 NOT_RUN。CI 的 Postgres 16 跑过：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46122030761 ，提交 `1534812797aee4e8cb8490ac625b5ae51b1707a2`，四个作业 success。`MatchLabIT` 和 `MatchLabFilterTest` 都在必需清单里。
 

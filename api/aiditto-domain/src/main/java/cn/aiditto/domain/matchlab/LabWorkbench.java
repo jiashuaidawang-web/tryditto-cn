@@ -6,9 +6,11 @@ import cn.aiditto.domain.compatibility.v4.CompatibilityDecision;
 import cn.aiditto.domain.compatibility.v4.CompatibilityPolicies;
 import cn.aiditto.domain.compatibility.v4.FeatureMatchContribution;
 import cn.aiditto.domain.compatibility.v4.PairCompatibilityResult;
+import cn.aiditto.domain.feedback.v4.strategy.ExplicitOutcome;
 import cn.aiditto.domain.feedback.v4.strategy.StrategyDataset;
 import cn.aiditto.domain.matching.Candidate;
 import cn.aiditto.domain.matching.Cohort;
+import cn.aiditto.domain.matching.v4.Objective;
 import cn.aiditto.domain.reasoning.v4.DirectionalReasoning;
 import cn.aiditto.domain.reasoning.v4.ReasoningClaim;
 import cn.aiditto.domain.reasoning.v4.ReasoningDataset;
@@ -49,6 +51,8 @@ public final class LabWorkbench {
     public static final int MAX_PROFILES = 24;
     public static final String SOURCE = "synthetic-fixture:match-lab";
     public static final String MODE = "SYNTHETIC_SANDBOX";
+    /** Integration commit that already holds the frozen datasets. A live run uses its own commit on {@link LabRun}. */
+    public static final String FROZEN_COMMIT = "5a23e862aa85bb7f65355b565f5032eb3d094d48";
 
     private static final String[] SELF = {"self.pace", "self.communication", "self.social.initiative", "self.schedule"};
     private static final String[] PREF = {"partner.pace", "partner.communication", "partner.social.initiative", "partner.schedule"};
@@ -69,25 +73,49 @@ public final class LabWorkbench {
         Stored veto = profiles.get(71006L);
         Candidate older = veto.subject.candidate().toBuilder().birthday(java.time.LocalDate.of(1980, 1, 1)).ageRange(40, 60).build();
         profiles.put(71006L, new Stored(veto.name, veto.version, rebuild(veto.subject, older), veto.writes));
+        seedBehavior();
+    }
+
+    public List<PolicyNote> policies() {
+        return List.of(
+                new PolicyNote("E", "m01-rank-dev", "召回策略 E。开发集和保留集分开，两边的人数不能加总。"),
+                new PolicyNote("B5", "m02-b5-cases", "双向评分 B5。八个虚构案例的分数来自冻结引擎输出。"),
+                new PolicyNote("G2", "m04-g2", "全局目标 G2。本阶段只登记案例，不运行求解。"));
     }
 
     public List<CatalogEntry> catalog() {
         return List.of(
-                new CatalogEntry("f03-synthetic-1", "F03", "群体观察", "128 条已发布合成匹配", StrategyDataset.VERSION,
-                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "PASS_OFFLINE", "真实校准 NOT_RUN",
-                        List.of("128 条观察", "开发集 96", "保留集 32")),
-                new CatalogEntry("m02-b5-cases", "M02", "双向评分案例", "八个虚构故事，分数来自冻结引擎输出", "m02-b5",
-                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "PASS_OFFLINE", "不是喜欢概率",
-                        List.of("8 个案例")),
-                new CatalogEntry("m01-rank-dev", "M01", "召回排序开发集", "冻结人群。页面上的对照会在本次进程里重新调用引擎", "recall-rank-1",
-                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "PASS_OFFLINE", "不外推到生产用户",
-                        List.of("策略 E", "开发集与保留集分开")),
-                new CatalogEntry("m03-rule-echo", "M03", "关系推理解释", "确定性夹具回放。没有 LongCat、DeepSeek、混元或千问的逐样本输出",
-                        ReasoningPrompt.VERSION, "MODEL_REPLAY", "FROZEN_EXPERIMENT", "REAL_MODEL_NO_GO",
-                        "C1 与 C2 加分关闭", List.of("规则回声夹具")),
-                new CatalogEntry("production-gate", "PROD", "生产启用", "生产匹配、生产画像和生产发布保持关闭", "none",
-                        "ILLUSTRATIVE", "SYNTHETIC_SANDBOX", "NO_GO", "真实关系质量 NOT_RUN",
-                        List.of("生产启用 NO-GO")));
+                entry("f03-synthetic-1", "F03", "群体观察", "128 条已发布合成匹配", StrategyDataset.VERSION,
+                        ExplicitOutcome.VERSION, "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        "真实校准 NOT_RUN", List.of("128 条观察", "开发集 96", "保留集 32"),
+                        List.of("f03-synthetic-1")),
+                entry("m02-b5-cases", "M02", "双向评分案例", "八个虚构故事，分数来自冻结引擎输出", "m02-b5",
+                        CompatibilityPolicies.VERSION, "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        "不是喜欢概率", List.of("8 个案例"),
+                        List.of("M02-C1", "M02-C2", "M02-C3", "M02-C4", "M02-C5", "M02-C6", "M02-C7", "M02-C8")),
+                entry("m01-rank-dev", "M01", "召回排序", "冻结人群。候选页会在本次进程里重新调用引擎，这一行仍是历史结果", "recall-rank-1",
+                        RecallRankFixture.POLICY, "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        "不外推到生产用户", List.of("策略 E", "开发集与保留集分开"),
+                        List.of("dev", "holdout")),
+                entry("m03-rule-echo", "M03", "关系推理解释", "确定性夹具回放。没有 LongCat、DeepSeek、混元或千问的逐样本输出",
+                        ReasoningPrompt.VERSION, ReasoningExperiment.POLICY, "MODEL_REPLAY", "FROZEN_EXPERIMENT", "REPLAY_READY",
+                        "REAL_MODEL_NO_GO", "C1 与 C2 加分关闭", List.of("规则回声夹具", "回放 dev-0-MUTUAL"),
+                        List.of("dev-0-MUTUAL")),
+                entry("m04-g2", "M04", "全局匹配", "冻结案例只登记。本阶段不运行全局求解", Objective.SELECTED_VERSION,
+                        Objective.SELECTED_VERSION, "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        "L01 不执行全局匹配", List.of("10 个冻结案例名"),
+                        List.of("local-optimum", "cardinality", "triangle", "odd-node", "empty",
+                                "topk-full", "topk-1", "quality-tier", "fairness", "dev-cohort")),
+                entry("production-gate", "PROD", "生产启用", "生产匹配、生产画像和生产发布保持关闭", "none",
+                        "none", "ILLUSTRATIVE", "SYNTHETIC_SANDBOX", "NOT_EXECUTED", "NO_GO",
+                        "真实关系质量 NOT_RUN", List.of("生产启用 NO-GO"), List.of()));
+    }
+
+    private CatalogEntry entry(String id, String module, String title, String description, String dataset, String policy,
+                               String source, String mode, String executionStatus, String quality, String limitations,
+                               List<String> metrics, List<String> caseIds) {
+        return new CatalogEntry(id, module, title, description, dataset, hash(id + "\n" + dataset), FROZEN_COMMIT, policy,
+                source, mode, executionStatus, quality, limitations, metrics, caseIds);
     }
 
     public List<FeatureDefinition> registry() {
@@ -105,17 +133,27 @@ public final class LabWorkbench {
     }
 
     public StoredView create(String name, List<FeatureWrite> self, List<FeatureWrite> preferences) {
+        return create(name, self, preferences, List.of());
+    }
+
+    public StoredView create(String name, List<FeatureWrite> self, List<FeatureWrite> preferences, List<FeatureWrite> behavior) {
         if (profiles.size() >= MAX_PROFILES) throw new LabRejection("SANDBOX_LIMIT");
         long id = sequence.incrementAndGet();
         while (profiles.containsKey(id)) id = sequence.incrementAndGet();
-        Stored stored = store(id, name, 1, self, preferences);
+        Stored stored = store(id, name, 1, self, preferences, behavior);
         profiles.put(id, stored);
         return view(id, stored);
     }
 
     public StoredView update(long userId, String name, List<FeatureWrite> self, List<FeatureWrite> preferences) {
+        return update(userId, name, self, preferences, List.of());
+    }
+
+    public StoredView update(long userId, String name, List<FeatureWrite> self, List<FeatureWrite> preferences,
+                             List<FeatureWrite> behavior) {
         Stored current = require(userId);
-        Stored stored = store(userId, name == null || name.isBlank() ? current.name : name, current.version + 1, self, preferences);
+        Stored stored = store(userId, name == null || name.isBlank() ? current.name : name, current.version + 1,
+                self, preferences, behavior);
         profiles.put(userId, stored);
         return view(userId, stored);
     }
@@ -154,7 +192,11 @@ public final class LabWorkbench {
     }
 
     public RecallComparison recall(String commitSha) {
-        RecallRankFixture.Cohort cohort = RecallRankFixture.dev();
+        return recall("dev", commitSha);
+    }
+
+    public RecallComparison recall(String split, String commitSha) {
+        RecallRankFixture.Cohort cohort = cohort(split);
         if (cohort.people().size() > 80) throw new LabRejection("SANDBOX_LIMIT");
         List<SchemeResult> schemes = new ArrayList<>();
         for (SchemeRequest request : List.of(
@@ -164,11 +206,40 @@ public final class LabWorkbench {
                 new SchemeRequest("SHORTLIST_M02", RecallRankStudy.Scheme.F_PREFILTER))) {
             schemes.add(oneScheme(cohort, request));
         }
-        String runId = remember(run("CANDIDATE_RECALL", "recall-rank-dev", hash(cohort.split()),
+        List<PoolPerson> pool = pool(cohort);
+        int legal = 0;
+        int blocked = 0;
+        for (PoolPerson person : pool) {
+            if ("LEGAL".equals(person.legality())) legal++;
+            else if (!"SEEKER".equals(person.legality())) blocked++;
+        }
+        String runId = remember(run("CANDIDATE_RECALL", "recall-rank-" + cohort.split(), hash(cohort.split()),
                 RecallRankFixture.POLICY, commitSha, "ENGINE_EXECUTED", "COMPLETED",
                 schemes.size() + " schemes", null,
-                "冻结开发集上的本次引擎执行。不是生产召回，也没有跑 10000 人规模点。"));
-        return new RecallComparison(runId, "ENGINE_EXECUTED", cohort.split(), cohort.people().size(), schemes);
+                "冻结人群上的本次引擎执行。不是生产召回，也没有跑 10000 人规模点。"));
+        return new RecallComparison(runId, "ENGINE_EXECUTED", cohort.split(), cohort.people().size(),
+                cohort.seeker().profile().userId(), legal, blocked, pool, schemes);
+    }
+
+    private static RecallRankFixture.Cohort cohort(String split) {
+        if ("dev".equals(split)) return RecallRankFixture.dev();
+        if ("holdout".equals(split)) return RecallRankFixture.holdout();
+        throw new LabRejection("DATASET");
+    }
+
+    private static List<PoolPerson> pool(RecallRankFixture.Cohort cohort) {
+        Map<Long, RecallRankFixture.Person> people = new LinkedHashMap<>();
+        for (RecallRankFixture.Person person : cohort.people()) people.put(person.profile().userId(), person);
+        long seeker = cohort.seeker().profile().userId();
+        List<PoolPerson> out = new ArrayList<>();
+        out.add(new PoolPerson(seeker, cohort.seeker().label().name(), "SEEKER", "", ""));
+        for (RecallRankStudy.Edge edge : RecallRankStudy.graph(cohort)) {
+            long other = edge.lowId() == seeker ? edge.highId() : edge.lowId();
+            RecallRankFixture.Person person = people.get(other);
+            out.add(new PoolPerson(other, person == null ? "" : person.label().name(), edge.legality(),
+                    edge.routes(), edge.miss()));
+        }
+        return List.copyOf(out);
     }
 
     public ReasoningView reasoning(String commitSha) {
@@ -215,7 +286,7 @@ public final class LabWorkbench {
                     pair == null ? null : pair.scoreAB(), pair == null ? null : pair.scoreBA(),
                     pair == null ? null : pair.coverageAB(), pair == null ? null : pair.coverageBA(),
                     decision != null && decision.recommendationEligible(), placement.miss().name()));
-            if (rows.size() >= 40) break;
+            if (rows.size() >= 80) break;
         }
         return new SchemeResult(request.name(), run.recommended(), run.insufficient(), run.hardRejected(),
                 run.safetyViolations(), rows);
@@ -237,7 +308,7 @@ public final class LabWorkbench {
     private static AgentSide side(DirectionalReasoning reasoning) {
         return new AgentSide(claims(reasoning.supportedMatches()), claims(reasoning.potentialComplements()),
                 claims(reasoning.possibleConflicts()), claims(reasoning.missingInformation()),
-                claims(reasoning.unsupportedClaims()), reasoning.evidenceRefs());
+                claims(reasoning.contradictions()), claims(reasoning.unsupportedClaims()), reasoning.evidenceRefs());
     }
 
     private static List<String> claims(List<ReasoningClaim> claims) {
@@ -246,13 +317,19 @@ public final class LabWorkbench {
         return out;
     }
 
-    private Stored store(long id, String name, long version, List<FeatureWrite> self, List<FeatureWrite> preferences) {
+    private Stored store(long id, String name, long version, List<FeatureWrite> self, List<FeatureWrite> preferences,
+                         List<FeatureWrite> behavior) {
+        if (behavior == null) behavior = List.of();
         String clean = cleanName(name);
         List<ProfileFeature> features = new ArrayList<>();
         List<PreferenceTarget> targets = new ArrayList<>();
         List<FeatureWrite> writes = new ArrayList<>();
         for (FeatureWrite write : self) {
             features.add(selfFeature(write));
+            writes.add(write);
+        }
+        for (FeatureWrite write : behavior) {
+            features.add(behaviorFeature(write));
             writes.add(write);
         }
         for (FeatureWrite write : preferences) {
@@ -270,6 +347,14 @@ public final class LabWorkbench {
         FeatureStatus status = status(write.status());
         FeatureValue value = status == FeatureStatus.CONTESTED ? null : value(definition, write.value());
         registry.checkValue(definition, value == null ? new FeatureValue.Unbounded() : value);
+        if (value != null) registry.checkValue(definition, value);
+        return cn.aiditto.domain.compatibility.v4.CompatibilitySubject.feature(definition.featureCode(), value, status);
+    }
+
+    private ProfileFeature behaviorFeature(FeatureWrite write) {
+        FeatureDefinition definition = requireFeature(write.code(), Section.BEHAVIOR);
+        FeatureStatus status = status(write.status());
+        FeatureValue value = status == FeatureStatus.CONTESTED ? null : value(definition, write.value());
         if (value != null) registry.checkValue(definition, value);
         return cn.aiditto.domain.compatibility.v4.CompatibilitySubject.feature(definition.featureCode(), value, status);
     }
@@ -353,7 +438,13 @@ public final class LabWorkbench {
 
     private void seed(String name, String[] self, String[] preference) {
         long id = sequence.incrementAndGet();
-        profiles.put(id, store(id, name, 1, writes(SELF, self, "CONFIRMED", null), writes(PREF, preference, "CONFIRMED", "SUPER")));
+        profiles.put(id, store(id, name, 1, writes(SELF, self, "CONFIRMED", null), writes(PREF, preference, "CONFIRMED", "SUPER"), List.of()));
+    }
+
+    private void seedBehavior() {
+        long id = sequence.incrementAndGet();
+        profiles.put(id, store(id, "庚·行为", 1, writes(SELF, ideal(), "CONFIRMED", null), writes(PREF, ideal(), "CONFIRMED", "SUPER"),
+                List.of(new FeatureWrite("behavior.scenario.signal", "steady", "CONFIRMED", null, "EQ"))));
     }
 
     private static List<FeatureWrite> writes(String[] codes, String[] values, String status, String importance) {
@@ -455,9 +546,12 @@ public final class LabWorkbench {
 
     public record FeatureWrite(String code, String value, String status, String importance, String operator) {}
 
+    public record PolicyNote(String policy, String experimentId, String note) {}
+
     public record CatalogEntry(String experimentId, String module, String title, String description, String datasetVersion,
-                               String sourceType, String executionMode, String qualityStatus, String limitations,
-                               List<String> metrics) {}
+                               String datasetHash, String commitSha, String policyVersion, String sourceType,
+                               String executionMode, String executionStatus, String qualityStatus, String limitations,
+                               List<String> metrics, List<String> caseIds) {}
 
     public record LabFeature(String featureCode, String displayName, String section, String value, String operator,
                              String importance, String evidenceSource, String status, boolean usableForMatching) {}
@@ -481,10 +575,13 @@ public final class LabWorkbench {
     public record SchemeResult(String scheme, int recommended, int insufficient, int hardRejected, int safetyViolations,
                                List<RecallRow> rows) {}
 
-    public record RecallComparison(String runId, String executionMode, String dataset, int people, List<SchemeResult> schemes) {}
+    public record PoolPerson(long userId, String label, String legality, String routes, String miss) {}
+
+    public record RecallComparison(String runId, String executionMode, String dataset, int people, long seekerId,
+                                   int legalPool, int hardBlocked, List<PoolPerson> pool, List<SchemeResult> schemes) {}
 
     public record AgentSide(List<String> supported, List<String> complements, List<String> conflicts, List<String> unknown,
-                            List<String> rejected, List<String> evidence) {}
+                            List<String> rejected, List<String> unsupported, List<String> evidence) {}
 
     public record ReasoningView(String runId, String executionMode, String modelName, String realModelStatus,
                                 String promptVersion, String kind, String note, Double m02Score, boolean aiAdjustment,
