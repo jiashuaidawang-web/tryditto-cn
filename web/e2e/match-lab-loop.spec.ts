@@ -35,6 +35,7 @@ test('sandbox relationship loop', async ({ page }) => {
   await expect(proposal).toContainText('PENDING_CONFIRMATION');
   await page.getByRole('button', { name: '模拟用户确认' }).click();
   await expect(proposal).toContainText('CONFIRMED');
+  await expect(page.locator('td', { hasText: 'self.pace' }).first()).toBeVisible();
   await page.getByRole('button', { name: '用新画像重新匹配' }).click();
   await expect(page.getByRole('heading', { name: '重新匹配' })).toBeVisible();
   await expect(page.locator('p', { hasText: '父运行' })).toBeVisible();

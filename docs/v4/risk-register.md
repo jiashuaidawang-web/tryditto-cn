@@ -533,8 +533,8 @@ Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-l
 
 仍开放：
 
-- 浏览器闭环已由 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46129223021 的 `match-lab-e2e` 执行。更早两次闭环作业的浏览器步骤失败，不能拿来代替这次。前端构建成功仍然不能单独代替浏览器作业。
-- 工作区仍是进程内存，重启后丢失。
+- 浏览器闭环已由 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46129223021 的 `match-lab-e2e` 执行。L02-FINAL 又补了特征保留、接受事件不能充当偏好来源，以及历史输入摘要不随当前画像变化。这些断言要等新的 `match-lab-e2e` 变绿。
+- 工作区仍是进程内存，重启后丢失。计划、账本、事件和提案有上限，重置会一起丢掉。
 - 分数变化不是真实关系质量。真实关系质量 NOT_RUN。
 - 生产启用和最终匹配算法质量继续 NO-GO。
 

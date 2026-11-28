@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ApiError } from '../api/http';
-import { labApi, type FeedbackView, type GlobalView, type LearningView, type Profile, type RematchView } from './api';
+import { labApi, type FeedbackView, type GlobalView, type LabRun, type LearningView, type Profile, type RematchView } from './api';
 
 function Gate({ error }: { error: unknown }) {
   if (!(error instanceof ApiError)) return <p className="lab-error">加载失败。</p>;
@@ -23,6 +23,7 @@ export function GlobalPage() {
   const [objective, setObjective] = useState('G2');
   const [focus, setFocus] = useState<number | null>(null);
   const [data, setData] = useState<GlobalView | null>(null);
+  const [history, setHistory] = useState<LabRun[]>([]);
   const [note, setNote] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -33,6 +34,7 @@ export function GlobalPage() {
       setPicked(rows.map((item) => item.userId));
       setFocus(rows[0]?.userId ?? null);
     }).catch(setError);
+    labApi.runs().then((rows) => setHistory(rows.filter((item) => item.experimentType === 'GLOBAL_MATCH'))).catch(setError);
   }, []);
 
   function toggle(userId: number) {
@@ -47,6 +49,7 @@ export function GlobalPage() {
         const result = await labApi.global(objective, picked);
         setData(result);
         setNote(result.limitations);
+        setHistory(await labApi.runs());
       } else if (kind === 'math') {
         const result = await labApi.compare();
         setData(result);
@@ -104,6 +107,8 @@ export function GlobalPage() {
           </section>
           <p>{data.executionMode} · {data.objective} · 覆盖 {data.coverage} · 安全违规 {data.safetyViolations} · 平均契合 {data.averageFit} · 最低契合 {data.lowestFit} · 总权重 {data.totalWeight} · 可继续 {data.usablePlan ? '可以' : '不可以'}</p>
           <p>运行 {data.runId}{data.parentRunId ? ` · 上一次 ${data.parentRunId}` : ''}</p>
+          <p>输入摘要 {data.inputHash}</p>
+          <p>语义结果 {data.semanticResultHash}</p>
           <h2>配对</h2>
           <table>
             <thead><tr><th>低编号</th><th>高编号</th><th>契合</th><th>双向分数</th><th>覆盖</th><th></th></tr></thead>
@@ -148,6 +153,17 @@ export function GlobalPage() {
             </tbody>
           </table>
           {data.comparison && <p>贪心对照运行 {data.comparison.runId}，配对 {data.comparison.pairs.map((pair) => pair.key).join('，') || '无'}。</p>}
+          <h2>历史运行</h2>
+          {history.filter((item) => item.experimentType === 'GLOBAL_MATCH').length === 0 ? <p>还没有可回看的全局匹配。</p> : (
+            <table>
+              <thead><tr><th>运行</th><th>状态</th><th>输入摘要</th><th>结果摘要</th></tr></thead>
+              <tbody>
+                {history.filter((item) => item.experimentType === 'GLOBAL_MATCH').map((item) => (
+                  <tr key={item.runId}><td>{item.runId}</td><td>{item.status}</td><td>{item.inputHash}</td><td>{item.resultHash}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          )}
           <JsonBlock value={data} />
         </>
       )}
@@ -221,7 +237,15 @@ export function FeedbackPage() {
               ))}
             </tbody>
           </table>
-          <p><Link to={`/match-lab/learning?ledger=${encodeURIComponent(data.ledgerKey)}&user=${data.userB}&run=${data.matchingRunId}`}>进入画像学习</Link></p>
+          <p><Link to={`/match-lab/learning?ledger=${encodeURIComponent(data.ledgerKey)}&user=${data.userB}&run=${data.labRunId}`}>进入画像学习</Link></p>
+          <button type="button" onClick={() => {
+            const accept = data.events.find((event) => event.type === 'MATCH_ACCEPTED' && event.actorUserId === data.userA);
+            if (!accept) {
+              setError(new ApiError(422, 'SOURCE', '还没有这条匹配的接受事件'));
+              return;
+            }
+            labApi.propose(data.userA, 'partner.pace', 'fast', accept.eventId, data.ledgerKey, 'FEEDBACK').catch(setError);
+          }}>把接受事件当作偏好来源</button>
           <JsonBlock value={data} />
         </>
       )}

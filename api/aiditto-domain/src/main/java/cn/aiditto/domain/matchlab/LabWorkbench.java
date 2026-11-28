@@ -205,7 +205,7 @@ public final class LabWorkbench {
         if (profiles.size() >= MAX_PROFILES) throw new LabRejection("SANDBOX_LIMIT");
         long id = sequence.incrementAndGet();
         while (profiles.containsKey(id)) id = sequence.incrementAndGet();
-        Stored stored = store(id, name, 1, self, preferences, behavior);
+        Stored stored = store(id, name, 1, self, preferences, behavior, null, 1);
         profiles.put(id, stored);
         return view(id, stored);
     }
@@ -219,7 +219,7 @@ public final class LabWorkbench {
         Stored current = require(userId);
         if (current.version != expectedVersion) throw new LabRejection("VERSION");
         Stored stored = store(userId, name == null || name.isBlank() ? current.name : name, current.version + 1,
-                self, preferences, behavior);
+                self, preferences, behavior, current.subject.candidate(), current.subject.generation());
         profiles.put(userId, stored);
         return view(userId, stored);
     }
@@ -442,6 +442,11 @@ public final class LabWorkbench {
 
     private Stored store(long id, String name, long version, List<FeatureWrite> self, List<FeatureWrite> preferences,
                          List<FeatureWrite> behavior) {
+        return store(id, name, version, self, preferences, behavior, null, 1);
+    }
+
+    private Stored store(long id, String name, long version, List<FeatureWrite> self, List<FeatureWrite> preferences,
+                         List<FeatureWrite> behavior, Candidate carried, long generation) {
         if (behavior == null) behavior = List.of();
         String clean = cleanName(name);
         List<ProfileFeature> features = new ArrayList<>();
@@ -459,9 +464,9 @@ public final class LabWorkbench {
             targets.add(preference(write));
             writes.add(write);
         }
-        Candidate candidate = Candidate.builder(id).cohort(Cohort.DEMO).build();
+        Candidate candidate = carried == null ? Candidate.builder(id).cohort(Cohort.DEMO).build() : carried;
         cn.aiditto.domain.compatibility.v4.CompatibilitySubject subject = cn.aiditto.domain.compatibility.v4.CompatibilitySubject.synthetic(
-                id, version, 1, true, false, SOURCE, features, targets, candidate);
+                id, version, generation, true, false, SOURCE, features, targets, candidate);
         return new Stored(clean, version, subject, writes);
     }
 

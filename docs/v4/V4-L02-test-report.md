@@ -1,6 +1,6 @@
 # V4-L02 测试报告
 
-本地 `mvn -B -pl aiditto-domain test`：608 项，失败 0，异常 0，跳过 0。其中 `SandboxLoopTest` 3 项，覆盖不合格边不进求解器、相同输入的配对可重复、数学夹具不能打开反馈、反馈更正、跨用户确认被拒绝，以及案例 B、C、D、E、F 的预期观察。
+本地 `mvn -B -pl aiditto-domain test`：611 项，失败 0，异常 0，跳过 0。其中 `SandboxLoopFinalTest` 3 项覆盖完整画像保留、过期提案、反馈来源绑定、撤回和授权撤回、历史快照以及 G1/G2 策略绑定。`SandboxLoopTest` 仍是 3 项。
 
 `cd web && npm run build` 通过。新增页面在现有 Match Lab 路由里。
 

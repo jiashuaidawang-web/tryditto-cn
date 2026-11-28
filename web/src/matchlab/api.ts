@@ -184,7 +184,8 @@ export const labApi = {
   openFeedback: (runId: string, userA: number, userB: number) => http<FeedbackView>('POST', '/api/match-lab/feedback/open', { runId, userA, userB }),
   act: (ledgerKey: string, action: string, actorUserId: number, supersedesEventId?: string) => http<FeedbackView>('POST', '/api/match-lab/feedback/act', { ledgerKey, action, actorUserId, supersedesEventId }),
   learning: (ledgerKey: string, userId: number) => http<LearningView>('GET', `/api/match-lab/learning?ledgerKey=${encodeURIComponent(ledgerKey)}&userId=${userId}`),
-  propose: (userId: number, featureCode: string, newValue: string, sourceEventId: string) => http<LearningView>('POST', '/api/match-lab/learning/propose', { userId, featureCode, newValue, sourceEventId }),
+  propose: (userId: number, featureCode: string, newValue: string, sourceEventId: string, ledgerKey?: string, origin?: string) => http<LearningView>('POST', '/api/match-lab/learning/propose', { userId, featureCode, newValue, sourceEventId, ledgerKey, origin }),
+  runs: () => http<LabRun[]>('GET', '/api/match-lab/runs'),
   decide: (proposalId: string, action: string, actorUserId: number) => http<LearningView>('POST', '/api/match-lab/learning/decide', { proposalId, action, actorUserId }),
   retract: (userId: number, sourceRef: string) => http<LearningView>('POST', '/api/match-lab/learning/retract', { userId, sourceRef }),
   rematch: (parentRunId: string, objective: string) => http<RematchView>('POST', '/api/match-lab/rematch', { parentRunId, objective }),
@@ -215,7 +216,21 @@ export type GlobalView = {
   unmatched: { userId: number; reason: string; diagnostics: string[] }[];
   edges: { lowId: number; highId: number; fit: number | null; solver: boolean; exclusion: string; versionLow: number; versionHigh: number; generationLow: number; generationHigh: number; diagnostics: string[] }[];
   limitations: string;
+  inputHash: string;
+  resultHash: string;
+  semanticResultHash: string;
   comparison: GlobalView | null;
+};
+
+export type LabRun = {
+  runId: string;
+  parentRunId: string | null;
+  experimentType: string;
+  inputSnapshot: string;
+  inputHash: string;
+  resultHash: string;
+  executionMode: string;
+  status: string;
 };
 
 export type FeedbackView = {
@@ -227,6 +242,8 @@ export type FeedbackView = {
   versionB: number;
   events: { eventId: string; type: string; actorUserId: number; occurredAt: string; recordedAt: string; source: string; effective: boolean; causationEventId: string | null; supersedesEventId: string | null; superseded: boolean }[];
   projection: { responseA: string; responseB: string; mutualAcceptance: boolean; schedule: string; attendance: string; contested: boolean; continueA: string; continueB: string; unknown: string[]; learningAllowed: boolean; learningReasons: string[] };
+  labRunId: string;
+  globalObjectiveVersion: string;
 };
 
 export type LearningView = {

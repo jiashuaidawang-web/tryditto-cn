@@ -156,7 +156,8 @@ public class MatchLabController {
 
     @PostMapping("/learning/propose")
     ResponseEntity<Object> propose(@RequestBody ProposeBody body, HttpServletRequest request) {
-        return guard(() -> lab(request).loop().propose(body.userId(), body.featureCode(), body.newValue(), body.sourceEventId()));
+        return guard(() -> lab(request).loop().propose(body.userId(), body.featureCode(), body.newValue(),
+                body.sourceEventId(), body.ledgerKey(), body.origin()));
     }
 
     @PostMapping("/learning/decide")
@@ -240,7 +241,7 @@ public class MatchLabController {
     record GlobalBody(String objective, List<Long> userIds) {}
     record OpenBody(String runId, long userA, long userB) {}
     record ActBody(String ledgerKey, String action, long actorUserId, String supersedesEventId) {}
-    record ProposeBody(long userId, String featureCode, String newValue, String sourceEventId) {}
+    record ProposeBody(long userId, String featureCode, String newValue, String sourceEventId, String ledgerKey, String origin) {}
     record DecideBody(String proposalId, String action, long actorUserId) {}
     record RetractBody(long userId, String sourceRef) {}
     record RematchBody(String parentRunId, String objective) {}
