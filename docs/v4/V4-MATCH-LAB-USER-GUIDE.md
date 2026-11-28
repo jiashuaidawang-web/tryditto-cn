@@ -22,7 +22,7 @@ cd web && npm run dev
 | 用户画像 | `/match-lab/profiles` | 创建和修改虚构画像，查看四层特征 |
 | 候选发现 | `/match-lab/candidates` | 冻结召回对照和沙箱候选 |
 | 双向评分 | `/match-lab/score` | 调用 M02。单向高分和证据不足会被拒绝 |
-| AI 关系推理 | `/match-lab/reasoning` | 回放规则夹具。真实模型是 NOT_RUN |
+| AI 关系推理 | `/match-lab/reasoning` | 回放规则夹具。本页不调用模型。历史真实模型实验仍是 NO-GO |
 | 全局匹配 | `/match-lab/global` | 用当前工作区用户跑 M04 |
 | 反馈事件 | `/match-lab/feedback` | 按 F01 提交双方事件 |
 | 画像学习 | `/match-lab/learning` | 确认或拒绝 F02 提案 |
@@ -45,3 +45,13 @@ cd web && npm run dev
 `POST /api/match-lab/workspace/reset` 会清掉当前管理员的画像、运行、反馈和学习提案。别人的工作区编号会返回 403。
 
 接受事件不能当作某项伴侣偏好的证据。反馈撤回后，绑定该账本的未确认提案不能再生效。历史快照不会因为后来修改画像而改变。分数变化不是真实关系质量提升。
+
+## 冻结后的能力边界
+
+沙箱分数沿用 M02：方向分和契合分是 0–100，覆盖率是 0–1。空分和越界分拒绝这条观察，不写成 0，也不按数值大小换算单位。1 分仍是 1 分。
+
+沙箱数据集是 `sandbox-ledger-1`。策略对照仍来自冻结实验 `f03-synthetic-1`。匹配事实、群体评估可读和学习资格分列，学习授权不代替反馈授权。
+
+回放只能重放内存里的全局匹配图。不能只凭保存的文本重建图。对照没有特征级差异。校准没有曲线点。这些项在安全页上是 `NOT_IMPLEMENTED` 或 `LIMITED`，不是 GO。
+
+本页没有调用模型，记为 `NOT_RUN`。`V4-M03-live-eval-report.md` 里的历史真实模型结论仍是 NO-GO。

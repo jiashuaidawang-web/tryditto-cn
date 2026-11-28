@@ -273,6 +273,7 @@ export type StrategyReport = {
   source: string;
   observations: number;
   datasetVersion: string;
+  strategyDatasetVersion: string;
   labelVersion: string;
   labelNote: string;
   counts: { metric: string; level: string; numerator: number; denominator: number; window: string; source: string; missing: number; contested: number; immature: number; retracted: number; authorization: string }[];
@@ -290,7 +291,8 @@ export type SafetyReport = {
   realRelationshipQuality: string;
   realLift: string;
   algorithmQuality: string;
-  risks: { riskId: string; module: string; priority: string; statement: string; status: string; scope: string; resolution: string; source: string }[];
+  risks: { riskId: string; module: string; priority: string; statement: string; status: string; scope: string; resolution: string; source: string; sourceVersion: string }[];
   gates: { name: string; status: string; note: string }[];
+  capabilities: { name: string; status: string; note: string }[];
 };
 export type ProductionGate = { production: string; realRelationshipQuality: string; realLift: string; algorithmQuality: string; conditions: string[] };

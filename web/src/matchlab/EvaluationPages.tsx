@@ -45,7 +45,7 @@ export function StrategyPage() {
       </div>
       {!data ? <p>正在读取观察。</p> : (
         <>
-          <p>来源 {data.source} · 数据集 {data.datasetVersion} · 观察 {data.observations} · 当前选择 {source}</p>
+          <p>来源 {data.source} · 观察数据集 {data.datasetVersion} · 策略对照 {data.strategyDatasetVersion} · 观察 {data.observations} · 当前选择 {source}</p>
           <p className="lab-note">{data.labelNote}</p>
           <p className="lab-note">{data.limitations}</p>
           <h2>匹配级计数</h2>
@@ -206,6 +206,15 @@ export function SafetyPage() {
             <article><b>{data.realLift}</b><span>真实策略提升</span></article>
             <article><b>{data.algorithmQuality}</b><span>最终算法质量</span></article>
           </section>
+          <h2>实验室能力</h2>
+          <table>
+            <thead><tr><th>能力</th><th>状态</th><th>说明</th></tr></thead>
+            <tbody>
+              {data.capabilities.map((item) => (
+                <tr key={item.name}><td>{item.name}</td><td>{item.status}</td><td>{item.note}</td></tr>
+              ))}
+            </tbody>
+          </table>
           <h2>质量闸门</h2>
           <table>
             <thead><tr><th>闸门</th><th>状态</th><th>说明</th></tr></thead>
@@ -219,10 +228,10 @@ export function SafetyPage() {
           <ul className="lab-limits">{gate.conditions.map((item) => <li key={item}>{item}</li>)}</ul>
           <h2>风险登记</h2>
           <table>
-            <thead><tr><th>编号</th><th>模块</th><th>优先级</th><th>说明</th><th>状态</th><th>范围</th><th>解决条件</th><th>来源</th></tr></thead>
+            <thead><tr><th>编号</th><th>模块</th><th>优先级</th><th>说明</th><th>状态</th><th>范围</th><th>解决条件</th><th>来源</th><th>版本</th></tr></thead>
             <tbody>
               {data.risks.map((risk) => (
-                <tr key={risk.riskId}><td>{risk.riskId}</td><td>{risk.module}</td><td>{risk.priority}</td><td>{risk.statement}</td><td>{risk.status}</td><td>{risk.scope}</td><td>{risk.resolution}</td><td>{risk.source}</td></tr>
+                <tr key={risk.riskId}><td>{risk.riskId}</td><td>{risk.module}</td><td>{risk.priority}</td><td>{risk.statement}</td><td>{risk.status}</td><td>{risk.scope}</td><td>{risk.resolution}</td><td>{risk.source}</td><td>{risk.sourceVersion}</td></tr>
               ))}
             </tbody>
           </table>

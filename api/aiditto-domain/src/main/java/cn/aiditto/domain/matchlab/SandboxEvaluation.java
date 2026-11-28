@@ -35,14 +35,20 @@ public final class SandboxEvaluation {
         if (!"SYNTHETIC_SANDBOX".equals(selected) && !"FROZEN_EXPERIMENT".equals(selected)) {
             throw new LabRejection("DATASET");
         }
-        List<Count> counts = "SYNTHETIC_SANDBOX".equals(selected) ? sandboxCounts(loop) : frozenCounts(rows);
-        List<CalibrationRow> calibration = "SYNTHETIC_SANDBOX".equals(selected)
-                ? insufficient(rows.size()) : frozenCalibration();
+        boolean sandbox = "SYNTHETIC_SANDBOX".equals(selected);
+        String dataset = sandbox ? "sandbox-ledger-1" : StrategyDataset.VERSION;
+        List<Count> counts = sandbox ? sandboxCounts(loop) : frozenCounts(rows);
+        List<CalibrationRow> calibration = sandbox ? insufficient(rows.size()) : frozenCalibration();
         StrategyLearningProposal proposal = proposal(StrategyDataset.VERSION, learnable(rows), true);
-        return new Report(selected, rows.size(), "f03-synthetic-1", "f03-labels-2",
+        String limits = sandbox
+                ? "观察数据集是 sandbox-ledger-1。策略对照表来自冻结实验 " + StrategyDataset.VERSION + "，不随沙箱切换。"
+                : "观察和策略对照都来自冻结实验 " + StrategyDataset.VERSION + "。";
+        return new Report(selected, rows.size(), dataset, "f03-labels-2",
                 "历史标签文件保持原样。本页计数使用 F03-FINAL 的 RelationshipLabels，不另造一份旧标签。",
                 counts, calibration, StrategyComparison.compare(StrategyDataset.observations()), proposal,
-                "策略对照表来自冻结实验，不随沙箱切换。合成频率不是真实用户接受概率。未发布候选的接受、见面和继续意愿不可知。真实策略提升是 NOT_IDENTIFIED。");
+                limits + "合成频率不是真实用户接受概率。未发布候选的接受、见面和继续意愿不可知。真实策略提升是 NOT_IDENTIFIED。"
+                        + "回放只使用内存中的候选图。没有独立反序列化回放，没有特征级差异，也没有校准曲线。",
+                StrategyDataset.VERSION);
     }
 
     public static ReplayResult replay(SandboxLoop loop, String runId, String commitSha) {
@@ -80,7 +86,7 @@ public final class SandboxEvaluation {
             plans++;
             violations += held.result().safetyViolations();
         }
-        return new SafetyReport(plans, violations, "NO-GO", "NOT_RUN", "NOT_IDENTIFIED", "NO-GO", risks(), gates());
+        return new SafetyReport(plans, violations, "NO-GO", "NOT_RUN", "NOT_IDENTIFIED", "NO-GO", risks(), gates(), capabilities());
     }
 
     public static String export(SandboxLoop loop, String runId) {
@@ -119,11 +125,10 @@ public final class SandboxEvaluation {
 
     private static MatchingObservation observe(String ledgerKey, FeedbackLedger ledger, SandboxLoop loop, int index) {
         GlobalMatchingResult.MatchedPair pair = pair(loop, ledger);
-        int scoreAB = unit(pair.scoreLowToHigh());
-        int scoreBA = unit(pair.scoreHighToLow());
-        int reciprocal = unit(pair.fitScore());
-        MatchScoreSnapshot scores = new MatchScoreSnapshot(scoreAB, scoreBA, unitCoverage(pair.coverageLowToHigh()),
-                unitCoverage(pair.coverageHighToLow()), reciprocal, "m02");
+        MatchScoreSnapshot scores = new MatchScoreSnapshot(
+                scorePoints(pair.scoreLowToHigh()), scorePoints(pair.scoreHighToLow()),
+                coverageFraction(pair.coverageLowToHigh()), coverageFraction(pair.coverageHighToLow()),
+                scorePoints(pair.fitScore()), "m02");
         Instant published = ledger.events().get(0).recordedAt();
         ObservationWindow window = new ObservationWindow(published.plus(7, ChronoUnit.DAYS),
                 published.plus(14, ChronoUnit.DAYS), published.plus(21, ChronoUnit.DAYS));
@@ -163,7 +168,9 @@ public final class SandboxEvaluation {
         int missing = 0;
         int contested = 0;
         int retracted = 0;
-        int withheld = 0;
+        int feedbackGranted = 0;
+        int learningConsent = 0;
+        int learningEligible = 0;
         for (FeedbackLedger ledger : loop.ledgers.values()) {
             FeedbackProjection projection = ledger.project();
             if (projection.viewedA() || projection.viewedB()) viewed++;
@@ -181,21 +188,42 @@ public final class SandboxEvaluation {
             if (!projection.unknown().isEmpty()) missing++;
             if (projection.contested()) contested++;
             if (projection.retracted()) retracted++;
-            if (!projection.learningAllowed()) withheld++;
+            if (ledger.context().feedbackConsentA() && ledger.context().feedbackConsentB()) feedbackGranted++;
+            if (ledger.context().learningConsentA() && ledger.context().learningConsentB()) learningConsent++;
+            if (ledger.eligibility().matchFactEligible()) learningEligible++;
         }
-        String window = "从该账本发布时刻到调用时刻。各项不是严格递进，缺失只统计仍有未知事实的匹配。";
-        String authorization = (published - withheld) + "/" + published;
+        int y1Immature = 0;
+        int y2Immature = 0;
+        int y3Immature = 0;
+        int cohort = 0;
+        List<MatchingObservation> observed = sandboxRows(loop);
+        for (MatchingObservation row : observed) {
+            RelationshipLabels labels = RelationshipLabels.of(row);
+            if (labels.y1() == RelationshipLabels.Mutual.IMMATURE) y1Immature++;
+            if (labels.y2() == RelationshipLabels.AttendanceLabel.IMMATURE) y2Immature++;
+            if (labels.y3() == RelationshipLabels.ContinueLabel.IMMATURE) y3Immature++;
+            if (row.feedbackAuthorization() == MatchingObservation.Access.OPEN && !row.retracted()) cohort++;
+        }
+        String window = "匹配事实。分母是工作区账本。授权列是双方反馈处理授权，不是学习资格，也不是群体评估可读数。";
+        String factAuth = feedbackGranted + "/" + published;
+        int unreadable = Math.max(0, published - retracted - observed.size());
         return List.of(
-                count("已发布匹配", published, published, window, missing, contested, 0, retracted, authorization),
-                count("查看", viewed, published, window, missing, contested, 0, retracted, authorization),
-                count("至少一方响应", oneResponse, published, window, missing, contested, 0, retracted, authorization),
-                count("双方响应", bothResponse, published, window, missing, contested, 0, retracted, authorization),
-                count("双方接受", bothAccepted, published, window, missing, contested, 0, retracted, authorization),
-                count("见面安排", scheduled, published, window, missing, contested, 0, retracted, authorization),
-                count("用户报告见面", reported, published, window, missing, contested, 0, retracted, authorization),
-                count("双方确认见面", bothAttended, published, window, missing, contested, 0, retracted, authorization),
-                count("单方继续意愿", oneContinue, published, window, missing, contested, 0, retracted, authorization),
-                count("双方继续意愿", bothContinue, published, window, missing, contested, 0, retracted, authorization));
+                count("已发布匹配", "MATCH", published, published, window, missing, contested, y1Immature, retracted, factAuth),
+                count("查看", "MATCH", viewed, published, window, missing, contested, y1Immature, retracted, factAuth),
+                count("至少一方响应", "MATCH", oneResponse, published, window, missing, contested, y1Immature, retracted, factAuth),
+                count("双方响应", "MATCH", bothResponse, published, window, missing, contested, y1Immature, retracted, factAuth),
+                count("双方接受", "MATCH", bothAccepted, published, window, missing, contested, y1Immature, retracted, factAuth),
+                count("见面安排", "MATCH", scheduled, published, window, missing, contested, y2Immature, retracted, factAuth),
+                count("用户报告见面", "MATCH", reported, published, window, missing, contested, y2Immature, retracted, factAuth),
+                count("双方确认见面", "MATCH", bothAttended, published, window, missing, contested, y2Immature, retracted, factAuth),
+                count("单方继续意愿", "MATCH", oneContinue, published, window, missing, contested, y3Immature, retracted, factAuth),
+                count("双方继续意愿", "MATCH", bothContinue, published, window, missing, contested, y3Immature, retracted, factAuth),
+                count("群体评估可读", "COHORT", cohort, observed.size(),
+                        "F03 标签可读的观察。分母是成功建成的观察，失败的观察记在缺失，不另造分母。",
+                        unreadable, contested, y1Immature, retracted, cohort + "/" + observed.size()),
+                count("学习资格", "LEARNING", learningEligible, published,
+                        "matchFactEligible。学习授权覆盖是 " + learningConsent + "/" + published + "，不拿它代替反馈授权。",
+                        missing, contested, y1Immature, retracted, learningConsent + "/" + published));
     }
 
     private static List<Count> frozenCounts(List<MatchingObservation> rows) {
@@ -215,8 +243,8 @@ public final class SandboxEvaluation {
             if (labels.y2() == RelationshipLabels.AttendanceLabel.CONTESTED) contested++;
         }
         String authorization = (rows.size() - withheld) + "/" + rows.size();
-        return List.of(count("双方接受", bothAccepted, rows.size(), "冻结观察窗口", unknown, contested, immature, 0, authorization),
-                count("未知或过期", unknown + expired, rows.size(), "冻结观察窗口", unknown, contested, immature, 0, authorization));
+        return List.of(count("双方接受", "MATCH", bothAccepted, rows.size(), "冻结观察窗口", unknown, contested, immature, 0, authorization),
+                count("未知或过期", "MATCH", unknown + expired, rows.size(), "冻结观察窗口", unknown, contested, immature, 0, authorization));
     }
 
     private static List<CalibrationRow> frozenCalibration() {
@@ -263,22 +291,29 @@ public final class SandboxEvaluation {
         return "ACCEPTED".equals(name) || "DECLINED".equals(name);
     }
 
-    private static Count count(String metric, int numerator, int denominator, String window,
+    private static Count count(String metric, String level, int numerator, int denominator, String window,
                                int missing, int contested, int immature, int retracted, String authorization) {
-        return new Count(metric, "MATCH", numerator, denominator, window, "server-projection", missing, contested, immature, retracted,
+        return new Count(metric, level, numerator, denominator, window, "server-projection", missing, contested, immature, retracted,
                 authorization);
     }
 
-    private static int unit(Double value) {
-        if (value == null || !Double.isFinite(value)) return 0;
-        double scaled = value <= 1.0 ? value * 100.0 : value;
-        return (int) Math.max(0, Math.min(100, Math.round(scaled)));
+    /**
+     * M02 writes a 0–100 point score, or null when there is no known weight.
+     * A value is never scaled because it is small. Null and out-of-range values are rejected.
+     */
+    static int scorePoints(Double value) {
+        if (value == null || !Double.isFinite(value) || value < 0 || value > 100) {
+            throw new FeedbackRejection("SCORE");
+        }
+        return (int) Math.round(value);
     }
 
-    private static double unitCoverage(Double value) {
-        if (value == null || !Double.isFinite(value)) return 0;
-        double scaled = value > 1 ? value / 100.0 : value;
-        return Math.max(0, Math.min(1, scaled));
+    /** M02 coverage is a 0–1 fraction, or null when nothing is evaluable. It is not a point score. */
+    static double coverageFraction(Double value) {
+        if (value == null || !Double.isFinite(value) || value < 0 || value > 1) {
+            throw new FeedbackRejection("COVERAGE");
+        }
+        return value;
     }
 
     private static LabRun find(SandboxLoop loop, String runId) {
@@ -288,23 +323,24 @@ public final class SandboxEvaluation {
 
     private static List<Risk> risks() {
         return List.of(
-                risk("R-ACCOUNT-DELETE", "S01", "P0", "生产销户还没有接入 eraseActor", "OPEN", "生产账号", "AccountService.requestDelete 调用擦除", "risk-register.md"),
-                risk("R-MATCH-SNAPSHOT", "M04", "P0", "真实匹配快照还没有接入", "OPEN", "生产匹配", "只读发布快照接入并经过安全复查", "V4-PROJECT-STATUS.md"),
-                risk("R-FEEDBACK-API", "F01", "P0", "生产反馈接口还没有接入", "OPEN", "生产反馈", "独立生产适配器通过 F01 契约", "risk-register.md"),
-                risk("R-V3-LEARNING", "F02", "P1", "V3 旧自动学习路径还需要治理", "OPEN", "旧学习写入", "旧路径不能绕过画像准入", "risk-register.md"),
-                risk("R-PROFILE-QUALITY", "P01", "P1", "真实画像语义质量未过门槛", "OPEN", "真实画像", "独立语义评估达到门槛", "V4-PROJECT-STATUS.md"),
-                risk("R-VECTOR-QUALITY", "M01", "P1", "真实向量质量未验证", "OPEN", "召回", "真实向量对照完成", "V4-PROJECT-STATUS.md"),
-                risk("R-GRAPH-LIMIT", "M04", "P1", "大规模候选图仍受资源限制", "OPEN", "全局匹配", "有保护的资源实验", "V4-PROJECT-STATUS.md"),
-                risk("R-BLOSSOM-TIMEOUT", "M04", "P1", "Blossom 超时还没有单独的资源隔离", "OPEN", "求解器", "超时不能拖垮其他租户", "risk-register.md"),
-                risk("R-REAL-MODEL", "M03", "P1", "真实模型对照未完成", "OPEN", "推理", "预注册的真实模型评估", "V4-PROJECT-STATUS.md"),
-                risk("R-RELATIONSHIP-QUALITY", "F03", "P0", "真实用户关系质量未验证", "OPEN", "关系质量", "真实反馈队列和受控实验", "V4-PROJECT-STATUS.md"));
+                risk("R-ACCOUNT-DELETE", "S01", "P0", "生产销户还没有接入 eraseActor", "OPEN", "生产账号", "AccountService.requestDelete 调用擦除", "risk-register.md", "2026-11-28"),
+                risk("R-MATCH-SNAPSHOT", "M04", "P0", "真实匹配快照还没有接入", "OPEN", "生产匹配", "只读发布快照接入并经过安全复查", "V4-PROJECT-STATUS.md", "2026-11-28"),
+                risk("R-FEEDBACK-API", "F01", "P0", "生产反馈接口还没有接入", "OPEN", "生产反馈", "独立生产适配器通过 F01 契约", "risk-register.md", "2026-11-28"),
+                risk("R-V3-LEARNING", "F02", "P1", "V3 旧自动学习路径还需要治理", "OPEN", "旧学习写入", "旧路径不能绕过画像准入", "risk-register.md", "2026-11-28"),
+                risk("R-PROFILE-QUALITY", "P01", "P1", "真实画像语义质量未过门槛", "OPEN", "真实画像", "独立语义评估达到门槛", "V4-PROJECT-STATUS.md", "2026-11-28"),
+                risk("R-VECTOR-QUALITY", "M01", "P1", "真实向量质量未验证", "OPEN", "召回", "真实向量对照完成", "V4-PROJECT-STATUS.md", "2026-11-28"),
+                risk("R-GRAPH-LIMIT", "M04", "P1", "大规模候选图仍受资源限制", "OPEN", "全局匹配", "有保护的资源实验", "V4-PROJECT-STATUS.md", "2026-11-28"),
+                risk("R-BLOSSOM-TIMEOUT", "M04", "P1", "Blossom 超时还没有单独的资源隔离", "OPEN", "求解器", "超时不能拖垮其他租户", "risk-register.md", "2026-11-28"),
+                risk("R-REAL-MODEL", "M03", "P0", "历史真实模型实验结论是 NO-GO", "OPEN", "推理", "新的预注册评估，而不是把本页未调用写成通过", "V4-M03-live-eval-report.md", "2026-11-27"),
+                risk("R-RELATIONSHIP-QUALITY", "F03", "P0", "真实用户关系质量未验证", "OPEN", "关系质量", "真实反馈队列和受控实验", "V4-PROJECT-STATUS.md", "2026-11-28"));
     }
 
     private static List<Gate> gates() {
         return List.of(
                 new Gate("工程质量", "SEE_CI", "以该提交的五个 CI 作业为准，页面不申报通过。"),
                 new Gate("离线合成质量", "PASS_OFFLINE", "只覆盖已经冻结的合成集。"),
-                new Gate("真实模型质量", "NOT_RUN", "本页不调用模型。"),
+                new Gate("本页模型调用", "NOT_RUN", "策略、回放和安全页没有调用模型。这个状态不覆盖历史实验结论。"),
+                new Gate("历史真实模型质量", "NO-GO", "V4-M03-live-eval-report.md：解释、新增关系和排序增益是 NO-GO。"),
                 new Gate("真实语义向量质量", "NOT_RUN", "没有真实向量对照。"),
                 new Gate("大规模候选图性能", "NO-GO", "候选图规模和求解资源仍受限制。"),
                 new Gate("真实校准质量", "NOT_RUN", "合成频率不是真实接受概率。"),
@@ -313,8 +349,19 @@ public final class SandboxEvaluation {
                 new Gate("生产启用", "NO-GO", "页面、地址参数和沙箱请求都不能打开生产 V4。"));
     }
 
-    private static Risk risk(String id, String module, String priority, String statement, String status, String scope, String resolution, String source) {
-        return new Risk(id, module, priority, statement, status, scope, resolution, source);
+    private static List<Capability> capabilities() {
+        return List.of(
+                new Capability("M04_CURRENT_ENGINE_REPLAY", "LIMITED", "用当前引擎重放内存中的 Held 图。回收后返回 HISTORY_UNAVAILABLE。"),
+                new Capability("DESERIALIZED_REPLAY", "NOT_IMPLEMENTED", "不能只凭已保存文本重建候选图再执行。"),
+                new Capability("FEATURE_DIFF", "NOT_IMPLEMENTED", "两次运行只比较输入摘要、策略版本和结果摘要。"),
+                new Capability("CALIBRATION_CURVE", "NOT_IMPLEMENTED", "校准结果只有汇总误差，没有分箱曲线点。"),
+                new Capability("M02_STANDALONE_REPLAY", "NOT_IMPLEMENTED", "没有单独从历史输入重跑双向评分。"),
+                new Capability("F01_F03_ON_LEDGER", "LIMITED", "当前账本可以做事实投影和 F03 标签。"));
+    }
+
+    private static Risk risk(String id, String module, String priority, String statement, String status, String scope,
+                             String resolution, String source, String sourceVersion) {
+        return new Risk(id, module, priority, statement, status, scope, resolution, source, sourceVersion);
     }
 
     private static String escape(String value) {
@@ -324,7 +371,7 @@ public final class SandboxEvaluation {
 
     public record Report(String source, int observations, String datasetVersion, String labelVersion, String labelNote,
                          List<Count> counts, List<CalibrationRow> calibration, List<StrategyComparison.Row> strategies,
-                         StrategyLearningProposal proposal, String limitations) {}
+                         StrategyLearningProposal proposal, String limitations, String strategyDatasetVersion) {}
 
     public record Count(String metric, String level, int numerator, int denominator, String window, String source,
                         int missing, int contested, int immature, int retracted, String authorization) {}
@@ -341,10 +388,13 @@ public final class SandboxEvaluation {
                                 String note) {}
 
     public record SafetyReport(int plans, int safetyViolations, String production, String realRelationshipQuality,
-                               String realLift, String algorithmQuality, List<Risk> risks, List<Gate> gates) {}
+                               String realLift, String algorithmQuality, List<Risk> risks, List<Gate> gates,
+                               List<Capability> capabilities) {}
 
     public record Gate(String name, String status, String note) {}
 
+    public record Capability(String name, String status, String note) {}
+
     public record Risk(String riskId, String module, String priority, String statement, String status, String scope,
-                       String resolution, String source) {}
+                       String resolution, String source, String sourceVersion) {}
 }

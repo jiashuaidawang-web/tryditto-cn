@@ -551,3 +551,9 @@ Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-l
 - 页面不能把合成频率写成真实接受概率，也不能打开生产 V4。
 
 本地领域测试 612 项，失败 0，异常 0，跳过 0。提交 `8173410f6efa18b3ea8fef8b87658058feffc3d1` 的五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46134624886 全部 success。浏览器 Artifact `15258449746`。生产启用和最终匹配算法质量继续 NO-GO。
+
+## V4-L03-FINAL（2026-11-28）
+
+沙箱观察不再按数值大小猜测分数单位。M02 的方向分和契合分是 0–100，覆盖率是 0–1。未知和越界拒绝观察。未成熟计数来自 F03 标签和观察窗口。匹配事实、群体评估和学习资格分开。沙箱数据集是 `sandbox-ledger-1`，不再冒用 `f03-synthetic-1`。本页未调用模型是 NOT_RUN，历史真实模型实验仍是 NO-GO。没有实现的回放和校准曲线保持 NOT_IMPLEMENTED。
+
+细节见 `V4-L03-final-audit.md`。生产启用和最终匹配算法质量继续 NO-GO。

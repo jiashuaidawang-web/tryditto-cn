@@ -53,7 +53,7 @@ F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试
 
 ## 下一阶段
 
-L02-FINAL 已快进到 `master_agent_v4`。`feature/v4-match-lab-evaluation` 承载 L03，不自动合并。不实现 M05。
+L03-FINAL 在 `feature/v4-match-lab-evaluation` 收口分数单位、统计口径和能力边界。五作业通过后才快进到 `master_agent_v4`。不实现 M05。
 
 ## 接手
 
