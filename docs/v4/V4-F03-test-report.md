@@ -18,4 +18,4 @@
 
 这些名字在 `.github/workflows/v4-ci.yml` 的必需清单里。原有的 `FeedbackEventIT` 和 `ProfileLearningIT` 方法都还在。
 
-CI 地址在本分支推送并跑完四个作业之后回填。远程 Surefire 总数需要管理员权限才能读取，这里不另报一份远程合计。
+实现提交 `094e161c20198aef5a23a8dce76cf0b58e77d858`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46118005635 ，四个作业 success。集成作业成功，所以清单里的 `StrategyEvaluationIT` 方法已执行且没有失败或跳过。远程 Surefire 总数需要管理员权限才能读取，这里不另报一份远程合计。

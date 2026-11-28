@@ -491,4 +491,4 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 
 本地领域测试 593 项，失败 0，异常 0，跳过 0。PostgreSQL 的 `StrategyEvaluationIT` 有 7 个方法，只在 CI 的 Postgres 16 上执行。
 
-分支 `feature/v4-strategy-learning`。CI 地址在四个作业 success 之后回填。F03 不合并到 `master_agent_v4`。
+分支 `feature/v4-strategy-learning`。实现提交 `094e161c20198aef5a23a8dce76cf0b58e77d858`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46118005635 ，四个作业 success。F03 不合并到 `master_agent_v4`。
