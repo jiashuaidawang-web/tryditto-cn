@@ -533,9 +533,21 @@ Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-l
 
 仍开放：
 
-- 浏览器闭环已由 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46129223021 的 `match-lab-e2e` 执行。L02-FINAL 又补了特征保留、接受事件不能充当偏好来源，以及历史输入摘要不随当前画像变化。这些断言要等新的 `match-lab-e2e` 变绿。
+- L02-FINAL 已快进到 `master_agent_v4` 的 `3f822f86820f7e90710ba710a899938a1e4b94ea`。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46132647004 全部 success。浏览器 Artifact `15258557731`。第一次 L02-FINAL 浏览器作业 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46131938035 失败，是因为历史摘要只在当次求解里渲染；修正后历史输入摘要可以在离开页面后继续核对。
 - 工作区仍是进程内存，重启后丢失。计划、账本、事件和提案有上限，重置会一起丢掉。
 - 分数变化不是真实关系质量。真实关系质量 NOT_RUN。
 - 生产启用和最终匹配算法质量继续 NO-GO。
 
-本地领域测试 608 项，失败 0，异常 0，跳过 0。细节见 `V4-L02-test-report.md`。
+本地领域测试 608 项是 L02 主流程的数字。L02-FINAL 的领域测试在 CI 的 `domain-tests` 作业里通过。细节见 `V4-L02-test-report.md`。
+
+## V4-L03（2026-11-28）
+
+策略学习、实验回放和安全审计加在原有 Match Lab 里。冻结观察和沙箱账本分开。策略 `activate()` 继续拒绝。重新执行历史输入使用当前引擎，不称为历史版本复现。生产闸门只读，保持 NO-GO。
+
+仍开放：
+
+- 真实校准、真实策略提升和真实关系质量。
+- 生产销户、真实匹配快照和生产反馈接口。
+- 页面不能把合成频率写成真实接受概率，也不能打开生产 V4。
+
+本地领域测试 612 项，失败 0，异常 0，跳过 0。PostgreSQL、Qdrant 和浏览器以 `feature/v4-match-lab-evaluation` 的五作业 CI 为准。生产启用和最终匹配算法质量继续 NO-GO。

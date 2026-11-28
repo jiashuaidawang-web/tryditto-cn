@@ -180,6 +180,49 @@ public class MatchLabController {
         return guard(() -> lab(request).loop().runCase(code, properties.getCommitSha()));
     }
 
+    @GetMapping("/strategy")
+    ResponseEntity<Object> strategy(@RequestParam(required = false) String source, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().strategy(source));
+    }
+
+    @PostMapping("/strategy/activate")
+    ResponseEntity<Object> activate(HttpServletRequest request) {
+        return guard(() -> {
+            lab(request).loop().rejectStrategyActivation();
+            return Map.of("status", "NO-GO");
+        });
+    }
+
+    @PostMapping("/replay/{runId}")
+    ResponseEntity<Object> replay(@PathVariable String runId, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().replay(runId, properties.getCommitSha()));
+    }
+
+    @PostMapping("/runs/compare")
+    ResponseEntity<Object> compareRuns(@RequestBody CompareBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().compareRuns(body.leftRunId(), body.rightRunId()));
+    }
+
+    @GetMapping("/safety")
+    ResponseEntity<Object> safety(HttpServletRequest request) {
+        return guard(() -> lab(request).loop().safety());
+    }
+
+    @GetMapping("/runs/{runId}/export")
+    ResponseEntity<Object> export(@PathVariable String runId, HttpServletRequest request) {
+        return guard(() -> Map.of("schemaVersion", "sandbox-export-1", "document", lab(request).loop().exportRun(runId)));
+    }
+
+    @GetMapping("/production-gate")
+    ResponseEntity<Object> productionGate(HttpServletRequest request) {
+        return guard(() -> Map.of(
+                "production", "NO-GO",
+                "realRelationshipQuality", "NOT_RUN",
+                "realLift", "NOT_IDENTIFIED",
+                "algorithmQuality", "NO-GO",
+                "conditions", List.of("真实关系质量", "真实校准", "真实策略提升", "生产画像接入", "生产反馈接入", "发布安全复查")));
+    }
+
     private LabWorkbench lab(HttpServletRequest request) {
         return workspace(request).workbench();
     }
@@ -245,4 +288,5 @@ public class MatchLabController {
     record DecideBody(String proposalId, String action, long actorUserId) {}
     record RetractBody(long userId, String sourceRef) {}
     record RematchBody(String parentRunId, String objective) {}
+    record CompareBody(String leftRunId, String rightRunId) {}
 }

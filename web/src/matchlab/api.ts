@@ -190,6 +190,13 @@ export const labApi = {
   retract: (userId: number, sourceRef: string) => http<LearningView>('POST', '/api/match-lab/learning/retract', { userId, sourceRef }),
   rematch: (parentRunId: string, objective: string) => http<RematchView>('POST', '/api/match-lab/rematch', { parentRunId, objective }),
   runCase: (code: string) => http<CaseView>('POST', `/api/match-lab/cases/${code}`),
+  strategy: (source: string) => http<StrategyReport>('GET', `/api/match-lab/strategy?source=${encodeURIComponent(source)}`),
+  activateStrategy: () => http<void>('POST', '/api/match-lab/strategy/activate'),
+  replay: (runId: string) => http<ReplayResult>('POST', `/api/match-lab/replay/${encodeURIComponent(runId)}`),
+  compareRuns: (leftRunId: string, rightRunId: string) => http<CompareResult>('POST', '/api/match-lab/runs/compare', { leftRunId, rightRunId }),
+  safety: () => http<SafetyReport>('GET', '/api/match-lab/safety'),
+  exportRun: (runId: string) => http<{ schemaVersion: string; document: string }>('GET', `/api/match-lab/runs/${encodeURIComponent(runId)}/export`),
+  productionGate: () => http<ProductionGate>('GET', '/api/match-lab/production-gate'),
 };
 
 export type GlobalView = {
@@ -229,6 +236,7 @@ export type LabRun = {
   inputSnapshot: string;
   inputHash: string;
   resultHash: string;
+  result: string | null;
   executionMode: string;
   status: string;
 };
@@ -261,3 +269,28 @@ export type LearningView = {
 
 export type RematchView = { parentRunId: string; child: GlobalView; pairsBefore: string[]; pairsAfter: string[]; limitations: string };
 export type CaseView = { code: string; executionMode: string; observed: boolean; leftRunId: string; rightRunId: string; note: string };
+export type StrategyReport = {
+  source: string;
+  observations: number;
+  datasetVersion: string;
+  labelVersion: string;
+  labelNote: string;
+  counts: { metric: string; level: string; numerator: number; denominator: number; window: string; source: string; missing: number; contested: number; immature: number; retracted: number; authorization: string }[];
+  calibration: { target: string; method: string; status: string; sample: number; brier: number | null; logLoss: number | null; calibrationError: number | null; note: string }[];
+  strategies: { strategy: string; published: number; bothAccepted: number; bothDeclined: number; notBinary: number; counterfactual: boolean; realLift: string }[];
+  proposal: { proposalId: string; status: string; proposedChange: string; observedOfflineBenefit: string; realLift?: string };
+  limitations: string;
+};
+export type ReplayResult = { sourceRunId: string; replayRunId: string; executionMode: string; semanticMatch: boolean; inputHash: string; previousResultHash: string; replayResultHash: string; limitations: string };
+export type CompareResult = { leftRunId: string; rightRunId: string; sameInput: boolean; samePolicy: boolean; sameSemanticResult: boolean; note: string };
+export type SafetyReport = {
+  plans: number;
+  safetyViolations: number;
+  production: string;
+  realRelationshipQuality: string;
+  realLift: string;
+  algorithmQuality: string;
+  risks: { riskId: string; module: string; priority: string; statement: string; status: string; scope: string; resolution: string; source: string }[];
+  gates: { name: string; status: string; note: string }[];
+};
+export type ProductionGate = { production: string; realRelationshipQuality: string; realLift: string; algorithmQuality: string; conditions: string[] };

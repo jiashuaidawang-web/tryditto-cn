@@ -3,6 +3,7 @@ import { NavLink, Route } from 'react-router';
 import { ApiError } from '../api/http';
 import { labApi, type Overview, type Profile, type Recall, type Reasoning, type RegistryFeature, type Score, type ScoreItem } from './api';
 import { FeedbackPage, GlobalPage, LearningPage } from './LoopPages';
+import { ReplayPage, SafetyPage, StrategyPage } from './EvaluationPages';
 import './match-lab.css';
 
 function Shell({ children }: { children: ReactNode }) {
@@ -20,6 +21,9 @@ function Shell({ children }: { children: ReactNode }) {
           <NavLink to="/match-lab/global">全局匹配</NavLink>
           <NavLink to="/match-lab/feedback">反馈事件</NavLink>
           <NavLink to="/match-lab/learning">画像学习</NavLink>
+          <NavLink to="/match-lab/strategy">策略学习</NavLink>
+          <NavLink to="/match-lab/replay">实验回放</NavLink>
+          <NavLink to="/match-lab/safety">安全审计</NavLink>
         </nav>
       </aside>
       <main>{children}</main>
@@ -491,6 +495,9 @@ export function MatchLabRoutes() {
       <Route path="/match-lab/global" element={<Shell><GlobalPage /></Shell>} />
       <Route path="/match-lab/feedback" element={<Shell><FeedbackPage /></Shell>} />
       <Route path="/match-lab/learning" element={<Shell><LearningPage /></Shell>} />
+      <Route path="/match-lab/strategy" element={<Shell><StrategyPage /></Shell>} />
+      <Route path="/match-lab/replay" element={<Shell><ReplayPage /></Shell>} />
+      <Route path="/match-lab/safety" element={<Shell><SafetyPage /></Shell>} />
     </>
   );
 }

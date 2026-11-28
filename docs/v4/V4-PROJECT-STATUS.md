@@ -23,7 +23,8 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 | F01 / F02 反馈与学习 | 离线工程通过。真实反馈学习未启用。 |
 | F03 群体评估 | 离线工程通过。F03-FINAL 收口观察来源、标签口径和校准。真实校准 NOT_RUN。 |
 | Match Lab L01 | 已快进到 `master_agent_v4` 的 `f7bdcdc44c43d8081336788e62c169e625091cce`。浏览器作业 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 ，五个作业 success。第一次失败记录是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46126626515 。 |
-| Match Lab L02 | 主流程已在 `c0e0eeb1a9de9bde04156e89988db29cd91ef24c`，CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46129600992 。L02-FINAL 在同一分支继续收口画像保留、来源绑定和历史快照，合并前以该提交的五作业 CI 为准。 |
+| Match Lab L02 | 已快进到 `master_agent_v4` 的 `3f822f86820f7e90710ba710a899938a1e4b94ea`。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46132647004 。浏览器证据 Artifact `15258557731`。 |
+| Match Lab L03 | 在 `feature/v4-match-lab-evaluation`。策略学习、实验回放和安全审计还没有合并。 |
 
 ## 冻结策略
 
@@ -31,7 +32,8 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 
 ## 集成基准
 
-- `master_agent_v4`：`f7bdcdc44c43d8081336788e62c169e625091cce`。L01-FINAL 从 `5a23e862aa85bb7f65355b565f5032eb3d094d48` 快进。浏览器通过的 CI 是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 。
+- `master_agent_v4`：`3f822f86820f7e90710ba710a899938a1e4b94ea`。L02-FINAL 从 `f7bdcdc44c43d8081336788e62c169e625091cce` 快进。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46132647004 。
+- L01-FINAL 浏览器 CI 仍是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 。
 - F02-FINAL 实现：`c74e9c1b5db1aa2c5c985da4a0984fd5521e0325`
 - F03 实现：`094e161c20198aef5a23a8dce76cf0b58e77d858`
 - F03 文档尖端：`92cdd768bd4aec413c6adfab0a94bd4e162ab968`
@@ -51,7 +53,7 @@ F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试
 
 ## 下一阶段
 
-L01-FINAL 已快进到 `master_agent_v4`。`feature/v4-match-lab-loop` 承载 L02，浏览器证据见上表，不自动合并。不实现 L03 和 M05。
+L02-FINAL 已快进到 `master_agent_v4`。`feature/v4-match-lab-evaluation` 承载 L03，不自动合并。不实现 M05。
 
 ## 接手
 

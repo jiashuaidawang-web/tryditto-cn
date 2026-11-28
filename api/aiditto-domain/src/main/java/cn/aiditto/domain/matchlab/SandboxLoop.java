@@ -68,8 +68,8 @@ public final class SandboxLoop {
     private final LabWorkbench lab;
     private final ProfileLearningEngine learning = ProfileLearningEngine.v1();
     private final FeatureRegistry registry = FeatureRegistry.v1();
-    private final Map<String, Held> plans = new LinkedHashMap<>();
-    private final Map<String, FeedbackLedger> ledgers = new LinkedHashMap<>();
+    final Map<String, Held> plans = new LinkedHashMap<>();
+    final Map<String, FeedbackLedger> ledgers = new LinkedHashMap<>();
     private final Map<Long, List<ProfileEvidence>> evidence = new LinkedHashMap<>();
     private final Map<Long, ConfirmationSources> sources = new LinkedHashMap<>();
     private final Map<String, ProfileLearningProposal> proposals = new LinkedHashMap<>();
@@ -81,6 +81,8 @@ public final class SandboxLoop {
     public SandboxLoop(LabWorkbench lab) {
         this.lab = lab;
     }
+
+    LabWorkbench lab() { return lab; }
 
     public synchronized GlobalView solve(String objectiveName, List<Long> requested, String commitSha) {
         return solve(objectiveName, requested, commitSha, null, "ENGINE_EXECUTED");
@@ -253,6 +255,30 @@ public final class SandboxLoop {
         GlobalView next = solve(objectiveName, parent.graph().input().eligibleUsers().stream().map(CompatibilitySubject::userId).toList(),
                 commitSha, parentRunId, "ENGINE_EXECUTED");
         return new RematchView(parentRunId, next, before, next.pairs().stream().map(PairView::key).toList(), LIMIT);
+    }
+
+    public synchronized SandboxEvaluation.Report strategy(String source) {
+        return SandboxEvaluation.strategy(this, source);
+    }
+
+    public synchronized SandboxEvaluation.ReplayResult replay(String runId, String commitSha) {
+        return SandboxEvaluation.replay(this, runId, commitSha);
+    }
+
+    public synchronized SandboxEvaluation.CompareResult compareRuns(String left, String right) {
+        return SandboxEvaluation.compare(this, left, right);
+    }
+
+    public synchronized SandboxEvaluation.SafetyReport safety() {
+        return SandboxEvaluation.safety(this);
+    }
+
+    public synchronized String exportRun(String runId) {
+        return SandboxEvaluation.export(this, runId);
+    }
+
+    public void rejectStrategyActivation() {
+        SandboxEvaluation.refuseActivation();
     }
 
     public synchronized CaseView runCase(String code, String commitSha) {
@@ -777,7 +803,7 @@ public final class SandboxLoop {
         return "";
     }
 
-    private record Held(GlobalMatchingGraph graph, GlobalMatchingResult result, String mode, String objectiveVersion, Instant solvedAt) {}
+    record Held(GlobalMatchingGraph graph, GlobalMatchingResult result, String mode, String objectiveVersion, Instant solvedAt) {}
 
     private record ProposalBinding(String origin, String ledgerKey, String sourceEventId, long userId) {}
 
