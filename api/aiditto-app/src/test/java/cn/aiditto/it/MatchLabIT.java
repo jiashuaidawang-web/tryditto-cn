@@ -34,6 +34,7 @@ class MatchLabIT extends ApiIT {
         int profiles = count("relationship_profile_version");
         int observations = count("matching_observation");
         int events = count("relationship_feedback_event");
+        int matches = jdbc.queryForObject("SELECT COUNT(*) FROM \"match\"", Integer.class);
         Resp score = call("POST", "/api/match-lab/score", Map.of("userA", 71001, "userB", 71002), admin);
         assertThat(score.status()).as(String.valueOf(score.body())).isEqualTo(200);
         assertThat(score.body().get("executionMode").asString()).isEqualTo("ENGINE_EXECUTED");
@@ -53,9 +54,30 @@ class MatchLabIT extends ApiIT {
         assertThat(reasoning.status()).isEqualTo(200);
         assertThat(reasoning.body().get("realModelStatus").asString()).isEqualTo("NOT_RUN");
         assertThat(reasoning.body().get("aiAdjustment").asBoolean()).isFalse();
+        Resp global = call("POST", "/api/match-lab/global", Map.of("objective", "G2", "userIds", List.of()), admin);
+        assertThat(global.status()).as(String.valueOf(global.body())).isEqualTo(200);
+        assertThat(global.body().get("usablePlan").asBoolean()).isTrue();
+        String runId = global.body().get("runId").asString();
+        long low = global.body().get("pairs").get(0).get("lowId").asLong();
+        long high = global.body().get("pairs").get(0).get("highId").asLong();
+        Resp opened = call("POST", "/api/match-lab/feedback/open", Map.of("runId", runId, "userA", low, "userB", high), admin);
+        assertThat(opened.status()).as(String.valueOf(opened.body())).isEqualTo(200);
+        Resp math = call("POST", "/api/match-lab/global/compare", Map.of(), admin);
+        assertThat(math.status()).isEqualTo(200);
+        Resp blocked = call("POST", "/api/match-lab/feedback/open", Map.of(
+                "runId", math.body().get("runId").asString(), "userA", 1, "userB", 3), admin);
+        assertThat(blocked.status()).isEqualTo(422);
+        Resp proposal = call("POST", "/api/match-lab/learning/propose", Map.of(
+                "userId", high, "featureCode", "partner.pace", "newValue", "fast", "sourceEventId", ""), admin);
+        assertThat(proposal.status()).as(String.valueOf(proposal.body())).isEqualTo(200);
+        Resp confirmed = call("POST", "/api/match-lab/learning/decide", Map.of(
+                "proposalId", proposal.body().get("proposal").get("proposalId").asString(),
+                "action", "confirm", "actorUserId", high), admin);
+        assertThat(confirmed.status()).as(String.valueOf(confirmed.body())).isEqualTo(200);
         assertThat(count("relationship_profile_version")).isEqualTo(profiles);
         assertThat(count("matching_observation")).isEqualTo(observations);
         assertThat(count("relationship_feedback_event")).isEqualTo(events);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM \"match\"", Integer.class)).isEqualTo(matches);
         java.net.http.HttpRequest foreign = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + port + "/api/match-lab/overview"))
                 .header("Authorization", "Bearer " + admin)
                 .header("X-Match-Lab-Workspace", "ws-other-admin")

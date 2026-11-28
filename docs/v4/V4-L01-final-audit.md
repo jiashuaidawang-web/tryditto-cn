@@ -32,7 +32,7 @@
 ## 本文件写成时的判定
 
 - L01-FINAL 工程质量：本地领域测试和过滤器测试通过。集成与浏览器仍等 CI。
-- L01 浏览器验收：NOT_RUN。
+- L01 浏览器验收：第一次作业失败，https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46126626515 。定位修正已另提交。修正作业未绿之前仍是 NO-GO。
 - 沙箱环境隔离：过滤器与工作区单元测试通过。跨工作区的 HTTP 断言在 `MatchLabIT`，等 CI。
 - 真实关系质量：NOT_RUN。
 - 生产启用：NO-GO。

@@ -4,6 +4,7 @@ import cn.aiditto.auth.AuthUser;
 import cn.aiditto.domain.common.ErrorCode;
 import cn.aiditto.domain.matchlab.LabWorkbench;
 import cn.aiditto.domain.matchlab.LabWorkbench.FeatureWrite;
+import cn.aiditto.domain.feedback.v4.FeedbackRejection;
 import cn.aiditto.domain.matchlab.LabWorkbench.LabRejection;
 import cn.aiditto.domain.matchlab.WorkspaceBoard;
 import cn.aiditto.infra.web.Problems;
@@ -128,6 +129,56 @@ public class MatchLabController {
     @GetMapping("/runs")
     List<LabWorkbench.LabRun> runs(HttpServletRequest request) { return lab(request).runs(); }
 
+    @PostMapping("/global")
+    ResponseEntity<Object> global(@RequestBody GlobalBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().solve(body.objective(), body.userIds(), properties.getCommitSha()));
+    }
+
+    @PostMapping("/global/compare")
+    ResponseEntity<Object> compare(HttpServletRequest request) {
+        return guard(() -> lab(request).loop().compare(properties.getCommitSha()));
+    }
+
+    @PostMapping("/feedback/open")
+    ResponseEntity<Object> openFeedback(@RequestBody OpenBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().open(body.runId(), body.userA(), body.userB()));
+    }
+
+    @PostMapping("/feedback/act")
+    ResponseEntity<Object> act(@RequestBody ActBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().act(body.ledgerKey(), body.action(), body.actorUserId(), body.supersedesEventId()));
+    }
+
+    @GetMapping("/learning")
+    ResponseEntity<Object> learning(@RequestParam String ledgerKey, @RequestParam long userId, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().learningView(ledgerKey, userId));
+    }
+
+    @PostMapping("/learning/propose")
+    ResponseEntity<Object> propose(@RequestBody ProposeBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().propose(body.userId(), body.featureCode(), body.newValue(), body.sourceEventId()));
+    }
+
+    @PostMapping("/learning/decide")
+    ResponseEntity<Object> decide(@RequestBody DecideBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().decide(body.proposalId(), body.action(), body.actorUserId()));
+    }
+
+    @PostMapping("/learning/retract")
+    ResponseEntity<Object> retract(@RequestBody RetractBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().retract(body.userId(), body.sourceRef()));
+    }
+
+    @PostMapping("/rematch")
+    ResponseEntity<Object> rematch(@RequestBody RematchBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().rematch(body.parentRunId(), body.objective(), properties.getCommitSha()));
+    }
+
+    @PostMapping("/cases/{code}")
+    ResponseEntity<Object> runCase(@PathVariable String code, HttpServletRequest request) {
+        return guard(() -> lab(request).loop().runCase(code, properties.getCommitSha()));
+    }
+
     private LabWorkbench lab(HttpServletRequest request) {
         return workspace(request).workbench();
     }
@@ -165,6 +216,8 @@ public class MatchLabController {
                 return Problems.entity(ErrorCode.FORBIDDEN, rejection.code(), List.of(rejection.code()), null);
             }
             return Problems.entity(ErrorCode.VALIDATION, rejection.code(), List.of(rejection.code()), null);
+        } catch (FeedbackRejection rejection) {
+            return Problems.entity(ErrorCode.VALIDATION, rejection.code(), List.of(rejection.code()), null);
         }
     }
 
@@ -184,4 +237,11 @@ public class MatchLabController {
     record RecallBody(String split, String mode, Long seekerId) {}
     record FeatureBody(String code, String value, String status, String importance, String operator) {}
     record ScoreBody(long userA, long userB) {}
+    record GlobalBody(String objective, List<Long> userIds) {}
+    record OpenBody(String runId, long userA, long userB) {}
+    record ActBody(String ledgerKey, String action, long actorUserId, String supersedesEventId) {}
+    record ProposeBody(long userId, String featureCode, String newValue, String sourceEventId) {}
+    record DecideBody(String proposalId, String action, long actorUserId) {}
+    record RetractBody(long userId, String sourceRef) {}
+    record RematchBody(String parentRunId, String objective) {}
 }

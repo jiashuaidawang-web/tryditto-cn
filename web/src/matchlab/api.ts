@@ -179,4 +179,68 @@ export const labApi = {
   recallSandbox: (seekerId: number) => http<Recall>('POST', '/api/match-lab/recall', { mode: 'SYNTHETIC_SANDBOX', seekerId }),
   resetWorkspace: () => http<{ workspaceId: string }>('POST', '/api/match-lab/workspace/reset'),
   reasoning: () => http<Reasoning>('POST', '/api/match-lab/reasoning'),
+  global: (objective: string, userIds: number[]) => http<GlobalView>('POST', '/api/match-lab/global', { objective, userIds }),
+  compare: () => http<GlobalView>('POST', '/api/match-lab/global/compare'),
+  openFeedback: (runId: string, userA: number, userB: number) => http<FeedbackView>('POST', '/api/match-lab/feedback/open', { runId, userA, userB }),
+  act: (ledgerKey: string, action: string, actorUserId: number, supersedesEventId?: string) => http<FeedbackView>('POST', '/api/match-lab/feedback/act', { ledgerKey, action, actorUserId, supersedesEventId }),
+  learning: (ledgerKey: string, userId: number) => http<LearningView>('GET', `/api/match-lab/learning?ledgerKey=${encodeURIComponent(ledgerKey)}&userId=${userId}`),
+  propose: (userId: number, featureCode: string, newValue: string, sourceEventId: string) => http<LearningView>('POST', '/api/match-lab/learning/propose', { userId, featureCode, newValue, sourceEventId }),
+  decide: (proposalId: string, action: string, actorUserId: number) => http<LearningView>('POST', '/api/match-lab/learning/decide', { proposalId, action, actorUserId }),
+  retract: (userId: number, sourceRef: string) => http<LearningView>('POST', '/api/match-lab/learning/retract', { userId, sourceRef }),
+  rematch: (parentRunId: string, objective: string) => http<RematchView>('POST', '/api/match-lab/rematch', { parentRunId, objective }),
+  runCase: (code: string) => http<CaseView>('POST', `/api/match-lab/cases/${code}`),
 };
+
+export type GlobalView = {
+  runId: string;
+  parentRunId: string | null;
+  executionMode: string;
+  objective: string;
+  status: string;
+  statusDetail: string;
+  usablePlan: boolean;
+  initialUsers: number;
+  eligibleEdges: number;
+  consideredPairs: number;
+  solverEdges: number;
+  pairsCount: number;
+  unmatchedCount: number;
+  averageFit: number;
+  lowestFit: number;
+  totalWeight: number;
+  coverage: string;
+  solveMs: number;
+  safetyViolations: number;
+  pairs: { lowId: number; highId: number; key: string; fit: number | null; scoreLowToHigh: number | null; scoreHighToLow: number | null; coverageLowToHigh: number | null; coverageHighToLow: number | null }[];
+  unmatched: { userId: number; reason: string; diagnostics: string[] }[];
+  edges: { lowId: number; highId: number; fit: number | null; solver: boolean; exclusion: string; versionLow: number; versionHigh: number; generationLow: number; generationHigh: number; diagnostics: string[] }[];
+  limitations: string;
+  comparison: GlobalView | null;
+};
+
+export type FeedbackView = {
+  ledgerKey: string;
+  matchingRunId: string;
+  userA: number;
+  userB: number;
+  versionA: number;
+  versionB: number;
+  events: { eventId: string; type: string; actorUserId: number; occurredAt: string; recordedAt: string; source: string; effective: boolean; causationEventId: string | null; supersedesEventId: string | null; superseded: boolean }[];
+  projection: { responseA: string; responseB: string; mutualAcceptance: boolean; schedule: string; attendance: string; contested: boolean; continueA: string; continueB: string; unknown: string[]; learningAllowed: boolean; learningReasons: string[] };
+};
+
+export type LearningView = {
+  ledgerKey: string;
+  userId: number;
+  profileVersion: number;
+  signals: { sourceEventId: string; category: string; target: string; evidenceState: string; authorization: string }[];
+  unlearnable: string[];
+  proposal: { proposalId: string; userId: number; featureCode: string; oldValue: string | null; proposedValue: string; status: string; profileVersion: number; evidenceStatus: string } | null;
+  before: { featureCode: string; value: string; status: string }[];
+  after: { featureCode: string; value: string; status: string }[];
+  generation: number;
+  limitations: string;
+};
+
+export type RematchView = { parentRunId: string; child: GlobalView; pairsBefore: string[]; pairsAfter: string[]; limitations: string };
+export type CaseView = { code: string; executionMode: string; observed: boolean; leftRunId: string; rightRunId: string; note: string };

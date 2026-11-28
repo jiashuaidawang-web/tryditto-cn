@@ -70,6 +70,7 @@ public final class LabWorkbench {
     private final Map<Long, Stored> profiles = new LinkedHashMap<>();
     private final Map<String, LabRun> runs = new LinkedHashMap<>();
     private final AtomicLong sequence = new AtomicLong(71000);
+    private final SandboxLoop loop = new SandboxLoop(this);
 
     public LabWorkbench() {
         seed("甲·双向", ideal(), ideal());
@@ -90,6 +91,23 @@ public final class LabWorkbench {
     }
 
     public String workspaceId() { return workspaceId; }
+
+    public SandboxLoop loop() { return loop; }
+
+    public synchronized List<cn.aiditto.domain.compatibility.v4.CompatibilitySubject> subjects() {
+        List<cn.aiditto.domain.compatibility.v4.CompatibilitySubject> out = new ArrayList<>();
+        for (Stored stored : profiles.values()) out.add(stored.subject);
+        return List.copyOf(out);
+    }
+
+    public synchronized List<FeatureWrite> writes(long userId) {
+        return List.copyOf(require(userId).writes);
+    }
+
+    public synchronized String record(String type, String dataset, String snapshot, String policy, String commitSha,
+                                      String mode, String status, String result, String limitations, String parentRunId) {
+        return remember(type, dataset, snapshot, policy, commitSha, mode, status, result, null, limitations, parentRunId);
+    }
 
     public List<PolicyNote> policies() {
         return List.of(
@@ -614,10 +632,15 @@ public final class LabWorkbench {
 
     private String remember(String type, String dataset, String snapshot, String policy, String commitSha, String mode,
                             String status, String result, String error, String limitations) {
+        return remember(type, dataset, snapshot, policy, commitSha, mode, status, result, error, limitations, null);
+    }
+
+    private String remember(String type, String dataset, String snapshot, String policy, String commitSha, String mode,
+                            String status, String result, String error, String limitations, String parentRunId) {
         if (runs.size() >= MAX_RUNS) throw new LabRejection("SANDBOX_LIMIT");
         Instant now = Instant.now();
         String id = "run-" + sequence.incrementAndGet();
-        LabRun run = new LabRun(id, workspaceId, null, type, dataset, snapshot, fullHash(snapshot),
+        LabRun run = new LabRun(id, workspaceId, parentRunId, type, dataset, snapshot, fullHash(snapshot),
                 fullHash(result == null ? "" : result), policy, commitSha == null ? "UNSPECIFIED" : commitSha,
                 mode, status, now, now, result, error, limitations);
         runs.put(run.runId(), run);

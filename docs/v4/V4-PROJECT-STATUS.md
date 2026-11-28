@@ -22,7 +22,8 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 | M04 全局匹配 | 小规模求解通过。端到端合成匹配质量和大规模性能 NO-GO。 |
 | F01 / F02 反馈与学习 | 离线工程通过。真实反馈学习未启用。 |
 | F03 群体评估 | 离线工程通过。F03-FINAL 收口观察来源、标签口径和校准。真实校准 NOT_RUN。 |
-| Match Lab L01 | 工作台在 `234ca49`。L01-FINAL 补了独立工作区、环境隔离、内容摘要和沙箱候选。浏览器验收是 CI 作业 `match-lab-e2e`。该作业未绿之前不合并。 |
+| Match Lab L01 | 实现 `9ec3a16`。第一次浏览器作业失败：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46126626515 。定位修正 `f7bdcdc` 已推到 `feature/v4-match-lab`。该作业未绿之前不合并。 |
+| Match Lab L02 | 在 `feature/v4-match-lab-loop`。全局匹配、反馈和学习闭环已接上现有引擎。不自动合并。 |
 
 ## 冻结策略
 
@@ -50,7 +51,7 @@ F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试
 
 ## 下一阶段
 
-F03-FINAL 已快进到 `master_agent_v4`。`feature/v4-match-lab` 上的 L01-FINAL 先等 `match-lab-e2e`。五个作业都成功，并且远程 `master_agent_v4` 仍是 `5a23e862aa85bb7f65355b565f5032eb3d094d48` 的快进祖先时，才允许快进合并。然后从该尖端开 `feature/v4-match-lab-loop` 做 L02。L02 不自动合并。不实现 L03 和 M05。
+F03-FINAL 已快进到 `master_agent_v4`。`feature/v4-match-lab` 的浏览器修正还要等 `match-lab-e2e`。五个作业都成功，并且远程 `master_agent_v4` 仍是 `5a23e862aa85bb7f65355b565f5032eb3d094d48` 的快进祖先时，才允许快进合并。`feature/v4-match-lab-loop` 承载 L02，不自动合并。不实现 L03 和 M05。
 
 ## 接手
 

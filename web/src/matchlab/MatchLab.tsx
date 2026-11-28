@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Route } from 'react-router';
 import { ApiError } from '../api/http';
 import { labApi, type Overview, type Profile, type Recall, type Reasoning, type RegistryFeature, type Score, type ScoreItem } from './api';
+import { FeedbackPage, GlobalPage, LearningPage } from './LoopPages';
 import './match-lab.css';
 
 function Shell({ children }: { children: ReactNode }) {
@@ -16,6 +17,9 @@ function Shell({ children }: { children: ReactNode }) {
           <NavLink to="/match-lab/candidates">候选发现</NavLink>
           <NavLink to="/match-lab/score">双向评分</NavLink>
           <NavLink to="/match-lab/reasoning">AI 关系推理</NavLink>
+          <NavLink to="/match-lab/global">全局匹配</NavLink>
+          <NavLink to="/match-lab/feedback">反馈事件</NavLink>
+          <NavLink to="/match-lab/learning">画像学习</NavLink>
         </nav>
       </aside>
       <main>{children}</main>
@@ -484,6 +488,9 @@ export function MatchLabRoutes() {
       <Route path="/match-lab/candidates" element={<Shell><CandidatesPage /></Shell>} />
       <Route path="/match-lab/score" element={<Shell><ScorePage /></Shell>} />
       <Route path="/match-lab/reasoning" element={<Shell><ReasoningPage /></Shell>} />
+      <Route path="/match-lab/global" element={<Shell><GlobalPage /></Shell>} />
+      <Route path="/match-lab/feedback" element={<Shell><FeedbackPage /></Shell>} />
+      <Route path="/match-lab/learning" element={<Shell><LearningPage /></Shell>} />
     </>
   );
 }
