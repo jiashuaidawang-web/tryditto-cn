@@ -76,6 +76,8 @@ aiditto:
   match-lab:
     # Internal research console. Hidden navigation is not the control. Direct calls are rejected while this is false.
     enabled: ${MATCH_LAB_ENABLED:false}
+    # local, ci, or isolated. Production profiles stay closed even when the switch is true.
+    environment: ${MATCH_LAB_ENVIRONMENT:}
     commit-sha: ${GIT_COMMIT:UNSPECIFIED}
   match:
     consent:

@@ -1,11 +1,16 @@
 package cn.aiditto.matchlab;
 
+import cn.aiditto.auth.AuthUser;
 import cn.aiditto.domain.common.ErrorCode;
 import cn.aiditto.domain.matchlab.LabWorkbench;
 import cn.aiditto.domain.matchlab.LabWorkbench.FeatureWrite;
 import cn.aiditto.domain.matchlab.LabWorkbench.LabRejection;
+import cn.aiditto.domain.matchlab.WorkspaceBoard;
 import cn.aiditto.infra.web.Problems;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +28,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/match-lab")
 public class MatchLabController {
-    private final LabWorkbench lab = new LabWorkbench();
+    private final WorkspaceBoard board = new WorkspaceBoard();
     private final MatchLabProperties properties;
 
     public MatchLabController(MatchLabProperties properties) {
@@ -31,28 +36,40 @@ public class MatchLabController {
     }
 
     @GetMapping("/overview")
-    Map<String, Object> overview() {
+    ResponseEntity<Object> overview(HttpServletRequest request) {
+        return guard(() -> {
+        WorkspaceBoard.Workspace workspace = workspace(request);
+        LabWorkbench lab = workspace.workbench();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("environment", "SYNTHETIC_SANDBOX");
-        body.put("enabled", properties.isEnabled());
+        body.put("researchEnvironment", properties.getEnvironment());
+        body.put("enabled", properties.admits());
         body.put("commitSha", properties.getCommitSha());
-        body.put("frozenCommit", LabWorkbench.FROZEN_COMMIT);
+        body.put("frozenCommit", LabWorkbench.INTEGRATION_COMMIT);
         body.put("ciIndex", "https://github.com/jiashuaidawang-web/tryditto-cn/actions?query=branch%3Afeature%2Fv4-match-lab");
         body.put("statusDocument", "docs/v4/V4-PROJECT-STATUS.md");
         body.put("production", "NO-GO");
         body.put("realRelationshipQuality", "NOT_RUN");
+        body.put("storage", WorkspaceBoard.STORAGE);
+        body.put("workspace", workspaceView(workspace));
         body.put("policies", lab.policies());
         body.put("catalog", lab.catalog());
         body.put("profiles", lab.profiles().size());
         body.put("runs", lab.runs().size());
-        body.put("limits", List.of("最多 24 份虚构画像", "不读取生产用户", "不调用真实模型", "不发布匹配"));
+        body.put("limits", List.of("最多 24 份虚构画像", "最多 48 次实验运行", "请求体最多 64KiB", "服务重启后工作区丢失", "不读取生产用户", "不调用真实模型", "不发布匹配"));
         return body;
+        });
+    }
+
+    @PostMapping("/workspace/reset")
+    ResponseEntity<Object> reset(HttpServletRequest request) {
+        return guard(() -> workspaceView(board.reset(caller().userId(), request.getHeader("X-Match-Lab-Workspace"))));
     }
 
     @GetMapping("/registry")
-    List<Map<String, Object>> registry() {
+    List<Map<String, Object>> registry(HttpServletRequest request) {
         List<Map<String, Object>> out = new ArrayList<>();
-        lab.registry().forEach(definition -> {
+        lab(request).registry().forEach(definition -> {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("featureCode", definition.featureCode());
             row.put("displayName", definition.displayName());
@@ -65,46 +82,88 @@ public class MatchLabController {
     }
 
     @GetMapping("/profiles")
-    List<LabWorkbench.StoredView> profiles() { return lab.profiles(); }
+    List<LabWorkbench.StoredView> profiles(HttpServletRequest request) { return lab(request).profiles(); }
 
     @PostMapping("/profiles")
-    ResponseEntity<Object> create(@RequestBody WriteBody body) {
-        return guard(() -> lab.create(body.name(), writes(body.self()), writes(body.preferences()), writes(body.behavior())));
+    ResponseEntity<Object> create(@RequestBody WriteBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).create(body.name(), writes(body.self()), writes(body.preferences()), writes(body.behavior())));
     }
 
     @PutMapping("/profiles/{userId}")
-    ResponseEntity<Object> update(@PathVariable long userId, @RequestBody WriteBody body) {
-        return guard(() -> lab.update(userId, body.name(), writes(body.self()), writes(body.preferences()), writes(body.behavior())));
+    ResponseEntity<Object> update(@PathVariable long userId, @RequestBody WriteBody body, HttpServletRequest request) {
+        return guard(() -> {
+            if (body.expectedVersion() == null) throw new LabRejection("VERSION");
+            return lab(request).update(userId, body.name(), writes(body.self()), writes(body.preferences()),
+                    writes(body.behavior()), body.expectedVersion());
+        });
     }
 
     @GetMapping("/diff")
-    ResponseEntity<Object> diff(@RequestParam long left, @RequestParam long right) {
-        return guard(() -> lab.diff(left, right));
+    ResponseEntity<Object> diff(@RequestParam long left, @RequestParam long right, HttpServletRequest request) {
+        return guard(() -> lab(request).diff(left, right));
     }
 
     @PostMapping("/score")
-    ResponseEntity<Object> score(@RequestBody ScoreBody body) {
-        return guard(() -> lab.score(body.userA(), body.userB(), properties.getCommitSha()));
+    ResponseEntity<Object> score(@RequestBody ScoreBody body, HttpServletRequest request) {
+        return guard(() -> lab(request).score(body.userA(), body.userB(), properties.getCommitSha()));
     }
 
     @PostMapping("/recall")
-    ResponseEntity<Object> recall(@RequestBody(required = false) RecallBody body) {
-        String split = body == null || body.split() == null || body.split().isBlank() ? "dev" : body.split();
-        return guard(() -> lab.recall(split, properties.getCommitSha()));
+    ResponseEntity<Object> recall(@RequestBody(required = false) RecallBody body, HttpServletRequest request) {
+        return guard(() -> {
+            if (body != null && "SYNTHETIC_SANDBOX".equals(body.mode())) {
+                if (body.seekerId() == null) throw new LabRejection("PROFILE");
+                return lab(request).recallSandbox(body.seekerId(), properties.getCommitSha());
+            }
+            String split = body == null || body.split() == null || body.split().isBlank() ? "dev" : body.split();
+            return lab(request).recall(split, properties.getCommitSha());
+        });
     }
 
     @PostMapping("/reasoning")
-    ResponseEntity<Object> reasoning() {
-        return guard(() -> lab.reasoning(properties.getCommitSha()));
+    ResponseEntity<Object> reasoning(HttpServletRequest request) {
+        return guard(() -> lab(request).reasoning(properties.getCommitSha()));
     }
 
     @GetMapping("/runs")
-    List<LabWorkbench.LabRun> runs() { return lab.runs(); }
+    List<LabWorkbench.LabRun> runs(HttpServletRequest request) { return lab(request).runs(); }
+
+    private LabWorkbench lab(HttpServletRequest request) {
+        return workspace(request).workbench();
+    }
+
+    private WorkspaceBoard.Workspace workspace(HttpServletRequest request) {
+        return board.resolve(caller().userId(), request.getHeader("X-Match-Lab-Workspace"));
+    }
+
+    private static AuthUser caller() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof AuthUser user) || !user.admin()) {
+            throw new LabRejection("AUTH");
+        }
+        return user;
+    }
+
+    private static Map<String, Object> workspaceView(WorkspaceBoard.Workspace workspace) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("workspaceId", workspace.workspaceId());
+        body.put("ownerPrincipalId", workspace.ownerPrincipalId());
+        body.put("mode", workspace.mode());
+        body.put("createdAt", workspace.createdAt().toString());
+        body.put("lastAccessAt", workspace.lastAccessAt().toString());
+        body.put("revision", workspace.revision());
+        body.put("expiresAt", workspace.expiresAt().toString());
+        body.put("storage", WorkspaceBoard.STORAGE);
+        return body;
+    }
 
     private ResponseEntity<Object> guard(SupplierCall call) {
         try {
             return ResponseEntity.ok(call.get());
         } catch (LabRejection rejection) {
+            if ("WORKSPACE".equals(rejection.code()) || "AUTH".equals(rejection.code())) {
+                return Problems.entity(ErrorCode.FORBIDDEN, rejection.code(), List.of(rejection.code()), null);
+            }
             return Problems.entity(ErrorCode.VALIDATION, rejection.code(), List.of(rejection.code()), null);
         }
     }
@@ -120,8 +179,9 @@ public class MatchLabController {
 
     private interface SupplierCall { Object get(); }
 
-    record WriteBody(String name, List<FeatureBody> self, List<FeatureBody> preferences, List<FeatureBody> behavior) {}
-    record RecallBody(String split) {}
+    record WriteBody(String name, List<FeatureBody> self, List<FeatureBody> preferences, List<FeatureBody> behavior,
+                     Long expectedVersion) {}
+    record RecallBody(String split, String mode, Long seekerId) {}
     record FeatureBody(String code, String value, String status, String importance, String operator) {}
     record ScoreBody(long userA, long userB) {}
 }

@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import cn.aiditto.domain.matchlab.WorkspaceBoard;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -16,8 +18,11 @@ class LabWorkbenchTest {
             assertThat(entry.experimentId()).isEqualTo("f03-synthetic-1");
             assertThat(entry.sourceType()).isEqualTo("FROZEN_RESULT");
             assertThat(entry.executionStatus()).isEqualTo("RECORDED");
-            assertThat(entry.datasetHash()).isNotBlank();
-            assertThat(entry.commitSha()).isEqualTo(LabWorkbench.FROZEN_COMMIT);
+            assertThat(entry.datasetIdentityHash()).isNotBlank();
+            assertThat(entry.datasetContentHash()).isNotEqualTo(LabWorkbench.CONTENT_UNAVAILABLE);
+            assertThat(entry.commitSha()).isEqualTo("094e161c20198aef5a23a8dce76cf0b58e77d858");
+            assertThat(entry.catalogIntegrationCommit()).isEqualTo(LabWorkbench.INTEGRATION_COMMIT);
+            assertThat(entry.commitSha()).isNotEqualTo(entry.catalogIntegrationCommit());
             assertThat(entry.caseIds()).contains("f03-synthetic-1");
         });
         assertThat(lab.catalog()).anySatisfy(entry -> {
@@ -28,7 +33,11 @@ class LabWorkbenchTest {
             assertThat(entry.caseIds()).contains("dev-0-MUTUAL");
         });
         assertThat(lab.catalog()).noneMatch(entry -> entry.qualityStatus().equals("PRODUCTION_GO"));
-        assertThat(lab.catalog()).extracting(LabWorkbench.CatalogEntry::datasetHash).doesNotHaveDuplicates();
+        assertThat(lab.catalog()).extracting(LabWorkbench.CatalogEntry::datasetIdentityHash).doesNotHaveDuplicates();
+        assertThat(lab.catalog()).anySatisfy(entry -> {
+            assertThat(entry.experimentId()).isEqualTo("m01-rank-dev");
+            assertThat(entry.datasetContentHash()).isEqualTo(LabWorkbench.CONTENT_UNAVAILABLE);
+        });
         assertThat(lab.policies()).extracting(LabWorkbench.PolicyNote::policy).containsExactly("E", "B5", "G2");
     }
 
@@ -117,5 +126,70 @@ class LabWorkbenchTest {
         assertThat(reasoning.m02Score()).isNotNull();
         assertThat(reasoning.agentA().unsupported()).isNotNull();
         assertThat(reasoning.agentA().rejected()).isNotNull();
+        assertThat(reasoning.runId()).isNotBlank();
+        LabWorkbench.LabRun replay = lab.runs().get(lab.runs().size() - 1);
+        assertThat(replay.inputSnapshot()).contains("dev-0-MUTUAL");
+        assertThat(replay.inputHash()).hasSize(64);
+        assertThat(replay.resultHash()).hasSize(64);
+    }
+
+    @Test
+    void sandboxRecallDoesNotInventRouteSignalsAndVersionsDoNotGetLost() throws Exception {
+        LabWorkbench lab = new LabWorkbench();
+        var first = lab.score(71001, 71002, "test");
+        var second = lab.score(71001, 71002, "test");
+        assertThat(second.aggregate()).isEqualTo(first.aggregate());
+        assertThat(lab.runs()).filteredOn(run -> run.experimentType().equals("BIDIRECTIONAL_SCORE"))
+                .extracting(LabWorkbench.LabRun::inputHash).containsOnly(lab.runs().get(0).inputHash());
+        var sandbox = lab.recallSandbox(71001, "test");
+        assertThat(sandbox.population()).isEqualTo("SYNTHETIC_SANDBOX");
+        assertThat(sandbox.routeContract()).isEqualTo("NOT_APPLICABLE");
+        assertThat(sandbox.executionMode()).isEqualTo("ENGINE_EXECUTED");
+        assertThat(sandbox.schemes()).extracting(LabWorkbench.SchemeResult::scheme).containsExactly("FULL_POOL_M02");
+        assertThat(sandbox.pool()).anyMatch(person -> person.userId() == 71002 && "LEGAL".equals(person.legality()));
+        assertThat(sandbox.schemes().get(0).rows()).noneMatch(row -> "NO_ROUTE_SIGNAL".equals(row.miss()));
+        assertThat(sandbox.schemes().get(0).rows()).allSatisfy(row -> assertThat(row.profileVersion()).isPositive());
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.CountDownLatch ready = new java.util.concurrent.CountDownLatch(2);
+        java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+        Runnable edit = () -> {
+            ready.countDown();
+            try {
+                go.await();
+                lab.update(71002, "乙·并发", List.of(new FeatureWrite("self.pace", "slow", "CONFIRMED", null, "EQ")),
+                        List.of(new FeatureWrite("partner.pace", "fast", "CONFIRMED", "SUPER", "EQ")), List.of(), 1);
+            } catch (Throwable error) {
+                failure.compareAndSet(null, error);
+            }
+        };
+        Thread left = new Thread(edit);
+        Thread right = new Thread(edit);
+        left.start();
+        right.start();
+        assertThat(ready.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        go.countDown();
+        left.join();
+        right.join();
+        assertThat(lab.profile(71002).version()).isEqualTo(2);
+        assertThat(failure.get()).isInstanceOf(LabWorkbench.LabRejection.class);
+    }
+
+    @Test
+    void workspacesStayWithTheirOwnerAndResetStartsClean() {
+        WorkspaceBoard board = new WorkspaceBoard();
+        WorkspaceBoard.Workspace first = board.resolve(11, null);
+        WorkspaceBoard.Workspace again = board.resolve(11, first.workspaceId());
+        assertThat(again.workspaceId()).isEqualTo(first.workspaceId());
+        assertThat(again.workbench()).isSameAs(first.workbench());
+        WorkspaceBoard.Workspace other = board.resolve(22, null);
+        assertThat(other.workspaceId()).isNotEqualTo(first.workspaceId());
+        assertThatThrownBy(() -> board.resolve(11, other.workspaceId()))
+                .isInstanceOf(LabWorkbench.LabRejection.class)
+                .extracting(error -> ((LabWorkbench.LabRejection) error).code())
+                .isEqualTo("WORKSPACE");
+        WorkspaceBoard.Workspace reset = board.reset(11, first.workspaceId());
+        assertThat(reset.workspaceId()).isNotEqualTo(first.workspaceId());
+        assertThat(reset.workbench().profile(71001).version()).isEqualTo(1);
+        assertThat(reset.workbench().workspaceId()).isEqualTo(reset.workspaceId());
     }
 }

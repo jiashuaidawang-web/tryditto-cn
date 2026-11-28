@@ -16,12 +16,13 @@ class MatchLabIT extends ApiIT {
     @DynamicPropertySource
     static void lab(DynamicPropertyRegistry registry) {
         registry.add("aiditto.match-lab.enabled", () -> "true");
+        registry.add("aiditto.match-lab.environment", () -> "ci");
     }
 
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    void anonymousAndUserAreRejectedAndAdminCanScoreWithoutWritingProfiles() {
+    void anonymousAndUserAreRejectedAndAdminCanScoreWithoutWritingProfiles() throws Exception {
         assertThat(call("GET", "/api/match-lab/overview", null, null).status()).isEqualTo(401);
         String user = login(randomPhone());
         assertThat(call("GET", "/api/match-lab/overview", null, user).status()).isEqualTo(403);
@@ -55,6 +56,13 @@ class MatchLabIT extends ApiIT {
         assertThat(count("relationship_profile_version")).isEqualTo(profiles);
         assertThat(count("matching_observation")).isEqualTo(observations);
         assertThat(count("relationship_feedback_event")).isEqualTo(events);
+        java.net.http.HttpRequest foreign = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + port + "/api/match-lab/overview"))
+                .header("Authorization", "Bearer " + admin)
+                .header("X-Match-Lab-Workspace", "ws-other-admin")
+                .GET().build();
+        java.net.http.HttpResponse<String> rejected = java.net.http.HttpClient.newHttpClient()
+                .send(foreign, java.net.http.HttpResponse.BodyHandlers.ofString());
+        assertThat(rejected.statusCode()).isEqualTo(403);
     }
 
     private int count(String table) {

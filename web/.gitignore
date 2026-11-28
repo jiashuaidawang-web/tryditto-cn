@@ -2,3 +2,7 @@ node_modules
 dist
 *.tsbuildinfo
 .DS_Store
+e2e-artifacts
+e2e-report
+test-results
+playwright-report

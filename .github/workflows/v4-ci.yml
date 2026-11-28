@@ -3,7 +3,7 @@ name: V4 CI
 
 on:
   push:
-    branches: [master_agent_v4, feature/v4-recall, feature/v4-bidirectional, feature/v4-ai-reasoning, feature/v4-recall-rank, feature/v4-global-matching, feature/v4-feedback-events, feature/v4-profile-learning, feature/v4-strategy-learning, feature/v4-match-lab]
+    branches: [master_agent_v4, feature/v4-recall, feature/v4-bidirectional, feature/v4-ai-reasoning, feature/v4-recall-rank, feature/v4-global-matching, feature/v4-feedback-events, feature/v4-profile-learning, feature/v4-strategy-learning, feature/v4-match-lab, feature/v4-match-lab-loop]
   pull_request:
     branches: [master_agent_v4]
   workflow_dispatch:
@@ -305,6 +305,9 @@ jobs:
               ],
               "MatchLabFilterTest": [
                   "aClosedSwitchRejectsTheApiBeforeTheRestOfTheChain",
+                  "enabledWithoutANamedEnvironmentStaysClosed",
+                  "productionStaysClosedWhenTheSwitchIsOn",
+                  "aNamedIsolatedEnvironmentReachesTheChain",
                   "anOpenSwitchLeavesOtherPathsAlone",
               ],
               "V4VectorSyncTest": [
@@ -515,9 +518,116 @@ jobs:
               sys.exit(1)
           PY
 
+  match-lab-e2e:
+    name: match-lab-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: write
+    env:
+      TEST_DB_URL: jdbc:postgresql://127.0.0.1:5432/aiditto_lab_e2e?stringtype=unspecified
+      TEST_DB_USER: aiditto_ci
+      TEST_DB_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-lab
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aiditto_ci
+          POSTGRES_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-lab
+          POSTGRES_DB: aiditto_lab_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aiditto_ci -d aiditto_lab_e2e"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Mask the ephemeral database password
+        run: echo "::add-mask::${{ github.run_id }}-${{ github.run_attempt }}-lab"
+      - name: Prove a closed switch and a production profile stay closed
+        working-directory: api
+        run: mvn -B -pl aiditto-app -am test -Dtest=MatchLabFilterTest -Dsurefire.failIfNoSpecifiedTests=false
+      - name: Build the reactor
+        working-directory: api
+        run: mvn -B -pl aiditto-app -am -DskipTests package
+      - name: Build the frontend
+        working-directory: web
+        run: |
+          set -eu
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run build
+      - name: Start the isolated API
+        working-directory: api
+        run: |
+          set -eu
+          mkdir -p ../ci-meta
+          MATCH_LAB_ENABLED=true MATCH_LAB_ENVIRONMENT=ci \
+            ADMIN_PHONES=13800000001 DEMO_MODE=true DEMO_LOGIN_CODE=888888 \
+            SCHEDULER_ENABLED=false SYNTHETIC_AUTOLOAD=false GIT_COMMIT="${GITHUB_SHA}" \
+            DB_URL="$TEST_DB_URL" DB_USERNAME="$TEST_DB_USER" DB_PASSWORD="$TEST_DB_PASSWORD" \
+            java -jar aiditto-app/target/aiditto-api.jar > ../ci-meta/lab-server.log 2>&1 &
+          echo $! > ../ci-meta/lab-server.pid
+          for _ in $(seq 1 60); do
+            if curl -sf -X POST http://127.0.0.1:8080/api/auth/login \
+              -H 'content-type: application/json' \
+              -d '{"phone":"13800000001","code":"888888"}' >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          tail -n 80 ../ci-meta/lab-server.log
+          exit 1
+      - name: Run the browser session
+        working-directory: web
+        env:
+          MATCH_LAB_WEB: http://127.0.0.1:4173
+          MATCH_LAB_API: http://127.0.0.1:8080
+        run: |
+          set -eu
+          npm run preview -- --host 127.0.0.1 > ../ci-meta/lab-web.log 2>&1 &
+          echo $! > ../ci-meta/lab-web.pid
+          ready=0
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:4173/login; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = 1
+          npx playwright test
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: match-lab-e2e
+          if-no-files-found: warn
+          path: |
+            web/e2e-artifacts/**
+            web/e2e-report/**
+            web/test-results/**
+            ci-meta/lab-server.log
+            ci-meta/lab-web.log
+
   test-reports:
     name: test-reports
-    needs: [domain-tests, integration-tests, qdrant-isolation]
+    needs: [domain-tests, integration-tests, qdrant-isolation, match-lab-e2e]
     if: always()
     runs-on: ubuntu-latest
     permissions:

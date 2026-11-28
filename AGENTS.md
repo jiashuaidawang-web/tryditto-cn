@@ -9,6 +9,7 @@
 - 不修改 `WeekRunner`、`Scorer`、`MatchingSolver`、`Blossom`，不降低 S01 安全门槛。
 - 不改历史 Flyway migration，不改已经冻结的数据集和案例标签。
 - 不把未校准的 `score/100`、合成校准或模型回放写成生产概率或真实模型输出。
+- Match Lab 默认关闭。只打开开关不够，环境还必须是 `local`、`ci` 或 `isolated`，生产 profile 保持关闭。演示验证码不是生产管理员认证。
 - 不提交服务器密钥、数据库密码或访问凭据。
 - Maven 在 `api/` 下执行。应用层测试要带 `-am`，避免用旧的已安装领域包。
 - 易变的提交 SHA 和任务状态写在 `docs/v4/V4-PROJECT-STATUS.md`，不写进本文件。

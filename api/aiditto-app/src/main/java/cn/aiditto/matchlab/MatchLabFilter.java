@@ -27,9 +27,16 @@ public class MatchLabFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
-        if (path != null && path.startsWith("/api/match-lab") && !properties.isEnabled()) {
-            Problems.write(response, ErrorCode.FORBIDDEN, "Match Lab 默认关闭");
-            return;
+        if (path != null && path.startsWith("/api/match-lab")) {
+            if (!properties.admits()) {
+                Problems.write(response, ErrorCode.FORBIDDEN, "Match Lab 在这个环境关闭");
+                return;
+            }
+            long length = request.getContentLengthLong();
+            if (length > cn.aiditto.domain.matchlab.LabWorkbench.MAX_BODY_BYTES) {
+                Problems.write(response, ErrorCode.VALIDATION, "PAYLOAD");
+                return;
+            }
         }
         chain.doFilter(request, response);
     }

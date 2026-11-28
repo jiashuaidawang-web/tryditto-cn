@@ -4,8 +4,10 @@
 
 ```bash
 cd api
-MATCH_LAB_ENABLED=true ADMIN_PHONES=<管理员手机号> mvn -pl aiditto-app spring-boot:run
+MATCH_LAB_ENABLED=true MATCH_LAB_ENVIRONMENT=local ADMIN_PHONES=<管理员手机号> mvn -pl aiditto-app -am spring-boot:run
 ```
+
+`MATCH_LAB_ENVIRONMENT` 只能是 `local`、`ci` 或 `isolated`。漏掉它，或者 Spring profile 是 `prod` / `production`，接口保持关闭。演示验证码只用于这种隔离环境。
 
 另一个终端：
 
@@ -24,4 +26,6 @@ npm run dev
 
 `71006` 己·硬约束用来看年龄硬约束。`71007` 庚·行为带一条已确认的行为特征。记忆层没有单独写入，页面会显示为空。
 
-候选页先选开发集或保留集寻求者，再执行四个方案。推理页的回放按钮调用确定性夹具。分数变化只说明算法行为变了。总览上的人数和样本量各自属于一条实验，不能加成一次业务统计。
+候选页先选开发集或保留集寻求者，再执行四个冻结方案。旁边的沙箱按钮用当前工作区画像跑完整合法池，不显示召回路由。推理页的回放按钮调用确定性夹具。分数变化只说明算法行为变了。总览上的人数和样本量各自属于一条实验，不能加成一次业务统计。
+
+总览会显示当前工作区编号。服务重启后这份内存数据消失。画像保存带上一次读到的版本；别人已经改过时，这次保存会被拒绝。

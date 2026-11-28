@@ -33,6 +33,8 @@ import cn.aiditto.domain.relationship.RelationshipTypes.Section;
 import cn.aiditto.domain.relationship.RelationshipTypes.ValueType;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -51,8 +53,14 @@ public final class LabWorkbench {
     public static final int MAX_PROFILES = 24;
     public static final String SOURCE = "synthetic-fixture:match-lab";
     public static final String MODE = "SYNTHETIC_SANDBOX";
-    /** Integration commit that already holds the frozen datasets. A live run uses its own commit on {@link LabRun}. */
-    public static final String FROZEN_COMMIT = "5a23e862aa85bb7f65355b565f5032eb3d094d48";
+    /** Integration commit that already holds the frozen datasets. Each catalog row keeps its own source commit. */
+    public static final String INTEGRATION_COMMIT = "5a23e862aa85bb7f65355b565f5032eb3d094d48";
+    public static final String FROZEN_COMMIT = INTEGRATION_COMMIT;
+    public static final String CONTENT_UNAVAILABLE = "CONTENT_HASH_UNAVAILABLE";
+    public static final int MAX_RUNS = 48;
+    public static final int MAX_BODY_BYTES = 65_536;
+
+    private String workspaceId = "";
 
     private static final String[] SELF = {"self.pace", "self.communication", "self.social.initiative", "self.schedule"};
     private static final String[] PREF = {"partner.pace", "partner.communication", "partner.social.initiative", "partner.schedule"};
@@ -76,6 +84,13 @@ public final class LabWorkbench {
         seedBehavior();
     }
 
+    public void bindWorkspace(String id) {
+        if (id == null || id.isBlank()) throw new LabRejection("WORKSPACE");
+        this.workspaceId = id;
+    }
+
+    public String workspaceId() { return workspaceId; }
+
     public List<PolicyNote> policies() {
         return List.of(
                 new PolicyNote("E", "m01-rank-dev", "召回策略 E。开发集和保留集分开，两边的人数不能加总。"),
@@ -86,36 +101,68 @@ public final class LabWorkbench {
     public List<CatalogEntry> catalog() {
         return List.of(
                 entry("f03-synthetic-1", "F03", "群体观察", "128 条已发布合成匹配", StrategyDataset.VERSION,
-                        ExplicitOutcome.VERSION, "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        ExplicitOutcome.VERSION, "094e161c20198aef5a23a8dce76cf0b58e77d858", "f03-observations.json",
+                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
                         "真实校准 NOT_RUN", List.of("128 条观察", "开发集 96", "保留集 32"),
                         List.of("f03-synthetic-1")),
                 entry("m02-b5-cases", "M02", "双向评分案例", "八个虚构故事，分数来自冻结引擎输出", "m02-b5",
-                        CompatibilityPolicies.VERSION, "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        CompatibilityPolicies.VERSION, "fbb83a5e576de711680d9a07aeb73b62a65c6e18", "m02-match-lab-cases.json",
+                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
                         "不是喜欢概率", List.of("8 个案例"),
                         List.of("M02-C1", "M02-C2", "M02-C3", "M02-C4", "M02-C5", "M02-C6", "M02-C7", "M02-C8")),
                 entry("m01-rank-dev", "M01", "召回排序", "冻结人群。候选页会在本次进程里重新调用引擎，这一行仍是历史结果", "recall-rank-1",
-                        RecallRankFixture.POLICY, "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
-                        "不外推到生产用户", List.of("策略 E", "开发集与保留集分开"),
+                        RecallRankFixture.POLICY, "587539d9ccf9eac889055fd2c4b3be0ca02bd577", "",
+                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        "不外推到生产用户。没有单独的冻结 JSON，内容摘要不可用。", List.of("策略 E", "开发集与保留集分开"),
                         List.of("dev", "holdout")),
                 entry("m03-rule-echo", "M03", "关系推理解释", "确定性夹具回放。没有 LongCat、DeepSeek、混元或千问的逐样本输出",
-                        ReasoningPrompt.VERSION, ReasoningExperiment.POLICY, "MODEL_REPLAY", "FROZEN_EXPERIMENT", "REPLAY_READY",
+                        ReasoningPrompt.VERSION, ReasoningExperiment.POLICY, "c856ac05d11f1062b524c2bc517048fedc35d69e", "m03-match-lab-cases.json",
+                        "MODEL_REPLAY", "FROZEN_EXPERIMENT", "REPLAY_READY",
                         "REAL_MODEL_NO_GO", "C1 与 C2 加分关闭", List.of("规则回声夹具", "回放 dev-0-MUTUAL"),
                         List.of("dev-0-MUTUAL")),
                 entry("m04-g2", "M04", "全局匹配", "冻结案例只登记。本阶段不运行全局求解", Objective.SELECTED_VERSION,
-                        Objective.SELECTED_VERSION, "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        Objective.SELECTED_VERSION, "b7acb6da1e7ff5bd098cd396ee0565558298f236", "m04-match-lab-cases.json",
+                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
                         "L01 不执行全局匹配", List.of("10 个冻结案例名"),
                         List.of("local-optimum", "cardinality", "triangle", "odd-node", "empty",
                                 "topk-full", "topk-1", "quality-tier", "fairness", "dev-cohort")),
+                entry("f01-feedback", "F01", "反馈事件", "冻结反馈案例，只读", "f01",
+                        "f01", "0bf1313b0e344c23e6ae9a08fd16212f79175308", "f01-match-lab-cases.json",
+                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        "不是本次沙箱事件", List.of("冻结案例"), List.of("f01-match-lab-cases")),
+                entry("f02-learning", "F02", "画像学习", "冻结学习案例，只读", "f02",
+                        "learn-1", "6b898de023f5de6415490495b5520a33c71182f7", "f02-learning-cases.json",
+                        "FROZEN_RESULT", "FROZEN_EXPERIMENT", "RECORDED", "PASS_OFFLINE",
+                        "不是本次沙箱学习", List.of("冻结案例"), List.of("f02-learning-cases")),
                 entry("production-gate", "PROD", "生产启用", "生产匹配、生产画像和生产发布保持关闭", "none",
-                        "none", "ILLUSTRATIVE", "SYNTHETIC_SANDBOX", "NOT_EXECUTED", "NO_GO",
+                        "none", "NONE", "",
+                        "ILLUSTRATIVE", "SYNTHETIC_SANDBOX", "NOT_EXECUTED", "NO_GO",
                         "真实关系质量 NOT_RUN", List.of("生产启用 NO-GO"), List.of()));
     }
 
     private CatalogEntry entry(String id, String module, String title, String description, String dataset, String policy,
-                               String source, String mode, String executionStatus, String quality, String limitations,
-                               List<String> metrics, List<String> caseIds) {
-        return new CatalogEntry(id, module, title, description, dataset, hash(id + "\n" + dataset), FROZEN_COMMIT, policy,
-                source, mode, executionStatus, quality, limitations, metrics, caseIds);
+                               String sourceCommit, String contentFile, String source, String mode, String executionStatus,
+                               String quality, String limitations, List<String> metrics, List<String> caseIds) {
+        return new CatalogEntry(id, module, title, description, dataset, hash(id + "\n" + dataset), contentHash(contentFile),
+                sourceCommit, INTEGRATION_COMMIT, policy, source, mode, executionStatus, quality, limitations, metrics, caseIds);
+    }
+
+    static String contentHash(String fileName) {
+        if (fileName == null || fileName.isBlank()) return CONTENT_UNAVAILABLE;
+        Path[] candidates = {
+                Path.of("docs", "v4", fileName),
+                Path.of("..", "docs", "v4", fileName),
+                Path.of("..", "..", "docs", "v4", fileName)
+        };
+        for (Path path : candidates) {
+            if (!Files.isRegularFile(path)) continue;
+            try {
+                return fullHash(Files.readAllBytes(path));
+            } catch (java.io.IOException failure) {
+                return CONTENT_UNAVAILABLE;
+            }
+        }
+        return CONTENT_UNAVAILABLE;
     }
 
     public List<FeatureDefinition> registry() {
@@ -132,11 +179,11 @@ public final class LabWorkbench {
         return view(userId, require(userId));
     }
 
-    public StoredView create(String name, List<FeatureWrite> self, List<FeatureWrite> preferences) {
+    public synchronized StoredView create(String name, List<FeatureWrite> self, List<FeatureWrite> preferences) {
         return create(name, self, preferences, List.of());
     }
 
-    public StoredView create(String name, List<FeatureWrite> self, List<FeatureWrite> preferences, List<FeatureWrite> behavior) {
+    public synchronized StoredView create(String name, List<FeatureWrite> self, List<FeatureWrite> preferences, List<FeatureWrite> behavior) {
         if (profiles.size() >= MAX_PROFILES) throw new LabRejection("SANDBOX_LIMIT");
         long id = sequence.incrementAndGet();
         while (profiles.containsKey(id)) id = sequence.incrementAndGet();
@@ -145,13 +192,14 @@ public final class LabWorkbench {
         return view(id, stored);
     }
 
-    public StoredView update(long userId, String name, List<FeatureWrite> self, List<FeatureWrite> preferences) {
-        return update(userId, name, self, preferences, List.of());
+    public synchronized StoredView update(long userId, String name, List<FeatureWrite> self, List<FeatureWrite> preferences) {
+        return update(userId, name, self, preferences, List.of(), require(userId).version);
     }
 
-    public StoredView update(long userId, String name, List<FeatureWrite> self, List<FeatureWrite> preferences,
-                             List<FeatureWrite> behavior) {
+    public synchronized StoredView update(long userId, String name, List<FeatureWrite> self, List<FeatureWrite> preferences,
+                             List<FeatureWrite> behavior, long expectedVersion) {
         Stored current = require(userId);
+        if (current.version != expectedVersion) throw new LabRejection("VERSION");
         Stored stored = store(userId, name == null || name.isBlank() ? current.name : name, current.version + 1,
                 self, preferences, behavior);
         profiles.put(userId, stored);
@@ -177,17 +225,18 @@ public final class LabWorkbench {
         return List.copyOf(out);
     }
 
-    public ScoreView score(long leftId, long rightId, String commitSha) {
+    public synchronized ScoreView score(long leftId, long rightId, String commitSha) {
         Stored left = require(leftId);
         Stored right = require(rightId);
         if (leftId == rightId) throw new LabRejection("SAME_USER");
         CompatibilityContext context = CompatibilityContext.experiment(BidirectionalCompatibilityEngine.WEEK,
                 BidirectionalCompatibilityEngine.NOW, List.of(left.subject, right.subject));
         CompatibilityDecision decision = engine.decide(left.subject, right.subject, context);
-        String runId = remember(run("BIDIRECTIONAL_SCORE", "match-lab-sandbox", hash(left.digest() + "|" + right.digest()),
+        String snapshot = leftId + "=" + left.version + ":" + left.digest() + "\n" + rightId + "=" + right.version + ":" + right.digest();
+        String result = decision.pair().harmonicWithCoverage() == null ? "undefined" : Double.toString(decision.pair().harmonicWithCoverage());
+        String runId = remember("BIDIRECTIONAL_SCORE", "match-lab-sandbox", snapshot,
                 CompatibilityPolicies.VERSION, commitSha, "ENGINE_EXECUTED", "COMPLETED",
-                decision.pair().harmonicWithCoverage() == null ? "undefined" : Double.toString(decision.pair().harmonicWithCoverage()),
-                null, "分数变化只说明算法行为。它不是真实关系效果。"));
+                result, null, "分数变化只说明算法行为。它不是真实关系效果。");
         return scoreView(runId, leftId, rightId, left, right, decision);
     }
 
@@ -195,7 +244,7 @@ public final class LabWorkbench {
         return recall("dev", commitSha);
     }
 
-    public RecallComparison recall(String split, String commitSha) {
+    public synchronized RecallComparison recall(String split, String commitSha) {
         RecallRankFixture.Cohort cohort = cohort(split);
         if (cohort.people().size() > 80) throw new LabRejection("SANDBOX_LIMIT");
         List<SchemeResult> schemes = new ArrayList<>();
@@ -213,12 +262,66 @@ public final class LabWorkbench {
             if ("LEGAL".equals(person.legality())) legal++;
             else if (!"SEEKER".equals(person.legality())) blocked++;
         }
-        String runId = remember(run("CANDIDATE_RECALL", "recall-rank-" + cohort.split(), hash(cohort.split()),
+        String runId = remember("CANDIDATE_RECALL", "recall-rank-" + cohort.split(), "frozen:" + cohort.split(),
                 RecallRankFixture.POLICY, commitSha, "ENGINE_EXECUTED", "COMPLETED",
                 schemes.size() + " schemes", null,
-                "冻结人群上的本次引擎执行。不是生产召回，也没有跑 10000 人规模点。"));
+                "冻结人群上的本次引擎执行。不是生产召回，也没有跑 10000 人规模点。");
         return new RecallComparison(runId, "ENGINE_EXECUTED", cohort.split(), cohort.people().size(),
-                cohort.seeker().profile().userId(), legal, blocked, pool, schemes);
+                cohort.seeker().profile().userId(), legal, blocked, pool, schemes, "FROZEN_COHORT", "R1_R5");
+    }
+
+    public synchronized RecallComparison recallSandbox(long seekerId, String commitSha) {
+        Stored seeker = require(seekerId);
+        if (profiles.size() > 80) throw new LabRejection("SANDBOX_LIMIT");
+        List<cn.aiditto.domain.compatibility.v4.CompatibilitySubject> subjects = new ArrayList<>();
+        for (Stored stored : profiles.values()) subjects.add(stored.subject);
+        CompatibilityContext context = CompatibilityContext.experiment(BidirectionalCompatibilityEngine.WEEK,
+                BidirectionalCompatibilityEngine.NOW, subjects);
+        StringBuilder snapshot = new StringBuilder("sandbox-seeker=").append(seekerId).append('\n');
+        List<PoolPerson> pool = new ArrayList<>();
+        List<RecallRow> rows = new ArrayList<>();
+        pool.add(new PoolPerson(seekerId, "SEEKER", "SEEKER", "", ""));
+        int legal = 0;
+        int blocked = 0;
+        int recommended = 0;
+        int insufficient = 0;
+        int hard = 0;
+        for (var entry : profiles.entrySet()) {
+            Stored stored = entry.getValue();
+            snapshot.append(entry.getKey()).append('=').append(stored.version).append(':').append(stored.digest()).append('\n');
+            if (entry.getKey() == seekerId) continue;
+            CompatibilityDecision decision = engine.decide(seeker.subject, stored.subject, context);
+            PairCompatibilityResult pair = decision.pair();
+            String legality;
+            String miss;
+            if (!pair.hardFilterResult().isEmpty()) {
+                legality = "HARD_BLOCK";
+                miss = String.join(",", pair.hardFilterResult());
+                hard++;
+                blocked++;
+            } else if (!decision.recommendationEligible()) {
+                legality = "LEGAL";
+                miss = decision.reasons().isEmpty() ? "INSUFFICIENT" : String.join(",", decision.reasons());
+                legal++;
+                insufficient++;
+            } else {
+                legality = "LEGAL";
+                miss = "COVERED";
+                legal++;
+                recommended++;
+            }
+            pool.add(new PoolPerson(entry.getKey(), stored.name, legality, "", miss));
+            rows.add(new RecallRow(entry.getKey(), stored.name, 0, rows.size() + 1,
+                    pair.scoreAB(), pair.scoreBA(), pair.coverageAB(), pair.coverageBA(),
+                    decision.recommendationEligible(), miss, stored.version, stored.subject.generation()));
+        }
+        SchemeResult scheme = new SchemeResult("FULL_POOL_M02", recommended, insufficient, hard, 0, rows);
+        String runId = remember("CANDIDATE_RECALL", "workspace-sandbox", snapshot.toString(),
+                RecallRankFixture.POLICY, commitSha, "ENGINE_EXECUTED", "COMPLETED",
+                "recommended=" + recommended, null,
+                "工作区虚构画像的完整合法池。没有召回路由信号，所以不跑 RRF。策略 E。");
+        return new RecallComparison(runId, "ENGINE_EXECUTED", "workspace-sandbox", profiles.size(), seekerId,
+                legal, blocked, pool, List.of(scheme), "SYNTHETIC_SANDBOX", "NOT_APPLICABLE");
     }
 
     private static RecallRankFixture.Cohort cohort(String split) {
@@ -252,10 +355,10 @@ public final class LabWorkbench {
                         List.of(relation.seeker(), relation.candidate())),
                 new RuleEchoModel(), cn.aiditto.domain.reasoning.v4.ReasoningBudget.experiment());
         Double m02 = result.decision().pair().harmonicWithCoverage();
-        String runId = remember(run("REASONING_REPLAY", ReasoningPrompt.VERSION, relation.id(),
+        String runId = remember("REASONING_REPLAY", ReasoningPrompt.VERSION, "replay:" + relation.id(),
                 ReasoningExperiment.POLICY, commitSha, "MODEL_REPLAY", "COMPLETED",
                 m02 == null ? "undefined" : Double.toString(m02), null,
-                "确定性夹具回放。C1 与 C2 不加分。没有真实模型输出。"));
+                "确定性夹具回放。C1 与 C2 不加分。没有真实模型输出。");
         return new ReasoningView(runId, "MODEL_REPLAY", RuleEchoModel.NAME, "NOT_RUN", ReasoningPrompt.VERSION,
                 relation.kind().name(), relation.note(), m02, false,
                 side(result.agentA()), side(result.agentB()), result.agentA().status().name(), result.agentB().status().name());
@@ -281,11 +384,13 @@ public final class LabWorkbench {
                 decision = engine.decide(cohort.seeker().profile(), person.profile(), context);
             }
             PairCompatibilityResult pair = decision == null ? null : decision.pair();
+            long version = person == null ? 0 : person.profile().profileVersion();
+            long generation = person == null ? 0 : person.profile().generation();
             rows.add(new RecallRow(placement.candidateId(), person == null ? "" : person.label().name(),
                     placement.recallRank(), placement.finalRank(),
                     pair == null ? null : pair.scoreAB(), pair == null ? null : pair.scoreBA(),
                     pair == null ? null : pair.coverageAB(), pair == null ? null : pair.coverageBA(),
-                    decision != null && decision.recommendationEligible(), placement.miss().name()));
+                    decision != null && decision.recommendationEligible(), placement.miss().name(), version, generation));
             if (rows.size() >= 80) break;
         }
         return new SchemeResult(request.name(), run.recommended(), run.insufficient(), run.hardRejected(),
@@ -507,22 +612,33 @@ public final class LabWorkbench {
                 subject.self(), subject.preference(), subject.selfSupport(), subject.preferenceSupport(), candidate);
     }
 
-    private String remember(LabRun run) {
-        runs.put(run.runId(), run);
-        return run.runId();
-    }
-
-    private LabRun run(String type, String dataset, String inputHash, String policy, String commitSha, String mode,
-                       String status, String result, String error, String limitations) {
+    private String remember(String type, String dataset, String snapshot, String policy, String commitSha, String mode,
+                            String status, String result, String error, String limitations) {
+        if (runs.size() >= MAX_RUNS) throw new LabRejection("SANDBOX_LIMIT");
         Instant now = Instant.now();
         String id = "run-" + sequence.incrementAndGet();
-        return new LabRun(id, type, dataset, inputHash, policy, commitSha == null ? "UNSPECIFIED" : commitSha,
+        LabRun run = new LabRun(id, workspaceId, null, type, dataset, snapshot, fullHash(snapshot),
+                fullHash(result == null ? "" : result), policy, commitSha == null ? "UNSPECIFIED" : commitSha,
                 mode, status, now, now, result, error, limitations);
+        runs.put(run.runId(), run);
+        return run.runId();
     }
 
     private static String hash(String text) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8))).substring(0, 16);
+        } catch (Exception failure) {
+            throw new LabRejection("RUN");
+        }
+    }
+
+    private static String fullHash(String text) {
+        return fullHash(text.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String fullHash(byte[] bytes) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (Exception failure) {
             throw new LabRejection("RUN");
         }
@@ -549,7 +665,8 @@ public final class LabWorkbench {
     public record PolicyNote(String policy, String experimentId, String note) {}
 
     public record CatalogEntry(String experimentId, String module, String title, String description, String datasetVersion,
-                               String datasetHash, String commitSha, String policyVersion, String sourceType,
+                               String datasetIdentityHash, String datasetContentHash, String commitSha,
+                               String catalogIntegrationCommit, String policyVersion, String sourceType,
                                String executionMode, String executionStatus, String qualityStatus, String limitations,
                                List<String> metrics, List<String> caseIds) {}
 
@@ -570,7 +687,8 @@ public final class LabWorkbench {
                             List<String> hardFilter, List<ScoreItem> items, String executionMode) {}
 
     public record RecallRow(long userId, String label, int recallRank, int finalRank, Double scoreAB, Double scoreBA,
-                            Double coverageAB, Double coverageBA, boolean recommendationEligible, String miss) {}
+                            Double coverageAB, Double coverageBA, boolean recommendationEligible, String miss,
+                            long profileVersion, long generation) {}
 
     public record SchemeResult(String scheme, int recommended, int insufficient, int hardRejected, int safetyViolations,
                                List<RecallRow> rows) {}
@@ -578,7 +696,8 @@ public final class LabWorkbench {
     public record PoolPerson(long userId, String label, String legality, String routes, String miss) {}
 
     public record RecallComparison(String runId, String executionMode, String dataset, int people, long seekerId,
-                                   int legalPool, int hardBlocked, List<PoolPerson> pool, List<SchemeResult> schemes) {}
+                                   int legalPool, int hardBlocked, List<PoolPerson> pool, List<SchemeResult> schemes,
+                                   String population, String routeContract) {}
 
     public record AgentSide(List<String> supported, List<String> complements, List<String> conflicts, List<String> unknown,
                             List<String> rejected, List<String> unsupported, List<String> evidence) {}
@@ -587,9 +706,10 @@ public final class LabWorkbench {
                                 String promptVersion, String kind, String note, Double m02Score, boolean aiAdjustment,
                                 AgentSide agentA, AgentSide agentB, String statusA, String statusB) {}
 
-    public record LabRun(String runId, String experimentType, String datasetVersion, String inputHash, String policyVersion,
-                         String commitSha, String executionMode, String status, Instant startedAt, Instant completedAt,
-                         String result, String error, String limitations) {}
+    public record LabRun(String runId, String workspaceId, String parentRunId, String experimentType, String datasetVersion,
+                         String inputSnapshot, String inputHash, String resultHash, String policyVersion, String commitSha,
+                         String executionMode, String status, Instant startedAt, Instant completedAt, String result,
+                         String error, String limitations) {}
 
     public static final class LabRejection extends RuntimeException {
         private final String code;

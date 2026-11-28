@@ -63,6 +63,9 @@ function OverviewPage() {
         </label>
         <a href={`https://github.com/jiashuaidawang-web/tryditto-cn/commit/${data.frozenCommit}`}>冻结数据集提交</a>
         <a href={data.ciIndex}>分支 CI 列表</a>
+        <span>研究环境 {data.researchEnvironment}</span>
+        <span>工作区 {data.workspace.workspaceId}</span>
+        <span>{data.storage}</span>
         <span>具体通过记录见 {data.statusDocument}</span>
       </div>
       <section className="lab-cards">
@@ -76,7 +79,7 @@ function OverviewPage() {
         <tbody>
           {rows.map((entry) => (
             <tr key={entry.experimentId}>
-              <td>{entry.title}<small>{entry.module} · {entry.datasetVersion}</small><small>{entry.datasetHash}</small></td>
+              <td>{entry.title}<small>{entry.module} · {entry.datasetVersion}</small><small>{entry.datasetIdentityHash}</small><small>{entry.datasetContentHash}</small></td>
               <td>{entry.sourceType}<small>{entry.executionMode}</small></td>
               <td>{entry.executionStatus}<small>{entry.qualityStatus}</small></td>
               <td>{entry.metrics.join(' · ')}<small>{entry.limitations}</small></td>
@@ -135,6 +138,7 @@ function ProfilesPage() {
     });
     return {
       name: person.name,
+      expectedVersion: person.version,
       self: features.filter((feature) => feature.section === 'SELF').map(row),
       preferences: features.filter((feature) => feature.section === 'PREFERENCE').map(row),
       behavior: features.filter((feature) => feature.section === 'BEHAVIOR').map(row),
@@ -279,13 +283,18 @@ function CandidatesPage() {
           setBusy(true);
           setError(null);
           labApi.recall(split).then(setData).catch(setError).finally(() => setBusy(false));
-        }}>{busy ? '正在计算' : '执行对照'}</button>
+        }}>{busy ? '正在计算' : '执行冻结对照'}</button>
+        <button type="button" disabled={busy} onClick={() => {
+          setBusy(true);
+          setError(null);
+          labApi.recallSandbox(71001).then(setData).catch(setError).finally(() => setBusy(false));
+        }}>执行沙箱候选</button>
       </div>
       {error ? <Gate error={error} /> : null}
       {!data && !error && !busy ? <p>还没有执行。选择一个冻结寻求者后再计算。</p> : null}
       {data && (
         <>
-          <p>{data.executionMode} · {data.dataset} · 寻求者 {data.seekerId} · 初始池 {data.people} 人 · 合法边 {data.legalPool} · 未进合法池 {data.hardBlocked} · 运行 {data.runId}</p>
+          <p>{data.population} · {data.routeContract} · {data.executionMode} · {data.dataset} · 寻求者 {data.seekerId} · 初始池 {data.people} 人 · 合法边 {data.legalPool} · 未进合法池 {data.hardBlocked} · 运行 {data.runId}</p>
           <section className="lab-cards">
             {data.schemes.map((item) => (
               <article key={item.scheme}><b>{item.recommended}</b><span>{item.scheme} 可推荐</span><small>证据不足 {item.insufficient} · 硬约束 {item.hardRejected}</small></article>
@@ -371,7 +380,7 @@ function ScorePage() {
             feature.featureCode === 'partner.pace' ? 'fast' : feature.value,
           ));
           const behavior = person.features.filter((feature) => feature.section === 'BEHAVIOR').map((feature) => row(feature, feature.value));
-          labApi.update(right, { name: person.name, self, preferences, behavior }).then(() => labApi.score(left, right)).then((result) => {
+          labApi.update(right, { name: person.name, expectedVersion: person.version, self, preferences, behavior }).then(() => labApi.score(left, right)).then((result) => {
             setAfter(result);
             return labApi.profiles();
           }).then(setProfiles).catch(setError);

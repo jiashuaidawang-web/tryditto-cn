@@ -6,8 +6,10 @@ export type CatalogEntry = {
   title: string;
   description: string;
   datasetVersion: string;
-  datasetHash: string;
+  datasetIdentityHash: string;
+  datasetContentHash: string;
   commitSha: string;
+  catalogIntegrationCommit: string;
   policyVersion: string;
   sourceType: string;
   executionMode: string;
@@ -25,6 +27,9 @@ export type Overview = {
   enabled: boolean;
   commitSha: string;
   frozenCommit: string;
+  researchEnvironment: string;
+  storage: string;
+  workspace: { workspaceId: string; ownerPrincipalId: number; mode: string; revision: number; expiresAt: string; storage: string };
   ciIndex: string;
   statusDocument: string;
   production: string;
@@ -110,6 +115,8 @@ export type RecallRow = {
   coverageBA: number | null;
   recommendationEligible: boolean;
   miss: string;
+  profileVersion: number;
+  generation: number;
 };
 
 export type PoolPerson = {
@@ -130,6 +137,8 @@ export type Recall = {
   hardBlocked: number;
   pool: PoolPerson[];
   schemes: { scheme: string; recommended: number; insufficient: number; hardRejected: number; safetyViolations: number; rows: RecallRow[] }[];
+  population: string;
+  routeContract: string;
 };
 
 export type Reasoning = {
@@ -167,5 +176,7 @@ export const labApi = {
   diff: (left: number, right: number) => http<{ featureCode: string; section: string; left: string; right: string }[]>('GET', `/api/match-lab/diff?left=${left}&right=${right}`),
   score: (userA: number, userB: number) => http<Score>('POST', '/api/match-lab/score', { userA, userB }),
   recall: (split: string) => http<Recall>('POST', '/api/match-lab/recall', { split }),
+  recallSandbox: (seekerId: number) => http<Recall>('POST', '/api/match-lab/recall', { mode: 'SYNTHETIC_SANDBOX', seekerId }),
+  resetWorkspace: () => http<{ workspaceId: string }>('POST', '/api/match-lab/workspace/reset'),
   reasoning: () => http<Reasoning>('POST', '/api/match-lab/reasoning'),
 };
