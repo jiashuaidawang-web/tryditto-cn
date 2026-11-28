@@ -36,6 +36,7 @@ public class SecurityConfig {
                         // Signed URLs for <img src>; the controller checks the signature or the bearer session.
                         .requestMatchers(HttpMethod.GET, "/api/photos/*/raw").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/match-lab/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e

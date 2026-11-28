@@ -6,6 +6,7 @@ import './index.css';
 import { OnboardingPage } from './onboarding/OnboardingPage';
 import { landingRoutes, notFoundRoute } from './landing/routes';
 import { RequireLogin, appRoutes } from './app/routes';
+import { MatchLabRoutes } from './matchlab/MatchLab';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')!).render(
             }
           />
           {appRoutes()}
+          {MatchLabRoutes()}
           {notFoundRoute()}
         </Routes>
       </BrowserRouter>

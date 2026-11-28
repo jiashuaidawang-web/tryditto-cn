@@ -73,6 +73,10 @@ aiditto:
   relationship-profile:
     # Off until account purge and the processing grant are actually wired. Tests opt in.
     processing-enabled: false
+  match-lab:
+    # Internal research console. Hidden navigation is not the control. Direct calls are rejected while this is false.
+    enabled: ${MATCH_LAB_ENABLED:false}
+    commit-sha: ${GIT_COMMIT:UNSPECIFIED}
   match:
     consent:
       # V4 合规模式：只有 GRANTED 能进池和正式发布。UNKNOWN 与 REVOKED 都不行。
