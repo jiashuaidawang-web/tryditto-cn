@@ -61,12 +61,13 @@ public class RelationshipProfileService {
     private final ProfileInputLoader inputs;
     private final ExtractionTaskStore tasks;
     private final ProfileLearningStore learning;
+    private final OnboardingEvidenceAdapter onboarding;
     private final boolean processingEnabled;
     private final FeatureRegistry registry = FeatureRegistry.v1();
 
     public RelationshipProfileService(JdbcTemplate jdbc, UserLock userLock, AnswerEvidenceDirectory answers,
                                       ProfileInputLoader inputs, ExtractionTaskStore tasks,
-                                      @Lazy ProfileLearningStore learning,
+                                      @Lazy ProfileLearningStore learning, OnboardingEvidenceAdapter onboarding,
                                       @Value("${aiditto.relationship-profile.processing-enabled:false}") boolean processingEnabled) {
         this.jdbc = jdbc;
         this.userLock = userLock;
@@ -74,6 +75,7 @@ public class RelationshipProfileService {
         this.inputs = inputs;
         this.tasks = tasks;
         this.learning = learning;
+        this.onboarding = onboarding;
         this.processingEnabled = processingEnabled;
     }
 
@@ -478,14 +480,7 @@ public class RelationshipProfileService {
     }
 
     private RelationshipProfileSnapshot serverProjection(long userId) {
-        RelationshipProfileSnapshot projected;
-        try {
-            projected = SnapshotAdmission.admit(
-                    RelationshipProfileProjector.project(userId, answers.loadAnswers(userId), registry), registry, answers);
-        } catch (IllegalArgumentException e) {
-            throw DomainException.invalid("snapshot", e.getMessage());
-        }
-        return mergeLearning(userId, projected, answers);
+        return mergeLearning(userId, onboarding.project(userId), answers);
     }
 
     private RelationshipProfileSnapshot mergeLearning(long userId, RelationshipProfileSnapshot projected,

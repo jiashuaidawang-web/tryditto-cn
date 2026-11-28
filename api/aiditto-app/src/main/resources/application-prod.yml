@@ -28,5 +28,7 @@ aiditto:
   photos:
     root: ${PHOTO_ROOT:/data/photos}
     accel-redirect: true
+  integration:
+    mode: LEGACY_ONLY
   relationship-profile:
     processing-enabled: false

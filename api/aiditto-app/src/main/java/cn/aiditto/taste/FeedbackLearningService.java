@@ -1,5 +1,6 @@
 package cn.aiditto.taste;
 
+import cn.aiditto.account.User;
 import cn.aiditto.infra.crypto.Crypto;
 import cn.aiditto.match.JudgeCalibrationService;
 import cn.aiditto.match.PairMemoryService;
@@ -90,6 +91,7 @@ public class FeedbackLearningService {
                 long low = ((Number) r.get("user_low")).longValue();
                 long high = ((Number) r.get("user_high")).longValue();
                 long partner = userId == low ? high : low;
+                if (closed(userId)) continue;
                 long weekId = ((Number) r.get("week_id")).longValue();
                 Integer rating = r.get("rating") == null ? null : ((Number) r.get("rating")).intValue();
                 String again = str(r.get("again"));
@@ -136,6 +138,14 @@ public class FeedbackLearningService {
                         + "forbiddenPairs={} calibration={} bias={}",
                 rows.size(), rewritten, weekly, noSignal, failed, forbidden, cal.active(), cal.bias());
         return new Stats(rows.size(), rewritten, weekly, noSignal, failed, forbidden, cal.bias());
+    }
+
+    private boolean closed(long userId) {
+        List<String> rows = jdbc.query("SELECT status FROM \"user\" WHERE id = ?",
+                (rs, n) -> rs.getString("status"), userId);
+        if (rows.isEmpty()) return true;
+        String status = rows.get(0);
+        return User.DELETING.equals(status) || "purged".equals(status);
     }
 
     private boolean bothRefused(long matchId) {

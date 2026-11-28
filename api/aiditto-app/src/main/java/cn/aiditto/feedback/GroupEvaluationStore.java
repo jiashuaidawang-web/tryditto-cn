@@ -31,6 +31,7 @@ public class GroupEvaluationStore {
     /**
      * Account deletion is not called from {@code AccountService} in this round.
      * {@link RelationshipFeedbackStore#eraseActor} already calls {@link #withdrawActor}.
+     * {@code V4_INTEGRATION_TEST} deletion calls that path. {@code LEGACY_ONLY} does not.
      */
     public static final String FUTURE_ACCOUNT_DELETION =
             "AccountService.requestDelete locks the user, calls eraseActor, then RelationshipProfileService.erase, and commits. eraseActor withdraws that user's observations. It does not run a learner or restore an old snapshot.";

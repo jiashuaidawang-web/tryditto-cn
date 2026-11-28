@@ -3,7 +3,7 @@ name: V4 CI
 
 on:
   push:
-    branches: [master_agent_v4, feature/v4-recall, feature/v4-bidirectional, feature/v4-ai-reasoning, feature/v4-recall-rank, feature/v4-global-matching, feature/v4-feedback-events, feature/v4-profile-learning, feature/v4-strategy-learning, feature/v4-match-lab, feature/v4-match-lab-loop, feature/v4-match-lab-evaluation]
+    branches: [master_agent_v4, feature/v4-recall, feature/v4-bidirectional, feature/v4-ai-reasoning, feature/v4-recall-rank, feature/v4-global-matching, feature/v4-feedback-events, feature/v4-profile-learning, feature/v4-strategy-learning, feature/v4-match-lab, feature/v4-match-lab-loop, feature/v4-match-lab-evaluation, feature/v4-product-profile-integration]
   pull_request:
     branches: [master_agent_v4]
   workflow_dispatch:
@@ -146,9 +146,9 @@ jobs:
         run: |
           set -euo pipefail
           if ! mvn -B -pl aiditto-app -am verify \
-            -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest,ProfileAblationRunnerTest,V4VectorSyncTest,MatchLabFilterTest \
+            -Dtest=TestDatabaseGuardTest,ProfileExtractionParserTest,ProfileAblationRunnerTest,V4VectorSyncTest,MatchLabFilterTest,ProductIntegrationSettingsTest \
             -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT,FeedbackEventIT,ProfileLearningIT,StrategyEvaluationIT,MatchLabIT \
+            -Dit.test=PublishSafetyIT,ConsentLegacyIT,MatchIT,RelationshipProfileIT,ProfileExtractionIT,FeedbackEventIT,ProfileLearningIT,StrategyEvaluationIT,MatchLabIT,ProductProfileIntegrationIT,AccountLifecycleIT,LegacyProductModeIT \
             -Dfailsafe.failIfNoSpecifiedTests=true \
             -DforkCount=1 \
             -DreuseForks=false \
@@ -293,6 +293,25 @@ jobs:
               "MatchLabIT": [
                   "anonymousAndUserAreRejectedAndAdminCanScoreWithoutWritingProfiles",
               ],
+              "ProductProfileIntegrationIT": [
+                  "projectsOnboardingIntoTheAuthoritativeSnapshot",
+                  "answerEditKeepsOtherEvidenceAndConfirmedPreference",
+                  "revokeAndRegrantFollowTheLifecycle",
+                  "catalogCoverageStaysExplicit",
+                  "correctionRacesAProfileSaveWithoutSplittingTheReadableSnapshot",
+              ],
+              "AccountLifecycleIT": [
+                  "deleteStopsProcessingAndDoesNotClaimFullErasure",
+                  "repeatedDeleteAndLateTasksDoNotRestore",
+                  "externalFailureStaysPartial",
+                  "consentRevokesAreSeparate",
+                  "anotherUserIsUntouched",
+                  "revokeRacesAProfileSave",
+              ],
+              "LegacyProductModeIT": [
+                  "legacyDeleteDoesNotOpenV4Erasure",
+                  "v3LearningRemainsEnabled",
+              ],
           }
           surefire_required = {
               "ProfileExtractionParserTest": [
@@ -309,6 +328,10 @@ jobs:
                   "productionStaysClosedWhenTheSwitchIsOn",
                   "aNamedIsolatedEnvironmentReachesTheChain",
                   "anOpenSwitchLeavesOtherPathsAlone",
+              ],
+              "ProductIntegrationSettingsTest": [
+                  "legacyIsTheDefaultAndIntegrationTestDoesNotEnableProduction",
+                  "futureModesFailBeforeStartup",
               ],
               "V4VectorSyncTest": [
                   "syncIsIdempotentAndAStaleVersionCannotOverwrite",

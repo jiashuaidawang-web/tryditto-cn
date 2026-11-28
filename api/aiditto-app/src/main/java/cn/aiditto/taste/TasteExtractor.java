@@ -1,5 +1,6 @@
 package cn.aiditto.taste;
 
+import cn.aiditto.account.User;
 import cn.aiditto.ai.LlmGateway;
 import cn.aiditto.ai.LlmResult;
 import cn.aiditto.domain.questionnaire.QuestionCatalog;
@@ -65,6 +66,7 @@ public class TasteExtractor {
     /** 幂等入口：答案未变直接复用现有 active 版本。 */
     public Result ensure(long userId, String trigger) {
         try {
+            if (closed(userId)) return new Result(Outcome.SKIPPED, 0, "account_closed");
             Map<String, Object> raw = answers.load(userId);
             if (raw.isEmpty()) return new Result(Outcome.SKIPPED, 0, "no_answers");
             TasteFacts facts = TasteFacts.from(userId, raw, TasteWriter.PROMPT_VERSION, catalog);
@@ -75,6 +77,14 @@ public class TasteExtractor {
         } catch (RuntimeException e) {
             return Result.failed(e.getClass().getSimpleName());
         }
+    }
+
+    private boolean closed(long userId) {
+        List<String> rows = jdbc.query("SELECT status FROM \"user\" WHERE id = ?",
+                (rs, n) -> rs.getString("status"), userId);
+        if (rows.isEmpty()) return true;
+        String status = rows.get(0);
+        return User.DELETING.equals(status) || "purged".equals(status);
     }
 
     private LlmResult safeCall(TasteFacts facts) {

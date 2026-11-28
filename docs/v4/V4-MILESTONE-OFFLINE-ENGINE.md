@@ -7,7 +7,7 @@ Match Lab 第一版和它前面的离线引擎在 L03-FINAL 冻结。这一页�
 - `master_agent_v4` 在合并 L03-FINAL 之前是 `3f822f86820f7e90710ba710a899938a1e4b94ea`。
 - L03 工作台实现 `8173410f6efa18b3ea8fef8b87658058feffc3d1`。
 - L03 浏览器通过的尖端记录是 `bcdd3113af6689aca5444cc169532e35da8f2c4f`，CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46135107419 ，Artifact `15259471489`。
-- L03-FINAL 收口分数单位、统计口径、数据集身份和能力边界。合并后的 SHA 写在 `V4-PROJECT-STATUS.md`。
+- L03-FINAL 收口分数单位、统计口径、数据集身份和能力边界。快进后的 `master_agent_v4` 是 `767d65fbb3d67d17f6c3c7608e01b00fc918b115`。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46137692591 。
 
 ## 当时已经核实的工程数字
 

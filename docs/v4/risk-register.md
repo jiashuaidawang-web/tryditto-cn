@@ -556,4 +556,18 @@ Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-l
 
 沙箱观察不再按数值大小猜测分数单位。M02 的方向分和契合分是 0–100，覆盖率是 0–1。未知和越界拒绝观察。未成熟计数来自 F03 标签和观察窗口。匹配事实、群体评估和学习资格分开。沙箱数据集是 `sandbox-ledger-1`，不再冒用 `f03-synthetic-1`。本页未调用模型是 NOT_RUN，历史真实模型实验仍是 NO-GO。没有实现的回放和校准曲线保持 NOT_IMPLEMENTED。
 
-细节见 `V4-L03-final-audit.md`。生产启用和最终匹配算法质量继续 NO-GO。
+细节见 `V4-L03-final-audit.md`。该提交已快进到 `master_agent_v4` 的 `767d65fbb3d67d17f6c3c7608e01b00fc918b115`。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46137692591 。生产启用和最终匹配算法质量继续 NO-GO。
+
+## V4-I01（2026-11-28）
+
+产品集成默认 `LEGACY_ONLY`。`V4_SHADOW` 和 `V4_PILOT` 启动失败。隔离模式才会在注销时擦除 V4 画像、反馈和学习行，并为 Qdrant 留下可重试的擦除任务。关系数据库提交不等于 Qdrant 已删除。
+
+仍开放：
+
+- 生产注销仍不调用 `eraseActor`。风险来源是 `AccountService.requestDelete` 在默认模式下的行为，版本是当前 `LEGACY_ONLY` 配置。
+- 姓名、性别、生日、身高、地点、照片和语音没有 V4 映射。覆盖率不是语义质量。
+- 个体学习和群体评估没有面向用户的独立授权表。
+- 删除事务先锁用户行，学习确认先锁咨询锁。并发时可能互相等待。
+- 真实用户画像质量 NOT_RUN。真实关系质量 NOT_RUN。生产启用 NO-GO。最终匹配算法质量 NO-GO。
+
+细节见 `V4-I01-audit.md` 和 `V4-I01-account-lifecycle.md`。I01 不合并。

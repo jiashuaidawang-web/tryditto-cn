@@ -1,5 +1,6 @@
 package cn.aiditto.relationship;
 
+import cn.aiditto.account.User;
 import cn.aiditto.infra.web.Times;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -35,7 +36,18 @@ public class ExtractionTaskStore {
     }
 
     @Transactional
+    public int stopForDeletion(long userId) {
+        return jdbc.update("""
+                UPDATE relationship_profile_extraction
+                SET status = 'discarded', attempts = ?, updated_at = ?
+                WHERE user_id = ? AND status IN ('running', 'degraded', 'discarded') AND attempts < ?
+                """, MAX_ATTEMPTS, Timestamp.from(Times.millis(Instant.now())), userId, MAX_ATTEMPTS);
+    }
+
+    @Transactional
     public Claim tryStart(long userId, String inputHash, String promptVersion, long generation, long exportEpoch) {
+        String account = accountStatus(userId);
+        if (User.DELETING.equals(account) || "purged".equals(account)) return Claim.idle(Attempt.EXHAUSTED);
         Timestamp now = Timestamp.from(Times.millis(Instant.now()));
         Timestamp lease = Timestamp.from(Times.millis(Instant.now().plusSeconds(LEASE_SECONDS)));
         String attemptId = UUID.randomUUID().toString();
@@ -128,6 +140,12 @@ public class ExtractionTaskStore {
                   AND status = 'running' AND fence = ?
                 """, status, Timestamp.from(Times.millis(Instant.now())),
                 userId, inputHash, promptVersion, generation, fence);
+    }
+
+    private String accountStatus(long userId) {
+        List<String> rows = jdbc.query("SELECT status FROM \"user\" WHERE id = ?",
+                (rs, n) -> rs.getString("status"), userId);
+        return rows.isEmpty() ? "" : rows.get(0);
     }
 
     private String status(long userId, String inputHash, String promptVersion, long generation) {

@@ -32,7 +32,7 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 
 ## 集成基准
 
-- `master_agent_v4`：`3f822f86820f7e90710ba710a899938a1e4b94ea`。L02-FINAL 从 `f7bdcdc44c43d8081336788e62c169e625091cce` 快进。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46132647004 。
+- `master_agent_v4`：`767d65fbb3d67d17f6c3c7608e01b00fc918b115`。L03-FINAL 从 `3f822f86820f7e90710ba710a899938a1e4b94ea` 快进。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46137692591 。合并前远程仍是 L02-FINAL，没有并行提交。没有合并 `master_agent_v3`。
 - L01-FINAL 浏览器 CI 仍是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 。
 - F02-FINAL 实现：`c74e9c1b5db1aa2c5c985da4a0984fd5521e0325`
 - F03 实现：`094e161c20198aef5a23a8dce76cf0b58e77d858`
@@ -47,13 +47,15 @@ F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试
 
 原有 200 人生产算法仿真是 83 对、34 人未匹配、822 条候选边、0 违规。那是旧仿真，不是 V4 质量证明。
 
-## 未解决的生产风险
-
-真实校准、真实策略提升和真实关系质量都没有验证。生产 V4 匹配保持关闭。`AccountService.requestDelete` 仍不调用 `eraseActor`。重复次数 3 次和 30 天窗口没有写进评分权重。召回没有进入周匹配。生产启用 NO-GO。最终匹配算法质量 NO-GO。
-
 ## 下一阶段
 
-L03-FINAL 在 `feature/v4-match-lab-evaluation` 收口分数单位、统计口径和能力边界。五作业通过后才快进到 `master_agent_v4`。不实现 M05。
+L03-FINAL 已快进到 `master_agent_v4`。离线引擎里程碑的提交是 `767d65fbb3d67d17f6c3c7608e01b00fc918b115`。
+
+I01 在 `feature/v4-product-profile-integration`。它只做产品画像适配、授权契约和隔离注销。不合并。不实现 I02，不启动影子匹配或试点。
+
+## 未解决的生产风险
+
+真实校准、真实策略提升和真实关系质量都没有验证。生产 V4 匹配保持关闭。默认 `LEGACY_ONLY` 的注销仍不调用 `eraseActor`。`V4_INTEGRATION_TEST` 会调用，但该模式不是生产配置。重复次数 3 次和 30 天窗口没有写进评分权重。召回没有进入周匹配。生产启用 NO-GO。最终匹配算法质量 NO-GO。真实用户画像质量 NOT_RUN。
 
 ## 接手
 

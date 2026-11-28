@@ -34,8 +34,8 @@ public class RelationshipFeedbackStore {
     }
 
     /**
-     * Future account deletion calls this after its user lock and before commit.
-     * It is not called by AccountService in this round.
+     * Account deletion calls this after its user lock and before commit when the integration
+     * mode is {@code V4_INTEGRATION_TEST}. {@code LEGACY_ONLY} does not call it.
      */
     public static final String FUTURE_ACCOUNT_DELETION =
             "AccountService.requestDelete locks the user, calls eraseActor, then RelationshipProfileService.erase, and commits. eraseActor withdraws that user's observations. It does not run a learner or restore an old snapshot.";

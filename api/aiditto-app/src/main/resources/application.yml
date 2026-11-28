@@ -70,8 +70,11 @@ aiditto:
     delay-ms: ${SCHEDULER_DELAY_MS:30000}
   synthetic:
     autoload: ${SYNTHETIC_AUTOLOAD:true}
+  integration:
+    # LEGACY_ONLY keeps the current product path. V4_SHADOW and V4_PILOT fail startup.
+    mode: ${INTEGRATION_MODE:LEGACY_ONLY}
   relationship-profile:
-    # Off until account purge and the processing grant are actually wired. Tests opt in.
+    # Off until an isolated test opts in. Production profiles stay off.
     processing-enabled: false
   match-lab:
     # Internal research console. Hidden navigation is not the control. Direct calls are rejected while this is false.

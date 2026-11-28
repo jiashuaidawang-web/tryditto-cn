@@ -76,7 +76,7 @@ public class OnboardingService {
     @Transactional
     public void writeAnswer(long userId, String questionId, Object value) {
         userLock.lock(userId);
-        User u = accounts.require(userId);
+        User u = requireOpen(userId);
         Map<String, Object> answers = store.load(userId);
 
         if (catalog.isFlag(questionId)) {
@@ -123,6 +123,7 @@ public class OnboardingService {
     @Transactional
     public void setFurthestStep(long userId, String stepId) {
         if (stepId == null) return;
+        requireOpen(userId);
         if (catalog.find(stepId).isEmpty()) throw DomainException.invalid("furthestStepId", "没有这一步");
         users.update(null, new UpdateWrapper<User>().eq("id", userId).set("furthest_step_id", stepId)
                 .set("updated_at", Times.millis(clock.instant())));
@@ -139,7 +140,7 @@ public class OnboardingService {
     @Transactional
     public void complete(long userId) {
         userLock.lock(userId);
-        User u = accounts.require(userId);
+        User u = requireOpen(userId);
         Map<String, Object> answers = store.load(userId);
         List<String> missing = requiredFields(userId, answers);
         if (!missing.isEmpty()) {
@@ -171,6 +172,14 @@ public class OnboardingService {
         projection.write(userId, store.load(userId), photos.countActive(userId, "profile"));
         events.publishEvent(new ProfileWrittenEvent(userId, "answer_edit"));
         publishGuard.releaseUser(userId, clock.instant());
+    }
+
+    private User requireOpen(long userId) {
+        User u = accounts.require(userId);
+        if (User.DELETING.equals(u.status) || "purged".equals(u.status)) {
+            throw new DomainException(ErrorCode.ACCOUNT_INACTIVE, "账号正在注销，不能改问卷");
+        }
+        return u;
     }
 
     private AnswerValidator.Context context() {

@@ -6,6 +6,7 @@ import cn.aiditto.domain.common.ErrorCode;
 import cn.aiditto.infra.config.AppProperties;
 import cn.aiditto.infra.crypto.Crypto;
 import cn.aiditto.infra.web.Times;
+import cn.aiditto.integration.ProductIntegrationSettings;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import org.springframework.dao.DuplicateKeyException;
@@ -29,9 +30,12 @@ public class AccountService {
     private final Clock clock;
     private final UserLock userLock;
     private final cn.aiditto.match.PublishGuard publishGuard;
+    private final ProductIntegrationSettings integration;
+    private final AccountLifecycleCoordinator lifecycle;
 
     public AccountService(UserMapper users, SessionService sessions, Crypto crypto, AppProperties props, Clock clock,
-                          UserLock userLock, cn.aiditto.match.PublishGuard publishGuard) {
+                          UserLock userLock, cn.aiditto.match.PublishGuard publishGuard,
+                          ProductIntegrationSettings integration, AccountLifecycleCoordinator lifecycle) {
         this.users = users;
         this.sessions = sessions;
         this.crypto = crypto;
@@ -39,6 +43,8 @@ public class AccountService {
         this.clock = clock;
         this.userLock = userLock;
         this.publishGuard = publishGuard;
+        this.integration = integration;
+        this.lifecycle = lifecycle;
     }
 
     public User require(long userId) {
@@ -139,7 +145,11 @@ public class AccountService {
                 .set("status", u.onboarded() ? User.ACTIVE : User.ONBOARDING).set("deactivated_at", null).set("updated_at", now));
     }
 
-    /** Closes the account now; PurgeJob (M4) deletes personal data at {@code purge_at}. */
+    /**
+     * Closes the account now. {@code LEGACY_ONLY} still leaves V4 rows for a later purge.
+     * {@code V4_INTEGRATION_TEST} stops new work first, then erases stored V4 rows.
+     * The external-store task stays pending, so this method does not report a finished erasure.
+     */
     @Transactional
     public void requestDelete(long userId) {
         userLock.lock(userId);
@@ -148,5 +158,6 @@ public class AccountService {
                 .set("status", User.DELETING).set("delete_requested_at", now).set("purge_at", now.plus(PURGE_AFTER)).set("updated_at", now));
         sessions.revokeAll(userId);
         publishGuard.releaseUser(userId, now);
+        if (integration.v4IntegrationTest()) lifecycle.eraseIntegrated(userId);
     }
 }
