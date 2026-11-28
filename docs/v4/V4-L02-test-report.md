@@ -6,6 +6,6 @@
 
 `MatchLabIT` 增加了沙箱全局匹配、数学夹具拒绝进入反馈、学习确认，以及确认后 `relationship_profile_version`、`matching_observation`、`relationship_feedback_event` 和 `"match"` 行数不变。本机没有 PostgreSQL，这项仍由 CI 的 Postgres 16 执行。
 
-浏览器用例 `web/e2e/match-lab-loop.spec.ts` 覆盖全局匹配、候选边进入反馈、双方接受、派生互相接受、确认提案和重新匹配，并保存 `08-global.png`、`09-feedback.png`、`10-learning.png`。它和 L01 用例一起由 `match-lab-e2e` 执行。作业未绿之前，浏览器验收保持 NOT_RUN，不能用前端构建代替。
+浏览器用例 `web/e2e/match-lab-loop.spec.ts` 覆盖全局匹配、候选边进入反馈、双方接受、派生互相接受、确认提案和重新匹配，并保存 `08-global.png`、`09-feedback.png`、`10-learning.png`。它和 L01 用例一起由 `match-lab-e2e` 执行。L01 页面的浏览器作业已经通过。带闭环页面的第一次作业失败，修正后的作业地址以该提交的 Actions 为准。作业未绿之前，L02 浏览器验收保持 NO-GO，不能用前端构建代替。
 
 真实关系质量 NOT_RUN。生产启用 NO-GO。最终匹配算法质量 NO-GO。
