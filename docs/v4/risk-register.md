@@ -550,4 +550,4 @@ Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-l
 - 生产销户、真实匹配快照和生产反馈接口。
 - 页面不能把合成频率写成真实接受概率，也不能打开生产 V4。
 
-本地领域测试 612 项，失败 0，异常 0，跳过 0。PostgreSQL、Qdrant 和浏览器以 `feature/v4-match-lab-evaluation` 的五作业 CI 为准。生产启用和最终匹配算法质量继续 NO-GO。
+本地领域测试 612 项，失败 0，异常 0，跳过 0。提交 `8173410f6efa18b3ea8fef8b87658058feffc3d1` 的五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46134624886 全部 success。浏览器 Artifact `15258449746`。生产启用和最终匹配算法质量继续 NO-GO。

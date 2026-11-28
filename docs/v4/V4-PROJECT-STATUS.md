@@ -24,7 +24,7 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 | F03 群体评估 | 离线工程通过。F03-FINAL 收口观察来源、标签口径和校准。真实校准 NOT_RUN。 |
 | Match Lab L01 | 已快进到 `master_agent_v4` 的 `f7bdcdc44c43d8081336788e62c169e625091cce`。浏览器作业 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46127772617 ，五个作业 success。第一次失败记录是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46126626515 。 |
 | Match Lab L02 | 已快进到 `master_agent_v4` 的 `3f822f86820f7e90710ba710a899938a1e4b94ea`。五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46132647004 。浏览器证据 Artifact `15258557731`。 |
-| Match Lab L03 | 在 `feature/v4-match-lab-evaluation`。策略学习、实验回放和安全审计还没有合并。 |
+| Match Lab L03 | `feature/v4-match-lab-evaluation` 不自动合并。浏览器通过的提交是 `8173410f6efa18b3ea8fef8b87658058feffc3d1`，五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46134624886 。浏览器 Artifact `15258449746`。 |
 
 ## 冻结策略
 
