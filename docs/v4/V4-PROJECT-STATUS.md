@@ -35,7 +35,7 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 - F03 实现：`094e161c20198aef5a23a8dce76cf0b58e77d858`
 - F03 文档尖端：`92cdd768bd4aec413c6adfab0a94bd4e162ab968`
 - F03 尖端 CI：https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46118462694
-- F03-FINAL 提交：与本文档同一次提交，SHA 以该提交为准。CI 在推送后补记。
+- F03-FINAL：`b82429b34bc145a26dd54ddde27c3d4fc5ca5be1`。CI 在推送后补记。
 
 F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试，13 项应用层单元测试，1 项真实 Qdrant 集成测试，`ProfileLearningIT` 19 项，`StrategyEvaluationIT` 7 项，失败、异常、跳过都是 0。F03-FINAL 本地领域测试是 599 项。新增的 7 个 PostgreSQL 方法尚未在 CI 执行。
 

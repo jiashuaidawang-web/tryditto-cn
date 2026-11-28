@@ -499,6 +499,6 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 
 `f03-synthetic-1` 和 `RelationshipLabels` 保持原样。新口径 `f03-labels-2` 把明确拒绝和未知、超时、未成熟分开。旧双方拒绝 24 条，新的未达成双方接受 44 条。保序回归先聚合相同分数。未校准的 `score/100` 只是数学对照。合成校准仍不能写入生产评分。
 
-本地领域测试 599 项，失败 0，异常 0，跳过 0。`StrategyEvaluationIT` 从 7 个方法增到 14 个。本机没有 PostgreSQL，这 14 个方法本地 NOT_RUN，留到 CI 的 Postgres 16。
+本地领域测试 599 项，失败 0，异常 0，跳过 0。`StrategyEvaluationIT` 从 7 个方法增到 14 个。本机没有 PostgreSQL，这 14 个方法本地 NOT_RUN，留到 CI 的 Postgres 16。提交 `b82429b34bc145a26dd54ddde27c3d4fc5ca5be1`。
 
 仍开放：真实校准、真实策略提升、真实关系质量、生产匹配快照、生产启用。最终匹配算法质量继续 NO-GO。细节见 `V4-F03-final-audit.md`。
