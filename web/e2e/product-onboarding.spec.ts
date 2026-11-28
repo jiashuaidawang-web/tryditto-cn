@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Response } from '@playwright/test';
 
 const code = process.env.MATCH_LAB_CODE || '888888';
 const api = process.env.MATCH_LAB_API || 'http://127.0.0.1:8080';
@@ -68,45 +68,126 @@ async function walk(page: Page, email: string) {
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
     'base64');
   let previous = '';
-  for (let stepNo = 0; stepNo < 40; stepNo++) {
+  let photosSent = false;
+  let last = '';
+  for (let stepNo = 0; stepNo < 60; stepNo++) {
     if (/\/home/.test(page.url())) return;
-    const step = page.locator('[data-step]').first();
-    await step.waitFor({ state: 'visible', timeout: 20_000 });
-    const id = await step.getAttribute('data-step');
-    if (!id || id === previous) {
-      await page.waitForTimeout(400);
+    if (/\/voice/.test(page.url())) {
+      await leaveOptionalVoice(page);
+      return;
     }
-    previous = id ?? previous;
-    if (id === 'name') await step.locator('input').fill('测试');
-    else if (id === 'birthday') await step.locator('input').pressSequentially('20040501');
-    else if (id === 'schoolEmail' || id === 'personalEmail') await step.locator('input').fill(email);
-    else if (id === 'emailVerify') await step.locator('input').fill(code);
-    else if (id === 'photos') {
+    const step = page.locator('[data-step]:visible').last();
+    const visible = await step.waitFor({ state: 'visible', timeout: 8_000 }).then(() => true).catch(() => false);
+    if (!visible) {
+      await page.waitForURL(/\/(voice|home)/, { timeout: 15_000 });
+      continue;
+    }
+    const id = (await step.getAttribute('data-step')) ?? '';
+    last = id || last;
+    const same = id !== '' && id === previous;
+    previous = id;
+    if (same) await page.waitForTimeout(500);
+    const action = page.locator('[data-action="next"], [data-action="send"]').last();
+    const open = async () => (await action.count()) > 0 && (await action.getAttribute('aria-disabled')) === 'false';
+    if (id === 'photos' && !photosSent) {
+      photosSent = true;
+      let finalized = 0;
+      const done = new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('photo upload did not finish')), 25_000);
+        const onResponse = (response: Response) => {
+          if (!response.url().includes('/api/photos/finalize') || !response.ok()) return;
+          finalized += 1;
+          if (finalized >= 2) {
+            clearTimeout(timer);
+            page.off('response', onResponse);
+            resolve();
+          }
+        };
+        page.on('response', onResponse);
+      });
       await page.locator('input[type="file"]').setInputFiles([
         { name: 'a.png', mimeType: 'image/png', buffer: png },
         { name: 'b.png', mimeType: 'image/png', buffer: png },
       ]);
-    } else if (id === 'location') {
-      const locate = page.locator('[data-step="location"] button[aria-label="使用当前位置"]');
-      await locate.evaluate((el) => el.scrollIntoView({ block: 'center' }));
-      await locate.click();
-    } else if (id === 'isStudent') {
-      await step.getByRole('radio', { name: '是的，我是学生' }).click();
-    } else if (id === 'gender') {
-      await step.getByRole('radio', { name: '男生' }).click();
-    } else if (id === 'expectedGender') {
-      await step.getByRole('checkbox', { name: '女生' }).click();
-    } else {
-      const choice = step.locator('[role="radio"], [role="checkbox"]').first();
-      if (await choice.count()) await choice.click();
+      await done;
+    } else if (!same || !(await open())) {
+      await answerStep(step, id, email);
     }
-    const action = page.locator('[data-action="next"], [data-action="send"]').last();
-    if (await action.count() && await action.getAttribute('aria-disabled') === 'false') {
-      await action.click();
-    }
-    await page.waitForTimeout(250);
+    if (await open()) await action.click();
+    await page.waitForTimeout(300);
   }
-  throw new Error('onboarding did not finish');
+  throw new Error(`onboarding did not finish at ${last}`);
+}
+
+async function answerStep(step: ReturnType<Page['locator']>, id: string, email: string) {
+  if (id === 'name') {
+    await step.locator('input').fill('测试');
+    return;
+  }
+  if (id === 'birthday') {
+    const current = await step.locator('input').inputValue();
+    if (!current.includes('2004')) await step.locator('input').pressSequentially('20040501');
+    return;
+  }
+  if (id === 'schoolEmail' || id === 'personalEmail') {
+    await step.locator('input').fill(email);
+    return;
+  }
+  if (id === 'emailVerify') {
+    await step.locator('input').fill(code);
+    return;
+  }
+  if (id === 'location') {
+    const locate = step.locator('button[aria-label="使用当前位置"]');
+    await locate.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await locate.click();
+    return;
+  }
+  if (id === 'isStudent') {
+    await clickChoice(step, 'radio', '是的，我是学生');
+    return;
+  }
+  if (id === 'gender') {
+    await clickChoice(step, 'radio', '男生');
+    return;
+  }
+  if (id === 'expectedGender') {
+    await clickChoice(step, 'checkbox', '女生');
+    return;
+  }
+  const checked = step.locator('[aria-checked="true"]');
+  const choice = step.locator('[role="radio"], [role="checkbox"]').first();
+  if ((await choice.count()) && (await checked.count()) === 0) {
+    await choice.click();
+    return;
+  }
+  const area = step.locator('textarea');
+  if ((await area.count()) && (await area.inputValue()) === '') {
+    await area.fill('喜欢在校园里散步');
+    return;
+  }
+  const text = step.locator('input:not([type="file"])');
+  if ((await text.count()) && (await text.first().inputValue()) === '') {
+    await text.first().fill('红烧肉');
+    return;
+  }
+  const slider = step.locator('[role="slider"]');
+  if (await slider.count()) await slider.first().press('ArrowRight');
+}
+
+async function clickChoice(step: ReturnType<Page['locator']>, role: 'radio' | 'checkbox', name: string) {
+  const choice = step.getByRole(role, { name });
+  if ((await choice.getAttribute('aria-checked')) !== 'true') await choice.click();
+}
+
+async function leaveOptionalVoice(page: Page) {
+  const stop = page.getByRole('button', { name: '先不答了' });
+  await stop.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+  if (await stop.isVisible().catch(() => false)) await stop.click();
+  if (/\/home/.test(page.url())) return;
+  const home = page.getByRole('button', { name: '回首页' });
+  if (await home.isVisible().catch(() => false)) await home.click();
+  await expect(page).toHaveURL(/\/home/, { timeout: 20_000 });
 }
 
 async function tokenOf(page: Page) {
