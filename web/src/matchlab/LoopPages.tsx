@@ -95,6 +95,17 @@ export function GlobalPage() {
       </div>
       {!data && !busy ? <p>还没有执行。选择工作区里的虚构用户后再求解。</p> : null}
       {note ? <p className="lab-note">{note}</p> : null}
+      <h2>历史运行</h2>
+      {history.filter((item) => item.experimentType === 'GLOBAL_MATCH').length === 0 ? <p>还没有可回看的全局匹配。</p> : (
+        <table>
+          <thead><tr><th>运行</th><th>状态</th><th>输入摘要</th><th>结果摘要</th></tr></thead>
+          <tbody>
+            {history.filter((item) => item.experimentType === 'GLOBAL_MATCH').map((item) => (
+              <tr key={item.runId}><td>{item.runId}</td><td>{item.status}</td><td>{item.inputHash}</td><td>{item.resultHash}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       {data && (
         <>
           <section className="lab-cards">
@@ -153,17 +164,6 @@ export function GlobalPage() {
             </tbody>
           </table>
           {data.comparison && <p>贪心对照运行 {data.comparison.runId}，配对 {data.comparison.pairs.map((pair) => pair.key).join('，') || '无'}。</p>}
-          <h2>历史运行</h2>
-          {history.filter((item) => item.experimentType === 'GLOBAL_MATCH').length === 0 ? <p>还没有可回看的全局匹配。</p> : (
-            <table>
-              <thead><tr><th>运行</th><th>状态</th><th>输入摘要</th><th>结果摘要</th></tr></thead>
-              <tbody>
-                {history.filter((item) => item.experimentType === 'GLOBAL_MATCH').map((item) => (
-                  <tr key={item.runId}><td>{item.runId}</td><td>{item.status}</td><td>{item.inputHash}</td><td>{item.resultHash}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          )}
           <JsonBlock value={data} />
         </>
       )}
