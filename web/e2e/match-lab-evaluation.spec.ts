@@ -28,11 +28,11 @@ test('strategy replay and safety stay on sandbox evidence', async ({ page, reque
   await expect(page.getByRole('heading', { name: '策略学习' })).toBeVisible();
   await expect(page.getByText('观察 128')).toBeVisible();
   await expect(page.getByRole('cell', { name: '未知或过期', exact: true })).toBeVisible();
-  await expect(page.getByText('没有记成负例')).toBeVisible();
+  await expect(page.locator('p.lab-note', { hasText: '没有记成负例' })).toBeVisible();
   await expect(page.getByText('NOT_IDENTIFIED').first()).toBeVisible();
   await page.screenshot({ path: 'e2e-artifacts/11-strategy.png', fullPage: true });
   await page.getByRole('button', { name: '沙箱观察' }).click();
-  await expect(page.getByText('沙箱反馈太少，不训练有效模型。')).toBeVisible();
+  await expect(page.locator('p.lab-note', { hasText: '沙箱反馈太少，不训练有效模型。' })).toBeVisible();
   await expect(page.getByText('INSUFFICIENT').first()).toBeVisible();
   await page.getByRole('button', { name: '尝试激活策略' }).click();
   await expect(page.getByText('STRATEGY_NOT_ACTIVATED')).toBeVisible();
@@ -43,8 +43,7 @@ test('strategy replay and safety stay on sandbox evidence', async ({ page, reque
   await expect(page.getByRole('cell', { name: 'GLOBAL_MATCH' }).first()).toBeVisible();
   const before = await page.locator('pre').first().innerText();
   await page.getByRole('button', { name: '用当前引擎重放' }).click();
-  await expect(page.getByText('CURRENT_ENGINE_REPLAY')).toBeVisible();
-  await expect(page.getByText('语义一致 是')).toBeVisible();
+  await expect(page.locator('p', { hasText: 'CURRENT_ENGINE_REPLAY' }).filter({ hasText: '语义一致 是' })).toBeVisible();
   await page.getByRole('button', { name: '对照两次运行' }).click();
   await expect(page.getByText('不能写成策略增益')).toBeVisible();
   await page.screenshot({ path: 'e2e-artifacts/12-replay.png', fullPage: true });
