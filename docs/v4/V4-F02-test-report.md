@@ -13,6 +13,6 @@ PostgreSQL 集成测试在 CI 的 Postgres 16 上执行，本机没有数据库�
 - `storedProposalCannotBeExtendedOrRebound`
 - `retractingTheSourceRemovesDerivedEvidence`
 
-这些方法名在 `.github/workflows/v4-ci.yml` 的必需清单里。F02-FINAL 的 CI 地址在该提交的 GitHub Actions 运行成功后写入风险登记。远程 Surefire 总数需要管理员权限才能读取，这里不另报一份远程合计。
+这些方法名在 `.github/workflows/v4-ci.yml` 的必需清单里。F02-FINAL 实现提交 `c74e9c1b5db1aa2c5c985da4a0984fd5521e0325`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46115262767 ，四个作业 success。集成作业成功，所以清单里的 `ProfileLearningIT` 方法已执行且没有失败或跳过。远程 Surefire 总数需要管理员权限才能读取，这里不另报一份远程合计。
 
 F02 实现提交 `e24aae1f7f7b23a10aaec2a4f035fb0f7ed786bc` 的 CI 是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46061670392 。那次运行覆盖的是收口之前的代码。

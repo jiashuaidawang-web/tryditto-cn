@@ -38,7 +38,9 @@ F02 的确认事务原先自己插入 `relationship_profile_version`，并且只
 
 ## 测试
 
-本地领域测试 587 项，失败 0，异常 0，跳过 0。相对 F02 的 585 项，新增 2 项在 `ProfileLearningEngineTest`。`ProfileLearningIT` 新增 6 个 PostgreSQL 方法，方法名已写入 `.github/workflows/v4-ci.yml`。本机没有 PostgreSQL，这 6 个方法只在 CI 执行。
+本地领域测试 587 项，失败 0，异常 0，跳过 0。相对 F02 的 585 项，新增 2 项在 `ProfileLearningEngineTest`。`ProfileLearningIT` 新增 6 个 PostgreSQL 方法，方法名已写入 `.github/workflows/v4-ci.yml`。本机没有 PostgreSQL，这 6 个方法在 CI 执行。
+
+实现提交 `c74e9c1b5db1aa2c5c985da4a0984fd5521e0325`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46115262767 ，四个作业 success。
 
 应用模块 `test-compile` 通过。这不是集成测试通过。
 
