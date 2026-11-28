@@ -31,37 +31,37 @@ test('match lab sandbox session', async ({ page, request }) => {
   await page.getByRole('button', { name: '创建虚构画像' }).click();
   await expect(page.getByRole('button', { name: '戊二·新建' })).toBeVisible();
   await page.getByRole('button', { name: '保存修改' }).click();
-  await expect(page.getByText(/v2/)).toBeVisible();
+  await expect(page.getByText(/v2/).first()).toBeVisible();
 
   await page.getByRole('link', { name: '双向评分' }).click();
   await page.getByLabel('用户 A').selectOption('71001');
   await page.getByLabel('用户 B').selectOption('71002');
   await page.getByRole('button', { name: '执行双向匹配' }).click();
-  await expect(page.getByText('可推荐')).toBeVisible();
+  await expect(page.getByText('可推荐').first()).toBeVisible();
   await page.screenshot({ path: 'e2e-artifacts/03-score-mutual.png', fullPage: true });
   await page.getByLabel('用户 A').selectOption('71003');
   await page.getByLabel('用户 B').selectOption('71004');
   await page.getByRole('button', { name: '执行双向匹配' }).click();
-  await expect(page.getByText('拒绝推荐')).toBeVisible();
+  await expect(page.getByText('拒绝推荐').first()).toBeVisible();
   await page.getByLabel('用户 A').selectOption('71001');
   await page.getByLabel('用户 B').selectOption('71005');
   await page.getByRole('button', { name: '执行双向匹配' }).click();
-  await expect(page.getByText('拒绝推荐')).toBeVisible();
+  await expect(page.getByText('拒绝推荐').first()).toBeVisible();
   await page.screenshot({ path: 'e2e-artifacts/04-score-refused.png', fullPage: true });
 
   await page.getByRole('link', { name: '候选发现' }).click();
   await page.getByRole('button', { name: '执行冻结对照' }).click();
-  await expect(page.getByText('FROZEN_COHORT')).toBeVisible();
+  await expect(page.getByText('FROZEN_COHORT').first()).toBeVisible();
   await page.screenshot({ path: 'e2e-artifacts/05-frozen-recall.png', fullPage: true });
   await page.getByRole('button', { name: '执行沙箱候选' }).click();
-  await expect(page.getByText('SYNTHETIC_SANDBOX')).toBeVisible();
-  await expect(page.getByText('NOT_APPLICABLE')).toBeVisible();
+  await expect(page.getByText('SYNTHETIC_SANDBOX').nth(1)).toBeVisible();
+  await expect(page.getByText('NOT_APPLICABLE').first()).toBeVisible();
   await page.screenshot({ path: 'e2e-artifacts/06-sandbox-recall.png', fullPage: true });
 
   await page.getByRole('link', { name: 'AI 关系推理' }).click();
   await page.getByRole('button', { name: '回放冻结判断' }).click();
-  await expect(page.getByText('rule-echo-fixture')).toBeVisible();
-  await expect(page.getByText('NOT_RUN')).toBeVisible();
+  await expect(page.getByText('rule-echo-fixture').first()).toBeVisible();
+  await expect(page.getByText('NOT_RUN').first()).toBeVisible();
   await page.screenshot({ path: 'e2e-artifacts/07-reasoning.png', fullPage: true });
 
   const token = await page.evaluate(() => {
