@@ -33,6 +33,10 @@ abstract class ShadowCase extends ApiIT {
     }
 
     Ready enroll(String gender, List<String> wants, boolean profile, boolean consent) {
+        return enroll("wudaokou", gender, wants, profile, consent);
+    }
+
+    Ready enroll(String placeId, String gender, List<String> wants, boolean profile, boolean consent) {
         String phone = randomPhone();
         String token = login(phone);
         String email = "i02" + phone.substring(3) + "@pku.edu.cn";
@@ -44,7 +48,7 @@ abstract class ShadowCase extends ApiIT {
         answer(token, "hobbies", List.of("music", "reading"));
         answer(token, "musicSound", List.of("indie"));
         answer(token, "readingGenres", List.of("scifi"));
-        answer(token, "location", Map.of("placeId", "wudaokou", "mode", "transit", "minutes", 45));
+        answer(token, "location", Map.of("placeId", placeId, "mode", "transit", "minutes", 45));
         answer(token, "relationshipLooking", List.of("serious"));
         answer(token, "matchingStyle", "steady");
         answer(token, "schoolYear", "junior");
@@ -72,7 +76,11 @@ abstract class ShadowCase extends ApiIT {
     }
 
     ShadowRequest request(String runId) {
-        return new ShadowRequest(runId, PERIOD, "real", "bj", CUTOFF, V4ShadowRunner.STRATEGY,
+        return request(runId, "bj");
+    }
+
+    ShadowRequest request(String runId, String city) {
+        return new ShadowRequest(runId, PERIOD, "real", city, CUTOFF, V4ShadowRunner.STRATEGY,
                 "compat-decision-1", "global-objective-g2-1", null, 7L);
     }
 

@@ -29,6 +29,7 @@ class ProductMatchingPoolIT extends ShadowCase {
         Ready ungranted = enroll("woman", List.of("men"), false, true);
         Ready stale = enroll("man", List.of("women"), true, true);
         answer(stale.token, "matchingStyle", "faster");
+        jdbc.update("UPDATE profile SET version = version + 1 WHERE user_id = ?", stale.userId);
         ProductMatchingPoolReader.PoolRead read = pools.read("bj", PERIOD, CUTOFF, "real");
         assertThat(reason(read, revoked.userId)).isEqualTo(PoolExclusion.MATCH_CONSENT_REVOKED);
         assertThat(reason(read, paused.userId)).isEqualTo(PoolExclusion.ACCOUNT_INACTIVE);
