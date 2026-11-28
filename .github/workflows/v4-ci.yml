@@ -611,7 +611,16 @@ jobs:
             sleep 2
           done
           test "$ready" = 1
-          npx playwright test
+          set +e
+          npx playwright test --reporter=line > ../ci-meta/playwright.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" != 0 ]; then
+            tail -n 25 ../ci-meta/playwright.log | while IFS= read -r line; do
+              printf '::error title=playwright::%s\n' "$(printf '%s' "$line" | tr '\r' ' ' | cut -c1-400)"
+            done
+            exit "$status"
+          fi
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -624,6 +633,7 @@ jobs:
             web/test-results/**
             ci-meta/lab-server.log
             ci-meta/lab-web.log
+            ci-meta/playwright.log
 
   test-reports:
     name: test-reports
