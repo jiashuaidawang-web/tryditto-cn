@@ -8,6 +8,7 @@ import cn.aiditto.domain.feedback.v4.FeedbackEventType;
 import cn.aiditto.domain.feedback.v4.FeedbackRejection;
 import cn.aiditto.domain.feedback.v4.MatchFeedbackContext;
 import cn.aiditto.domain.feedback.v4.RelationshipFeedbackEvent;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,9 +26,11 @@ import java.util.List;
 @Service
 public class RelationshipFeedbackStore {
     private final JdbcTemplate jdbc;
+    private final GroupEvaluationStore observations;
 
-    public RelationshipFeedbackStore(JdbcTemplate jdbc) {
+    public RelationshipFeedbackStore(JdbcTemplate jdbc, @Lazy GroupEvaluationStore observations) {
         this.jdbc = jdbc;
+        this.observations = observations;
     }
 
     /**
@@ -35,7 +38,7 @@ public class RelationshipFeedbackStore {
      * It is not called by AccountService in this round.
      */
     public static final String FUTURE_ACCOUNT_DELETION =
-            "AccountService.requestDelete locks the user, calls eraseActor, then RelationshipProfileService.erase, and commits. It does not run a learner or restore an old snapshot.";
+            "AccountService.requestDelete locks the user, calls eraseActor, then RelationshipProfileService.erase, and commits. eraseActor withdraws that user's observations. It does not run a learner or restore an old snapshot.";
 
     @Transactional
     public RelationshipFeedbackEvent append(MatchFeedbackContext context, FeedbackCommand command, Instant recordedAt) {
@@ -142,6 +145,7 @@ public class RelationshipFeedbackStore {
                 ON CONFLICT (user_id) DO NOTHING
                 """, userId, when);
         revokeApplied(userId, erasedAt);
+        observations.withdrawActor(userId, erasedAt);
         jdbc.update("DELETE FROM relationship_feedback_event WHERE actor_user_id = ?", userId);
         jdbc.update("""
                 UPDATE relationship_feedback_event

@@ -53,7 +53,7 @@ public class RelationshipProfileService {
      * lock the user, erase feedback, erase this snapshot, and do not run a learner.
      */
     public static final String FUTURE_ACCOUNT_DELETION =
-            "AccountService.requestDelete locks the user, calls eraseActor, then RelationshipProfileService.erase, and commits. It does not run a learner or restore an old snapshot.";
+            "AccountService.requestDelete locks the user, calls eraseActor, then RelationshipProfileService.erase, and commits. eraseActor withdraws that user's observations. It does not run a learner or restore an old snapshot.";
 
     private final JdbcTemplate jdbc;
     private final UserLock userLock;

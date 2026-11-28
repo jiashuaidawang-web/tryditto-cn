@@ -6,7 +6,7 @@ import java.util.Set;
 
 /**
  * One learning use of one event. {@code learning_blocked == false} is not enough to consume it.
- * Group evaluation is named so its key stays distinct. This round does not run that learner.
+ * Group evaluation uses its own purpose key. Profile learning does not grant or block it.
  */
 public record FeedbackConsumption(
         String eventId,
@@ -37,7 +37,6 @@ public record FeedbackConsumption(
         if (consumer == null || status == null || consumedAt == null) throw new FeedbackRejection("CONSUMPTION");
         if (policyVersion == null || policyVersion.isBlank()) throw new FeedbackRejection("POLICY");
         if (lifecycleGeneration < 1 || authorizationEpoch < 1) throw new FeedbackRejection("GENERATION");
-        if (consumer == Consumer.GROUP_EVALUATION) throw new FeedbackRejection("F03_NOT_IMPLEMENTED");
     }
 
     public static String purpose(Consumer consumer, String policyVersion) {
@@ -46,7 +45,9 @@ public record FeedbackConsumption(
 
     public static FeedbackConsumption prepare(FeedbackLedger ledger, String eventId, Consumer consumer, String policyVersion,
                                               Instant consumedAt, String derivedArtifactId) {
-        if (consumer == Consumer.GROUP_EVALUATION) throw new FeedbackRejection("F03_NOT_IMPLEMENTED");
+        if (consumer == Consumer.GROUP_EVALUATION) {
+            return prepareGroup(ledger, eventId, policyVersion, consumedAt, derivedArtifactId);
+        }
         RelationshipFeedbackEvent event = ledger.events().stream()
                 .filter(item -> item.eventId().equals(eventId))
                 .findFirst()
@@ -61,6 +62,32 @@ public record FeedbackConsumption(
         if (!ledger.context().feedbackConsent(event.actorUserId())) throw new FeedbackRejection("NO_FEEDBACK_CONSENT");
         long actor = event.actorUserId();
         return new FeedbackConsumption(eventId, consumer, policyVersion,
+                ledger.context().lifecycleGeneration(actor), ledger.context().authorizationEpoch(actor),
+                Status.APPLIED, consumedAt, derivedArtifactId);
+    }
+
+    /**
+     * Group evaluation does not read learning consent and does not read the legacy consumed flag.
+     * A withdrawn processing grant still blocks it.
+     */
+    private static FeedbackConsumption prepareGroup(FeedbackLedger ledger, String eventId, String policyVersion,
+                                                    Instant consumedAt, String derivedArtifactId) {
+        RelationshipFeedbackEvent event = ledger.events().stream()
+                .filter(item -> item.eventId().equals(eventId))
+                .findFirst()
+                .orElseThrow(() -> new FeedbackRejection("UNKNOWN_EVENT"));
+        if (!CONSUMABLE.contains(event.eventType()) || event.actorUserId() == 0) {
+            throw new FeedbackRejection("NOT_CONSUMABLE");
+        }
+        if (ledger.learningBlocked()) throw new FeedbackRejection("WITHHELD");
+        if (!ledger.context().feedbackConsent(event.actorUserId())) throw new FeedbackRejection("NO_FEEDBACK_CONSENT");
+        boolean revoked = ledger.events().stream().anyMatch(item -> item.actorUserId() == event.actorUserId()
+                && item.eventType() == FeedbackEventType.FEEDBACK_PROCESSING_REVOKED);
+        if (revoked) throw new FeedbackRejection("PROCESSING_REVOKED");
+        boolean superseded = ledger.events().stream().anyMatch(item -> eventId.equals(item.supersedesEventId()));
+        if (superseded) throw new FeedbackRejection("SUPERSEDED");
+        long actor = event.actorUserId();
+        return new FeedbackConsumption(eventId, Consumer.GROUP_EVALUATION, policyVersion,
                 ledger.context().lifecycleGeneration(actor), ledger.context().authorizationEpoch(actor),
                 Status.APPLIED, consumedAt, derivedArtifactId);
     }

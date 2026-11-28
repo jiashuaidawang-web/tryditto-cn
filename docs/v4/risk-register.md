@@ -452,7 +452,7 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - 重复次数 3 次、窗口 30 天是未验证参数，没有写进特征权重。
 - 合成契约通过不等于真实用户学习质量。真实反馈学习和真实关系质量是 NOT_RUN。
 - 生产启用和最终匹配算法质量是 NO-GO。
-- F03 群体评估没有实现。
+- F03 群体评估在这个提交上没有实现。实现见 V4-F03 一节。
 - `AccountService.requestDelete` 仍不调用反馈删除或画像删除。
 
 分支 `feature/v4-profile-learning` 提交 `e24aae1f7f7b23a10aaec2a4f035fb0f7ed786bc`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46061670392 ，四个作业 success。本地领域测试 585 项，失败 0。
@@ -465,10 +465,30 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 
 - 重复次数 3 次、窗口 30 天仍是未验证参数，没有写进评分权重。
 - `AccountService.requestDelete` 仍不调用 `eraseActor` 和 `RelationshipProfileService.erase`。约定写在 `RelationshipFeedbackStore.FUTURE_ACCOUNT_DELETION`。
-- `GROUP_EVALUATION` 仍会抛出 `F03_NOT_IMPLEMENTED`。
+- `GROUP_EVALUATION` 在这个提交上会抛出 `F03_NOT_IMPLEMENTED`。F03 分支改成独立用途，见下一节。
 - 生产画像处理和真实反馈学习没有启用。真实学习质量和真实关系质量是 NOT_RUN。
 - 生产启用和最终匹配算法质量是 NO-GO。
 
 本地领域测试 587 项，失败 0，异常 0，跳过 0。PostgreSQL 新增 6 个 `ProfileLearningIT` 方法，只在 CI 的 Postgres 16 上执行。
 
 实现提交 `c74e9c1b5db1aa2c5c985da4a0984fd5521e0325`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46115262767 ，四个作业 success。合并前 `origin/master_agent_v4` 仍是 `2e6f5932815add1069925167acd6edaf8c55573f`，没有并行提交。
+
+## V4-F03（2026-11-28）
+
+新增的是已发布匹配的观察、三个分开的结果标签、漏斗、离线校准和不能激活的策略提案。`GROUP_EVALUATION` 与 `PROFILE_LEARNING` 分开领取。V19 没有改，新表在 V22。没有调用 V3 的自动调权，也没有把校准结果写回评分。
+
+合成评估：128 条观察，开发集 96，保留集 32。画像替换 0，授权误用 0，缺失被标成失败 0。开发集上可做 Y1 二分类的有 51 条。真实校准、真实策略提升和真实关系质量是 NOT_RUN 或 NOT_IDENTIFIED。受控实验是 NOT_STARTED。
+
+仍开放：
+
+- 重复次数 3 次、窗口 30 天仍是未验证参数，没有写进评分权重。
+- `AccountService.requestDelete` 仍不调用 `eraseActor`。`eraseActor` 会撤回该用户的观察并把载荷写成 `REDACTED`。
+- 生产匹配快照、生产画像处理和真实反馈学习没有启用。
+- 策略提案不能激活。合成校准不是真实用户概率。
+- 生产启用和最终匹配算法质量是 NO-GO。
+- 候选图 50,000 条边的上限和大规模性能仍未通过。
+- 真实语义向量、混元和千问对照仍未完成。
+
+本地领域测试 593 项，失败 0，异常 0，跳过 0。PostgreSQL 的 `StrategyEvaluationIT` 有 7 个方法，只在 CI 的 Postgres 16 上执行。
+
+分支 `feature/v4-strategy-learning`。CI 地址在四个作业 success 之后回填。F03 不合并到 `master_agent_v4`。

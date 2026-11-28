@@ -129,16 +129,20 @@ class FeedbackLedgerFinalTest {
                 "learn-1", T0, "proposal-1");
         assertThat(first.status()).isEqualTo(FeedbackConsumption.Status.APPLIED);
         assertThat(FeedbackConsumption.purpose(FeedbackConsumption.Consumer.PROFILE_LEARNING, "learn-1"))
-                .isNotEqualTo(FeedbackConsumption.purpose(FeedbackConsumption.Consumer.PROFILE_LEARNING, "learn-2"));
-        assertThatThrownBy(() -> FeedbackConsumption.prepare(ledger, eventId, FeedbackConsumption.Consumer.GROUP_EVALUATION,
-                "group-1", T0, null))
-                .isInstanceOf(FeedbackRejection.class)
-                .extracting(error -> ((FeedbackRejection) error).code())
-                .isEqualTo("F03_NOT_IMPLEMENTED");
+                .isNotEqualTo(FeedbackConsumption.purpose(FeedbackConsumption.Consumer.GROUP_EVALUATION, "group-1"));
+        FeedbackConsumption group = FeedbackConsumption.prepare(ledger, eventId, FeedbackConsumption.Consumer.GROUP_EVALUATION,
+                "group-1", T0, "obs-1");
+        assertThat(group.status()).isEqualTo(FeedbackConsumption.Status.APPLIED);
+        assertThat(group.consumer()).isEqualTo(FeedbackConsumption.Consumer.GROUP_EVALUATION);
         ledger.append(person(FeedbackEventType.FEEDBACK_PROCESSING_REVOKED, 81001, "revoke"), T0);
         assertThatThrownBy(() -> FeedbackConsumption.prepare(ledger, eventId, FeedbackConsumption.Consumer.PROFILE_LEARNING,
                 "learn-1", T0, "proposal-1"))
                 .isInstanceOf(FeedbackRejection.class);
+        assertThatThrownBy(() -> FeedbackConsumption.prepare(ledger, eventId, FeedbackConsumption.Consumer.GROUP_EVALUATION,
+                "group-1", T0, "obs-1"))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("PROCESSING_REVOKED");
         assertThatThrownBy(MatchFeedbackContext::production)
                 .isInstanceOf(FeedbackRejection.class)
                 .extracting(error -> ((FeedbackRejection) error).code())
