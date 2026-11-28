@@ -7,7 +7,9 @@ import cn.aiditto.domain.feedback.v4.FeedbackFacts;
 import cn.aiditto.domain.feedback.v4.FeedbackRejection;
 import cn.aiditto.domain.feedback.v4.MatchFeedbackContext;
 import cn.aiditto.domain.feedback.v4.RelationshipFeedbackEvent;
+import cn.aiditto.domain.feedback.v4.strategy.MatchScoreSnapshot;
 import cn.aiditto.domain.feedback.v4.strategy.MatchingObservation;
+import cn.aiditto.domain.feedback.v4.strategy.ObservationWindow;
 import cn.aiditto.domain.feedback.v4.strategy.StrategyLearningProposal;
 import cn.aiditto.feedback.GroupEvaluationStore;
 import cn.aiditto.feedback.RelationshipFeedbackStore;
@@ -18,7 +20,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -138,6 +146,175 @@ class StrategyEvaluationIT extends ApiIT {
         assertThat(activated).isFalse();
     }
 
+    @Test
+    void oneAcceptDoesNotCreateMutualLabels() {
+        Prepared prepared = prepare(74101, 83201, 83202, true, true);
+        MatchingObservation row = build(prepared, "obs-74101", "f03-it-one", eventIds(74101));
+        assertThat(row.responseA()).isEqualTo(MatchingObservation.Response.ACCEPTED);
+        assertThat(row.responseB()).isEqualTo(MatchingObservation.Response.UNKNOWN);
+        assertThat(row.attendance()).isNotEqualTo(MatchingObservation.Attendance.BOTH_ATTENDED);
+        assertThat(row.continueA()).isNotEqualTo(MatchingObservation.Continue.EXPRESSED);
+        assertThat(row.continueB()).isNotEqualTo(MatchingObservation.Continue.EXPRESSED);
+        String payload = payload("obs-74101");
+        assertThat(payload).contains("ra=ACCEPTED").contains("rb=UNKNOWN").doesNotContain("att=BOTH_ATTENDED");
+        Integer sources = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM matching_observation_source WHERE observation_id = 'obs-74101'", Integer.class);
+        assertThat(sources).isEqualTo(2);
+    }
+
+    @Test
+    void correctedOrUnknownSourceIsRefused() {
+        Prepared unknown = prepare(74102, 83203, 83204, true, true);
+        List<String> wrong = new ArrayList<>(eventIds(74102));
+        wrong.set(0, "00000000-0000-0000-0000-000000000099");
+        assertThatThrownBy(() -> build(unknown, "obs-74102", "f03-it-source", wrong))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("SOURCE_MISMATCH");
+        assertThat(countObservations(74102)).isZero();
+
+        Prepared corrected = prepare(74109, 83217, 83218, true, true);
+        feedback.append(corrected.context(), new FeedbackCommand(FeedbackEventType.FEEDBACK_CORRECTED, 83217,
+                FeedbackFacts.SourceType.PARTICIPANT, "fix-74109", T0, corrected.eventId(), null, null), T0.plusSeconds(2));
+        assertThatThrownBy(() -> build(corrected, "obs-74109-old", "f03-it-source", List.of(corrected.eventId())))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("SOURCE_MISMATCH");
+        MatchingObservation replaced = build(corrected, "obs-74109", "f03-it-source", effectiveIds(74109));
+        assertThat(replaced.responseA()).isEqualTo(MatchingObservation.Response.UNKNOWN);
+        assertThat(payload("obs-74109")).doesNotContain("ra=ACCEPTED");
+
+        Prepared retracted = prepare(74103, 83205, 83206, true, true);
+        feedback.append(retracted.context(), new FeedbackCommand(FeedbackEventType.FEEDBACK_RETRACTED, 83205,
+                FeedbackFacts.SourceType.PARTICIPANT, "undo-74103", T0, retracted.eventId(), null, null), T0.plusSeconds(2));
+        assertThatThrownBy(() -> build(retracted, "obs-74103", "f03-it-source", eventIds(74103)))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("RETRACTED_SOURCE");
+        assertThat(countObservations(74103)).isZero();
+    }
+
+    @Test
+    void oneConsentDoesNotAuthorizeBoth() {
+        MatchFeedbackContext context = MatchFeedbackContext.experiment(74104, "run-f03", LocalDate.of(2026, 11, 28),
+                83207, 83208, true, 4, 4, "m02-b5", "global-objective-g2-1", "E+G2", true, false);
+        feedback.append(context, new FeedbackCommand(FeedbackEventType.MATCH_PUBLISHED, 0, FeedbackFacts.SourceType.SYSTEM,
+                "pub-74104", T0, null, null, null), T0);
+        feedback.append(context, new FeedbackCommand(FeedbackEventType.MATCH_ACCEPTED, 83207,
+                FeedbackFacts.SourceType.PARTICIPANT, "acc-74104", T0, null, null, null), T0);
+        assertThatThrownBy(() -> groups.recordBuilt(context, "f03-it-half", "group-1", scores(), window(),
+                "obs-74104", T0.plusSeconds(10 * 86400L), T0.plusSeconds(20 * 86400L), eventIds(74104)))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("NO_FEEDBACK_CONSENT");
+        assertThat(countObservations(74104)).isZero();
+    }
+
+    @Test
+    void withdrawLeavesTheOtherObservation() {
+        Prepared first = prepare(74105, 83209, 83210, true, true);
+        Prepared second = prepare(74106, 83211, 83212, true, true);
+        build(first, "obs-74105", "f03-it-withdraw", eventIds(74105));
+        build(second, "obs-74106", "f03-it-withdraw", eventIds(74106));
+        groups.withdrawLinked("obs-74105", T0.plusSeconds(30 * 86400L));
+        assertThat(groups.legalPayloads("f03-it-withdraw")).hasSize(1);
+        assertThat(payload("obs-74106")).contains("obs-74106");
+        Boolean withdrawn = jdbc.queryForObject(
+                "SELECT withdrawn FROM matching_observation WHERE observation_id = 'obs-74105'", Boolean.class);
+        assertThat(withdrawn).isTrue();
+        assertThatThrownBy(() -> feedback.claim(first.context(), first.eventId(),
+                FeedbackConsumption.Consumer.GROUP_EVALUATION, "group-1", T0.plusSeconds(31 * 86400L), "obs-74105"))
+                .isInstanceOf(FeedbackRejection.class);
+        assertThatThrownBy(() -> groups.withdrawLinked("obs-74105", T0.plusSeconds(32 * 86400L)))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("OBSERVATION");
+        assertThatThrownBy(() -> build(first, "obs-74105-again", "f03-it-withdraw", eventIds(74105)))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("DUPLICATE_MATCH");
+        assertThat(jdbc.queryForObject(
+                "SELECT withdrawn FROM matching_observation WHERE observation_id = 'obs-74105'", Boolean.class)).isTrue();
+        String secondStatus = jdbc.queryForObject("""
+                SELECT processing_status FROM relationship_feedback_consumption
+                WHERE event_id = ? AND consumer_type = 'GROUP_EVALUATION'
+                """, String.class, second.eventId());
+        assertThat(secondStatus).isEqualTo("APPLIED");
+    }
+
+    @Test
+    void replayDoesNotDuplicateOrRestore() {
+        Prepared prepared = prepare(74107, 83213, 83214, true, true);
+        build(prepared, "obs-74107", "f03-it-replay", eventIds(74107));
+        Integer sources = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM matching_observation_source WHERE observation_id = 'obs-74107'", Integer.class);
+        assertThatThrownBy(() -> build(prepared, "obs-74107-replay", "f03-it-replay", eventIds(74107)))
+                .isInstanceOf(FeedbackRejection.class)
+                .extracting(error -> ((FeedbackRejection) error).code())
+                .isEqualTo("DUPLICATE_MATCH");
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM matching_observation_source WHERE observation_id = 'obs-74107'", Integer.class))
+                .isEqualTo(sources);
+        assertThat(countObservations(74107)).isEqualTo(1);
+    }
+
+    @Test
+    void concurrentBuildsLeaveOneObservation() throws Exception {
+        Prepared prepared = prepare(74108, 83215, 83216, true, true);
+        List<String> sources = eventIds(74108);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<?> left = pool.submit(() -> {
+                start.await(5, TimeUnit.SECONDS);
+                groups.recordBuilt(prepared.context(), "f03-it-race", "group-1", scores(), window(),
+                        "obs-74108", T0.plusSeconds(10 * 86400L), T0.plusSeconds(20 * 86400L), sources);
+                return null;
+            });
+            Future<?> right = pool.submit(() -> {
+                start.await(5, TimeUnit.SECONDS);
+                groups.recordBuilt(prepared.context(), "f03-it-race", "group-1", scores(), window(),
+                        "obs-74108", T0.plusSeconds(10 * 86400L), T0.plusSeconds(20 * 86400L), sources);
+                return null;
+            });
+            start.countDown();
+            int duplicate = 0;
+            for (Future<?> future : List.of(left, right)) {
+                try {
+                    future.get(20, TimeUnit.SECONDS);
+                } catch (Exception failure) {
+                    Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+                    assertThat(cause).isInstanceOf(FeedbackRejection.class);
+                    assertThat(((FeedbackRejection) cause).code()).isEqualTo("DUPLICATE_MATCH");
+                    duplicate++;
+                }
+            }
+            assertThat(duplicate).isEqualTo(1);
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(countObservations(74108)).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM matching_observation_source WHERE observation_id = 'obs-74108'", Integer.class))
+                .isEqualTo(sources.size());
+    }
+
+    @Test
+    void datasetChangeInvalidatesProposalAndCalibration() {
+        groups.saveProposal(proposal("strategy-it-invalidate", "f03-it-invalidate"));
+        groups.saveProposal(proposal("strategy-it-keep", "f03-it-keep"));
+        groups.saveCalibration("cal-it-invalidate", "f03-it-invalidate", T0);
+        assertThat(groups.proposalValid("strategy-it-invalidate")).isTrue();
+        assertThat(groups.invalidateDataset("f03-it-invalidate")).isEqualTo(1);
+        assertThat(groups.proposalValid("strategy-it-invalidate")).isFalse();
+        assertThat(groups.proposalValid("strategy-it-keep")).isTrue();
+        Boolean calibration = jdbc.queryForObject(
+                "SELECT valid FROM group_calibration_run WHERE run_id = 'cal-it-invalidate'", Boolean.class);
+        assertThat(calibration).isFalse();
+        assertThat(groups.invalidateDataset("f03-it-invalidate")).isZero();
+        assertThat(groups.proposalValid("strategy-it-invalidate")).isFalse();
+    }
+
     private Prepared prepare(long matchId, long userA, long userB, boolean feedbackConsent, boolean learningConsent) {
         MatchFeedbackContext context = MatchFeedbackContext.experiment(matchId, "run-f03", LocalDate.of(2026, 11, 28),
                 userA, userB, true, 4, 4, "m02-b5", "global-objective-g2-1", "E+G2",
@@ -157,6 +334,52 @@ class StrategyEvaluationIT extends ApiIT {
                 true, true, MatchingObservation.Attendance.BOTH_ATTENDED, MatchingObservation.Continue.EXPRESSED,
                 MatchingObservation.Continue.EXPRESSED, MatchingObservation.Access.OPEN, false, List.of("src-" + matchId),
                 T0.plusSeconds(20 * 86400L));
+    }
+
+    private MatchingObservation build(Prepared prepared, String observationId, String dataset, List<String> sources) {
+        return groups.recordBuilt(prepared.context(), dataset, "group-1", scores(), window(), observationId,
+                T0.plusSeconds(10 * 86400L), T0.plusSeconds(20 * 86400L), sources);
+    }
+
+    private static MatchScoreSnapshot scores() {
+        return new MatchScoreSnapshot(40, 55, 0.6, 0.7, 40, "B5");
+    }
+
+    private static ObservationWindow window() {
+        return new ObservationWindow(T0.plusSeconds(7 * 86400L), T0.plusSeconds(14 * 86400L), T0.plusSeconds(21 * 86400L));
+    }
+
+    private List<String> eventIds(long matchId) {
+        return jdbc.queryForList("""
+                SELECT event_id FROM relationship_feedback_event
+                WHERE match_id = ? ORDER BY event_seq
+                """, String.class, matchId);
+    }
+
+    private List<String> effectiveIds(long matchId) {
+        List<String> superseded = jdbc.queryForList("""
+                SELECT supersedes_event_id FROM relationship_feedback_event
+                WHERE match_id = ? AND supersedes_event_id IS NOT NULL
+                """, String.class, matchId);
+        return eventIds(matchId).stream().filter(id -> !superseded.contains(id)).toList();
+    }
+
+    private int countObservations(long matchId) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM matching_observation WHERE match_id = ?", Integer.class, matchId);
+        return count == null ? 0 : count;
+    }
+
+    private String payload(String observationId) {
+        return jdbc.queryForObject(
+                "SELECT payload FROM matching_observation WHERE observation_id = ?", String.class, observationId);
+    }
+
+    private static StrategyLearningProposal proposal(String proposalId, String datasetVersion) {
+        return new StrategyLearningProposal(proposalId, "global-objective-g2-1", "global-objective-g2-1",
+                datasetVersion, "synthetic-published-matches", "Y1", "no weight change", "not estimated",
+                "synthetic only", "no counterfactual outcomes", "hard constraints unchanged",
+                "not measured on real users", StrategyLearningProposal.Status.EVALUATED, T0);
     }
 
     private record Prepared(MatchFeedbackContext context, String eventId) {}

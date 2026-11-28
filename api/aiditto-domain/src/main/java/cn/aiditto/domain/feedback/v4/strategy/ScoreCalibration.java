@@ -16,10 +16,20 @@ public final class ScoreCalibration {
     private ScoreCalibration() {}
 
     public enum Target { SCORE_AB_ACCEPT_A, SCORE_BA_ACCEPT_B, RECIPROCAL_MUTUAL, ATTENDANCE, CONTINUE }
-    public enum Method { UNCALIBRATED, BINNING, LOGISTIC, ISOTONIC }
+    public enum Method { UNCALIBRATED, CONSTANT_RATE, BINNING, LOGISTIC, ISOTONIC }
 
     public record Result(Target target, Method method, String status, int sample, Double brier, Double logLoss,
                          Double calibrationError) {}
+
+    static double[] probabilities(Method method, Target target, List<MatchingObservation> fitRows, List<MatchingObservation> evalRows) {
+        return switch (method) {
+            case UNCALIBRATED -> examples(evalRows, target).stream().mapToDouble(example -> clamp(example.score / 100.0)).toArray();
+            case CONSTANT_RATE -> constantRate(examples(fitRows, target), examples(evalRows, target).size());
+            case BINNING -> applyBins(examples(fitRows, target), examples(evalRows, target));
+            case LOGISTIC -> applyLogistic(examples(fitRows, target), examples(evalRows, target));
+            case ISOTONIC -> applyIsotonic(examples(fitRows, target), examples(evalRows, target));
+        };
+    }
 
     /** Fits and scores the same rows. Boundary tests use this. It is not a holdout result. */
     public static List<Result> run(List<MatchingObservation> rows) {
@@ -51,10 +61,15 @@ public final class ScoreCalibration {
         }
         double[] probability = switch (method) {
             case UNCALIBRATED -> eval.stream().mapToDouble(example -> clamp(example.score / 100.0)).toArray();
+            case CONSTANT_RATE -> constantRate(fit, eval.size());
             case BINNING -> applyBins(fit, eval);
             case LOGISTIC -> applyLogistic(fit, eval);
             case ISOTONIC -> applyIsotonic(fit, eval);
         };
+        for (int i = 0; i < probability.length; i++) {
+            if (!Double.isFinite(probability[i])) probability[i] = 0.5;
+            probability[i] = clamp(probability[i]);
+        }
         return new Result(target, method, "OK", eval.size(), brier(eval, probability),
                 logLoss(eval, probability), error(eval, probability));
     }
@@ -105,12 +120,25 @@ public final class ScoreCalibration {
         return probability;
     }
 
+    private static double[] constantRate(List<Example> fit, int size) {
+        double rate = 0;
+        for (Example example : fit) rate += example.label;
+        double probability = clamp(rate / fit.size());
+        double[] out = new double[size];
+        java.util.Arrays.fill(out, probability);
+        return out;
+    }
+
     private static double[] applyIsotonic(List<Example> fit, List<Example> eval) {
-        List<Example> ordered = new ArrayList<>(fit);
-        ordered.sort((left, right) -> Integer.compare(left.score, right.score));
+        java.util.Map<Integer, double[]> grouped = new java.util.TreeMap<>();
+        for (Example example : fit) {
+            double[] cell = grouped.computeIfAbsent(example.score, score -> new double[2]);
+            cell[0] += example.label;
+            cell[1] += 1;
+        }
         List<double[]> blocks = new ArrayList<>();
-        for (Example example : ordered) {
-            blocks.add(new double[] {example.label, 1, example.score});
+        for (var entry : grouped.entrySet()) {
+            blocks.add(new double[] {entry.getValue()[0], entry.getValue()[1], entry.getKey()});
             while (blocks.size() >= 2) {
                 double[] previous = blocks.get(blocks.size() - 2);
                 double[] current = blocks.get(blocks.size() - 1);
@@ -122,11 +150,10 @@ public final class ScoreCalibration {
         }
         double[] byScore = new double[101];
         java.util.Arrays.fill(byScore, Double.NaN);
-        int cursor = 0;
         for (double[] block : blocks) {
             double value = clamp(block[0] / block[1]);
-            int covered = (int) block[1];
-            for (int i = 0; i < covered; i++) byScore[Math.min(100, ordered.get(cursor++).score)] = value;
+            int start = (int) block[2];
+            byScore[Math.min(100, start)] = value;
         }
         double carry = Double.NaN;
         for (int score = 0; score <= 100; score++) {

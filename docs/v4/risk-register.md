@@ -492,3 +492,13 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 本地领域测试 593 项，失败 0，异常 0，跳过 0。PostgreSQL 的 `StrategyEvaluationIT` 有 7 个方法，只在 CI 的 Postgres 16 上执行。
 
 分支 `feature/v4-strategy-learning`。实现提交 `094e161c20198aef5a23a8dce76cf0b58e77d858`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46118005635 ，四个作业 success。F03 不合并到 `master_agent_v4`。
+
+## V4-F03-FINAL（2026-11-28）
+
+观察改由服务端账本和发布时分数快照生成。调用方不能自带双方接受、见面或继续意愿。一方反馈授权不能给另一方的结果放行。不存在、已更正或已撤回的来源事件不能成为合法样本。撤回一条观察不改其他观察，也不重新打开已撤回凭证。数据集版本变化后，该版本的提案和校准运行失效。
+
+`f03-synthetic-1` 和 `RelationshipLabels` 保持原样。新口径 `f03-labels-2` 把明确拒绝和未知、超时、未成熟分开。旧双方拒绝 24 条，新的未达成双方接受 44 条。保序回归先聚合相同分数。未校准的 `score/100` 只是数学对照。合成校准仍不能写入生产评分。
+
+本地领域测试 599 项，失败 0，异常 0，跳过 0。`StrategyEvaluationIT` 从 7 个方法增到 14 个。本机没有 PostgreSQL，这 14 个方法本地 NOT_RUN，留到 CI 的 Postgres 16。
+
+仍开放：真实校准、真实策略提升、真实关系质量、生产匹配快照、生产启用。最终匹配算法质量继续 NO-GO。细节见 `V4-F03-final-audit.md`。

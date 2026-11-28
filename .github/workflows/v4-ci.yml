@@ -282,6 +282,13 @@ jobs:
                   "secondClaimDoesNotRestoreAWithdrawnObservation",
                   "erasureDropsTheObservationFromTheLegalSet",
                   "proposalCannotBeActivated",
+                  "oneAcceptDoesNotCreateMutualLabels",
+                  "correctedOrUnknownSourceIsRefused",
+                  "oneConsentDoesNotAuthorizeBoth",
+                  "withdrawLeavesTheOtherObservation",
+                  "replayDoesNotDuplicateOrRestore",
+                  "concurrentBuildsLeaveOneObservation",
+                  "datasetChangeInvalidatesProposalAndCalibration",
               ],
           }
           surefire_required = {

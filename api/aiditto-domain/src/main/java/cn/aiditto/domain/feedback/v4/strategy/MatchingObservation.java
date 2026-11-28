@@ -96,6 +96,9 @@ public record MatchingObservation(
                 + "|att=" + attendance + "|ca=" + continueA + "|cb=" + continueB
                 + "|auth=" + feedbackAuthorization + "|retracted=" + retracted
                 + "|src=" + String.join(",", sourceEventIds)
+                + "|rd=" + responseDeadline
+                + "|dd=" + dateDeadline
+                + "|fd=" + followupDeadline
                 + "|at=" + observedAt;
     }
 
