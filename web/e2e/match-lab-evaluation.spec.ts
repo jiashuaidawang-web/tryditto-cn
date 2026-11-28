@@ -57,7 +57,7 @@ test('strategy replay and safety stay on sandbox evidence', async ({ page, reque
   await expect(page.getByRole('heading', { name: '安全审计' })).toBeVisible();
   await expect(page.getByRole('cell', { name: '生产启用', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'NO-GO', exact: true }).first()).toBeVisible();
-  await expect(page.getByText('R-RELATIONSHIP-QUALITY')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'R-RELATIONSHIP-QUALITY', exact: true })).toBeVisible();
   await page.screenshot({ path: 'e2e-artifacts/13-safety.png', fullPage: true });
 
   const token = await page.evaluate(() => {
