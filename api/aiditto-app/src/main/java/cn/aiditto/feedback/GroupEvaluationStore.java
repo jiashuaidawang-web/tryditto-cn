@@ -191,10 +191,12 @@ public class GroupEvaluationStore {
                 """, userId, userId);
     }
 
+    /** A missing row is a synthetic observation, not a closed account. Only a real deleting account is refused. */
     private void rejectClosed(long userId) {
-        String status = jdbc.queryForObject("SELECT status FROM \"user\" WHERE id = ?", String.class, userId);
-        if (status == null) throw new FeedbackRejection("NOT_FOUND");
-        if (User.DELETING.equals(status) || "purged".equals(status)) throw new FeedbackRejection("ACCOUNT_INACTIVE");
+        List<String> rows = jdbc.query("SELECT status FROM \"user\" WHERE id = ?", (rs, n) -> rs.getString(1), userId);
+        if (!rows.isEmpty() && (User.DELETING.equals(rows.get(0)) || "purged".equals(rows.get(0)))) {
+            throw new FeedbackRejection("ACCOUNT_INACTIVE");
+        }
     }
 
     public List<String> legalPayloads(String datasetVersion) {

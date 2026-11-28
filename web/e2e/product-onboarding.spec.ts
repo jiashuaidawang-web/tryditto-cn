@@ -87,15 +87,17 @@ async function walk(page: Page, email: string) {
         { name: 'b.png', mimeType: 'image/png', buffer: png },
       ]);
     } else if (id === 'location') {
-      await page.getByRole('button', { name: '使用当前位置' }).click();
+      const locate = page.locator('[data-step="location"] button[aria-label="使用当前位置"]');
+      await locate.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      await locate.click();
     } else if (id === 'isStudent') {
-      await step.getByRole('button', { name: '是的，我是学生' }).click();
+      await step.getByRole('radio', { name: '是的，我是学生' }).click();
     } else if (id === 'gender') {
-      await step.getByRole('button', { name: '男生' }).click();
+      await step.getByRole('radio', { name: '男生' }).click();
     } else if (id === 'expectedGender') {
-      await step.getByRole('button', { name: '女生' }).click();
+      await step.getByRole('checkbox', { name: '女生' }).click();
     } else {
-      const choice = step.getByRole('button').first();
+      const choice = step.locator('[role="radio"], [role="checkbox"]').first();
       if (await choice.count()) await choice.click();
     }
     const action = page.locator('[data-action="next"], [data-action="send"]').last();
