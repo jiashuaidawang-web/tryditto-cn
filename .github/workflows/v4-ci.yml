@@ -561,7 +561,20 @@ jobs:
         run: echo "::add-mask::${{ github.run_id }}-${{ github.run_attempt }}-lab"
       - name: Prove a closed switch and a production profile stay closed
         working-directory: api
-        run: mvn -B -pl aiditto-app -am test -Dtest=MatchLabFilterTest -Dsurefire.failIfNoSpecifiedTests=false
+        run: |
+          set +e
+          mkdir -p ../ci-meta
+          mvn -B -pl aiditto-app -am test -Dtest=MatchLabFilterTest -Dsurefire.failIfNoSpecifiedTests=false > ../ci-meta/filter.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" != 0 ]; then
+            if [ -f ../ci-meta/filter.log ]; then
+              grep -E 'ERROR|FAILURE|Failed|COMPILATION|cannot find|Tests run:' ../ci-meta/filter.log | head -n 12 | while IFS= read -r line; do
+                printf '::error title=filter::%s\n' "$(printf '%s' "$line" | tr '\r' ' ' | cut -c1-300)"
+              done
+            fi
+            exit "$status"
+          fi
       - name: Build the reactor
         working-directory: api
         run: mvn -B -pl aiditto-app -am -DskipTests package
@@ -634,6 +647,7 @@ jobs:
             ci-meta/lab-server.log
             ci-meta/lab-web.log
             ci-meta/playwright.log
+            ci-meta/filter.log
 
   test-reports:
     name: test-reports
