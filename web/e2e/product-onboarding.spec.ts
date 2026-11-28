@@ -1,4 +1,6 @@
-import { expect, test, type Page, type Response } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Response } from '@playwright/test';
+
+const fast = 3_000;
 
 const code = process.env.MATCH_LAB_CODE || '888888';
 const api = process.env.MATCH_LAB_API || 'http://127.0.0.1:8080';
@@ -25,8 +27,8 @@ test('real onboarding writes an isolated profile and deletion closes it', async 
   expect(kept.size).toBeGreaterThan(0);
 
   await page.goto('/onboarding/edit/matchingStyle?lang=zh');
-  await page.locator('[data-step="matchingStyle"] button').first().click();
-  await page.getByRole('button', { name: '完成' }).click();
+  await page.locator('[data-step="matchingStyle"] button').first().click({ timeout: 10_000 });
+  await page.getByRole('button', { name: '完成' }).click({ timeout: 10_000 });
   await expect.poll(async () => (await diagnostic(token)).profileVersion, { timeout: 20_000 }).toBeGreaterThan(firstVersion);
   const edited = await diagnostic(token);
   expect(edited.usableForV4).toBe(true);
@@ -82,13 +84,15 @@ async function walk(page: Page, email: string) {
       await page.waitForURL(/\/(voice|home)/, { timeout: 15_000 });
       continue;
     }
-    const id = (await step.getAttribute('data-step')) ?? '';
-    last = id || last;
-    const same = id !== '' && id === previous;
+    const id = (await attr(step, 'data-step')) ?? '';
+    if (!id) continue;
+    last = id;
+    try {
+    const same = id === previous;
     previous = id;
     if (same) await page.waitForTimeout(500);
     const action = page.locator('[data-action="next"], [data-action="send"]').last();
-    const open = async () => (await action.count()) > 0 && (await action.getAttribute('aria-disabled')) === 'false';
+    const open = async () => (await action.count()) > 0 && (await attr(action, 'aria-disabled')) === 'false';
     if (id === 'photos' && !photosSent) {
       photosSent = true;
       let finalized = 0;
@@ -113,34 +117,42 @@ async function walk(page: Page, email: string) {
     } else if (!same || !(await open())) {
       await answerStep(step, id, email);
     }
-    if (await open()) await action.click();
+    if (await open()) await action.click({ timeout: fast });
     await page.waitForTimeout(300);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`onboarding failed at ${last}: ${message}`);
+    }
   }
   throw new Error(`onboarding did not finish at ${last}`);
 }
 
+async function attr(locator: Locator, name: string) {
+  return locator.getAttribute(name, { timeout: fast }).catch(() => null);
+}
+
 async function answerStep(step: ReturnType<Page['locator']>, id: string, email: string) {
   if (id === 'name') {
-    await step.locator('input').fill('测试');
+    await step.locator('input').fill('测试', { timeout: fast });
     return;
   }
   if (id === 'birthday') {
-    const current = await step.locator('input').inputValue();
-    if (!current.includes('2004')) await step.locator('input').pressSequentially('20040501');
+    const current = await step.locator('input').inputValue({ timeout: fast }).catch(() => '');
+    if (!current.includes('2004')) await step.locator('input').pressSequentially('20040501', { timeout: fast });
     return;
   }
   if (id === 'schoolEmail' || id === 'personalEmail') {
-    await step.locator('input').fill(email);
+    await step.locator('input').fill(email, { timeout: fast });
     return;
   }
   if (id === 'emailVerify') {
-    await step.locator('input').fill(code);
+    await step.locator('input').fill(code, { timeout: fast });
     return;
   }
   if (id === 'location') {
     const locate = step.locator('button[aria-label="使用当前位置"]');
-    await locate.evaluate((el) => el.scrollIntoView({ block: 'center' }));
-    await locate.click();
+    await locate.scrollIntoViewIfNeeded({ timeout: fast });
+    await locate.click({ timeout: fast });
     return;
   }
   if (id === 'isStudent') {
@@ -158,35 +170,35 @@ async function answerStep(step: ReturnType<Page['locator']>, id: string, email: 
   const checked = step.locator('[aria-checked="true"]');
   const choice = step.locator('[role="radio"], [role="checkbox"]').first();
   if ((await choice.count()) && (await checked.count()) === 0) {
-    await choice.click();
+    await choice.click({ timeout: fast });
     return;
   }
   const area = step.locator('textarea');
-  if ((await area.count()) && (await area.inputValue()) === '') {
-    await area.fill('喜欢在校园里散步');
+  if ((await area.count()) && (await area.inputValue({ timeout: fast }).catch(() => 'x')) === '') {
+    await area.fill('喜欢在校园里散步', { timeout: fast });
     return;
   }
   const text = step.locator('input:not([type="file"])');
-  if ((await text.count()) && (await text.first().inputValue()) === '') {
-    await text.first().fill('红烧肉');
+  if ((await text.count()) && (await text.first().inputValue({ timeout: fast }).catch(() => 'x')) === '') {
+    await text.first().fill('红烧肉', { timeout: fast });
     return;
   }
   const slider = step.locator('[role="slider"]');
-  if (await slider.count()) await slider.first().press('ArrowRight');
+  if (await slider.count()) await slider.first().press('ArrowRight', { timeout: fast });
 }
 
 async function clickChoice(step: ReturnType<Page['locator']>, role: 'radio' | 'checkbox', name: string) {
   const choice = step.getByRole(role, { name });
-  if ((await choice.getAttribute('aria-checked')) !== 'true') await choice.click();
+  if ((await attr(choice, 'aria-checked')) !== 'true') await choice.click({ timeout: fast });
 }
 
 async function leaveOptionalVoice(page: Page) {
   const stop = page.getByRole('button', { name: '先不答了' });
   await stop.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
-  if (await stop.isVisible().catch(() => false)) await stop.click();
+  if (await stop.isVisible().catch(() => false)) await stop.click({ timeout: fast });
   if (/\/home/.test(page.url())) return;
   const home = page.getByRole('button', { name: '回首页' });
-  if (await home.isVisible().catch(() => false)) await home.click();
+  if (await home.isVisible().catch(() => false)) await home.click({ timeout: fast });
   await expect(page).toHaveURL(/\/home/, { timeout: 20_000 });
 }
 
