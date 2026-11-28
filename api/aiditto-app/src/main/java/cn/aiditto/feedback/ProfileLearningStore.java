@@ -23,6 +23,7 @@ import cn.aiditto.domain.relationship.RelationshipTypes.Importance;
 import cn.aiditto.domain.relationship.RelationshipTypes.Operator;
 import cn.aiditto.domain.relationship.RelationshipTypes.Section;
 import cn.aiditto.domain.relationship.SnapshotAdmission;
+import cn.aiditto.account.UserLifecycleLock;
 import cn.aiditto.relationship.AnswerEvidenceDirectory;
 import cn.aiditto.relationship.RelationshipProfileService;
 import cn.aiditto.relationship.RelationshipProfileService.LearningPermit;
@@ -52,15 +53,18 @@ public class ProfileLearningStore {
     private final RelationshipFeedbackStore feedback;
     private final RelationshipProfileService profiles;
     private final AnswerEvidenceDirectory answers;
+    private final UserLifecycleLock locks;
     private final ProfileLearningEngine engine = ProfileLearningEngine.v1();
     private final FeatureRegistry registry = FeatureRegistry.v1();
 
     public ProfileLearningStore(JdbcTemplate jdbc, RelationshipFeedbackStore feedback,
-                                @Lazy RelationshipProfileService profiles, AnswerEvidenceDirectory answers) {
+                                @Lazy RelationshipProfileService profiles, AnswerEvidenceDirectory answers,
+                                UserLifecycleLock locks) {
         this.jdbc = jdbc;
         this.feedback = feedback;
         this.profiles = profiles;
         this.answers = answers;
+        this.locks = locks;
     }
 
     @Transactional
@@ -127,7 +131,7 @@ public class ProfileLearningStore {
      */
     @Transactional
     public void retractUnsupported(MatchFeedbackContext context, long userId, Instant when) {
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) userId);
+        hold(userId);
         if (erased(userId)) throw new FeedbackRejection("ERASED");
         LearningPermit permit = lock(userId);
         if (!permit.processingGranted()) throw new FeedbackRejection("NO_FEEDBACK_CONSENT");
@@ -147,6 +151,11 @@ public class ProfileLearningStore {
         }
         invalidatePending(userId, superseded);
         if (revokedEvents.isEmpty()) return;
+        if (erased(userId)) throw new FeedbackRejection("ERASED");
+        LearningPermit again = lock(userId);
+        if (!again.accountActive() || !again.processingGranted() || again.generation() != permit.generation()) {
+            throw new FeedbackRejection("ACCOUNT_INACTIVE");
+        }
         writeCurrent(userId);
         for (String eventId : revokedEvents) feedback.revokeEvent(eventId, when);
     }
@@ -172,7 +181,7 @@ public class ProfileLearningStore {
         if (!command.feedbackProcessingGranted() || !context.feedbackConsent(command.userId())) {
             throw new FeedbackRejection("NO_FEEDBACK_CONSENT");
         }
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) command.userId());
+        hold(command.userId());
         if (erased(command.userId())) throw new FeedbackRejection("ERASED");
         LearningPermit permit = lock(command.userId());
         if (!permit.accountActive()) throw new FeedbackRejection("ACCOUNT_INACTIVE");
@@ -206,6 +215,11 @@ public class ProfileLearningStore {
         if (update.decision().kind() != ProfileVersionPolicy.Kind.INSERT
                 && update.decision().kind() != ProfileVersionPolicy.Kind.ACCEPT_REVISION) {
             throw new FeedbackRejection(update.decision().kind().name());
+        }
+        if (erased(command.userId())) throw new FeedbackRejection("ERASED");
+        LearningPermit again = lock(command.userId());
+        if (!again.accountActive() || !again.processingGranted() || again.generation() != permit.generation()) {
+            throw new FeedbackRejection("ACCOUNT_INACTIVE");
         }
         try {
             profiles.commitLearning(command.userId(), update.snapshot());
@@ -335,6 +349,14 @@ public class ProfileLearningStore {
                         rs.getInt("profile_version"), rs.getLong("lifecycle_generation"), rs.getLong("authorization_epoch"),
                         split(rs.getString("source_event_ids")), rs.getBoolean("retracted"),
                         rs.getTimestamp("created_at").toInstant(), rs.getString("evidence_origin")), key);
+    }
+
+    private void hold(long userId) {
+        try {
+            locks.userThenFeedback(userId);
+        } catch (DomainException ex) {
+            throw rejection(ex);
+        }
     }
 
     private LearningPermit lock(long userId) {

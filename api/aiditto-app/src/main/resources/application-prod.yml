@@ -30,5 +30,6 @@ aiditto:
     accel-redirect: true
   integration:
     mode: LEGACY_ONLY
+    environment: production
   relationship-profile:
     processing-enabled: false

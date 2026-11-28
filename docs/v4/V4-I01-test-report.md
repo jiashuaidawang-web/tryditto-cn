@@ -29,3 +29,9 @@ CI 的 Surefire 切片原来是 18 个。`ProductIntegrationSettingsTest` 的 2 
 题库 50 项，映射 22 项，未映射 28 项。合成入驻会检查爱好、阅读、音乐、关系目标、节奏、在读、年级、学历拒答、职业引用、年龄硬约束、身高不设限、学历重要性不设限、性别引用和开场白。宗教答案留在问卷里，但不进入 V4 快照。
 
 这些数字只说明隔离测试走通了现有投影规则。它们不是真实用户的语义理解质量。
+
+## I01-FINAL
+
+本机再次执行 `mvn -B -pl aiditto-domain test`：领域测试 617，失败 0，异常 0，跳过 0。`ProductIntegrationSettingsTest` 现为 7 个，已在本机通过。
+
+PostgreSQL 并发测试和浏览器测试在本机 NOT_RUN。CI 名单新增注销与学习确认、反馈、群体观察、双方注销、提取任务，以及授权撤回与画像更新。浏览器新增 `web/e2e/product-onboarding.spec.ts`，和原有 Match Lab 用例一起跑。外部擦除执行器仍是 NOT_RUN。

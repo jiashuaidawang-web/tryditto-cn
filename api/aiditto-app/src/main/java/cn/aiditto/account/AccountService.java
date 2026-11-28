@@ -147,8 +147,8 @@ public class AccountService {
 
     /**
      * Closes the account now. {@code LEGACY_ONLY} still leaves V4 rows for a later purge.
-     * {@code V4_INTEGRATION_TEST} stops new work first, then erases stored V4 rows.
-     * The external-store task stays pending, so this method does not report a finished erasure.
+     * An isolated test mode stops new work first, then erases stored V4 rows.
+     * The external-store task stays {@code NOT_RUN}. This method does not report a finished erasure.
      */
     @Transactional
     public void requestDelete(long userId) {
@@ -158,6 +158,6 @@ public class AccountService {
                 .set("status", User.DELETING).set("delete_requested_at", now).set("purge_at", now.plus(PURGE_AFTER)).set("updated_at", now));
         sessions.revokeAll(userId);
         publishGuard.releaseUser(userId, now);
-        if (integration.v4IntegrationTest()) lifecycle.eraseIntegrated(userId);
+        if (integration.isolatedTest()) lifecycle.eraseIntegrated(userId);
     }
 }

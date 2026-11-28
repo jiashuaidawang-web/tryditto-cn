@@ -296,7 +296,10 @@ public class RelationshipProfileService {
     public record LearningPermit(boolean accountActive, boolean processingGranted, long generation,
                                  int sourceVersion, int snapshotVersion, String hash) {}
 
-    /** Row lock after the caller's advisory user lock. The command's generation is not read here. */
+    /**
+     * User row lock, then a fresh read of the account and the processing grant.
+     * Callers take this after {@code UserLifecycleLock.userThenFeedback}, never before it.
+     */
     @Transactional
     public LearningPermit lockLearning(long userId) {
         requireEnabled();
@@ -356,6 +359,22 @@ public class RelationshipProfileService {
         if (life == null || !"granted".equals(life.processing())) return Optional.empty();
         Current current = currentRow(userId);
         return current == null ? Optional.empty() : Optional.of(current.versionRow());
+    }
+
+    public boolean processingOpen(long userId) {
+        if (!processingEnabled) return false;
+        Lifecycle life = lifecycle(userId);
+        return life != null && "granted".equals(life.processing());
+    }
+
+    public int storedSourceVersion(long userId) {
+        Integer source = profileVersion(userId);
+        return source == null ? 0 : source;
+    }
+
+    public long storedGeneration(long userId) {
+        Lifecycle life = lifecycle(userId);
+        return life == null ? 0 : life.generation();
     }
 
     public int latestProcessedSourceVersion(long userId) {

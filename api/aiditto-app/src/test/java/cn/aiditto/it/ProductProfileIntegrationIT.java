@@ -50,6 +50,7 @@ class ProductProfileIntegrationIT extends ApiIT {
     @DynamicPropertySource
     static void isolatedV4(DynamicPropertyRegistry registry) {
         registry.add("aiditto.integration.mode", () -> "V4_INTEGRATION_TEST");
+        registry.add("aiditto.integration.environment", () -> "ci");
         registry.add("aiditto.relationship-profile.processing-enabled", () -> "true");
     }
 

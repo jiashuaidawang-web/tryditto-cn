@@ -6,7 +6,8 @@ package cn.aiditto.domain.integration;
  */
 public enum ProductIntegrationMode {
     LEGACY_ONLY,
-    V4_INTEGRATION_TEST;
+    V4_INTEGRATION_TEST,
+    V4_SHADOW_TEST;
 
     public static ProductIntegrationMode parse(String raw) {
         if (raw == null || raw.isBlank()) return LEGACY_ONLY;
@@ -24,5 +25,14 @@ public enum ProductIntegrationMode {
     /** This mode never turns on a live model, Qdrant, production matching, V4 learning, or strategy activation. */
     public boolean allowsProductionV4() {
         return false;
+    }
+
+    /** Shadow and integration tests do not receive feedback, individual, or group learning consent. */
+    public boolean grantsFeedbackLearning() {
+        return false;
+    }
+
+    public boolean isolatedTest() {
+        return this == V4_INTEGRATION_TEST || this == V4_SHADOW_TEST;
     }
 }

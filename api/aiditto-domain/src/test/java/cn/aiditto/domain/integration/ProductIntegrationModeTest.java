@@ -12,8 +12,11 @@ class ProductIntegrationModeTest {
         assertThat(ProductIntegrationMode.parse("  ")).isEqualTo(ProductIntegrationMode.LEGACY_ONLY);
         assertThat(ProductIntegrationMode.parse("LEGACY_ONLY").allowsProductionV4()).isFalse();
         assertThat(ProductIntegrationMode.parse("V4_INTEGRATION_TEST").allowsProductionV4()).isFalse();
+        assertThat(ProductIntegrationMode.parse("V4_SHADOW_TEST").allowsProductionV4()).isFalse();
+        assertThat(ProductIntegrationMode.parse("V4_SHADOW_TEST").grantsFeedbackLearning()).isFalse();
         assertThat(LegacyLearningPolicy.mayWriteRelationshipProfile(ProductIntegrationMode.LEGACY_ONLY)).isFalse();
         assertThat(LegacyLearningPolicy.mayWriteRelationshipProfile(ProductIntegrationMode.V4_INTEGRATION_TEST)).isFalse();
+        assertThat(LegacyLearningPolicy.mayWriteRelationshipProfile(ProductIntegrationMode.V4_SHADOW_TEST)).isFalse();
         assertThat(LegacyLearningPolicy.mayWriteRelationshipProfile(null)).isFalse();
     }
 

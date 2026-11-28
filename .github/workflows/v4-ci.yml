@@ -307,6 +307,12 @@ jobs:
                   "consentRevokesAreSeparate",
                   "anotherUserIsUntouched",
                   "revokeRacesAProfileSave",
+                  "deleteRacesLearningConfirm",
+                  "deleteRacesFeedbackAppend",
+                  "deleteRacesGroupObservation",
+                  "bothUsersDeleteTogether",
+                  "deleteRacesExtraction",
+                  "consentRevokeRacesProfileUpdate",
               ],
               "LegacyProductModeIT": [
                   "legacyDeleteDoesNotOpenV4Erasure",
@@ -331,7 +337,12 @@ jobs:
               ],
               "ProductIntegrationSettingsTest": [
                   "legacyIsTheDefaultAndIntegrationTestDoesNotEnableProduction",
-                  "futureModesFailBeforeStartup",
+                  "defaultStaysLegacyWithoutAnEnvironment",
+                  "illegalModeFailsClosed",
+                  "testModeWithoutEnvironmentFails",
+                  "productionProfileRejectsTestMode",
+                  "isolatedEnvironmentAcceptsTestMode",
+                  "isolatedDatasourceIsRequired",
               ],
               "V4VectorSyncTest": [
                   "syncIsIdempotentAndAStaleVersionCannotOverwrite",
@@ -614,6 +625,8 @@ jobs:
           set -eu
           mkdir -p ../ci-meta
           MATCH_LAB_ENABLED=true MATCH_LAB_ENVIRONMENT=ci \
+            INTEGRATION_MODE=V4_INTEGRATION_TEST INTEGRATION_ENVIRONMENT=ci \
+            PROFILE_PROCESSING_ENABLED=true \
             ADMIN_PHONES=13800000001 DEMO_MODE=true DEMO_LOGIN_CODE=888888 \
             SCHEDULER_ENABLED=false SYNTHETIC_AUTOLOAD=false GIT_COMMIT="${GITHUB_SHA}" \
             DB_URL="$TEST_DB_URL" DB_USERNAME="$TEST_DB_USER" DB_PASSWORD="$TEST_DB_PASSWORD" \

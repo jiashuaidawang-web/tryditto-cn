@@ -1,6 +1,7 @@
 package cn.aiditto.relationship;
 
 import cn.aiditto.account.User;
+import cn.aiditto.account.UserLock;
 import cn.aiditto.infra.web.Times;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -30,13 +31,16 @@ public class ExtractionTaskStore {
     private static final long LEASE_SECONDS = 30;
 
     private final JdbcTemplate jdbc;
+    private final UserLock userLock;
 
-    public ExtractionTaskStore(JdbcTemplate jdbc) {
+    public ExtractionTaskStore(JdbcTemplate jdbc, UserLock userLock) {
         this.jdbc = jdbc;
+        this.userLock = userLock;
     }
 
     @Transactional
     public int stopForDeletion(long userId) {
+        userLock.lock(userId);
         return jdbc.update("""
                 UPDATE relationship_profile_extraction
                 SET status = 'discarded', attempts = ?, updated_at = ?
@@ -46,6 +50,7 @@ public class ExtractionTaskStore {
 
     @Transactional
     public Claim tryStart(long userId, String inputHash, String promptVersion, long generation, long exportEpoch) {
+        userLock.lock(userId);
         String account = accountStatus(userId);
         if (User.DELETING.equals(account) || "purged".equals(account)) return Claim.idle(Attempt.EXHAUSTED);
         Timestamp now = Timestamp.from(Times.millis(Instant.now()));
@@ -79,6 +84,9 @@ public class ExtractionTaskStore {
     @Transactional
     public int complete(long userId, String inputHash, String promptVersion, long generation,
                         String resultHash, long fence, long exportEpoch) {
+        userLock.lock(userId);
+        String account = accountStatus(userId);
+        if (User.DELETING.equals(account) || "purged".equals(account)) return 0;
         return jdbc.update("""
                 UPDATE relationship_profile_extraction
                 SET status = 'completed', result_hash = ?, updated_at = ?

@@ -16,6 +16,7 @@ import cn.aiditto.domain.feedback.v4.RelationshipFeedbackEvent;
 import cn.aiditto.domain.feedback.v4.learning.ExplicitPreferenceCommand;
 import cn.aiditto.domain.relationship.RelationshipTypes.Importance;
 import cn.aiditto.domain.relationship.RelationshipTypes.Operator;
+import cn.aiditto.feedback.GroupEvaluationStore;
 import cn.aiditto.feedback.ProfileLearningStore;
 import cn.aiditto.feedback.RelationshipFeedbackStore;
 import cn.aiditto.onboarding.OnboardingService;
@@ -33,8 +34,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,11 +55,13 @@ class AccountLifecycleIT extends ApiIT {
     @Autowired MatchingConsentService consents;
     @Autowired RelationshipFeedbackStore feedback;
     @Autowired ProfileLearningStore learning;
+    @Autowired GroupEvaluationStore observations;
     @Autowired OnboardingService onboarding;
 
     @DynamicPropertySource
     static void isolatedV4(DynamicPropertyRegistry registry) {
         registry.add("aiditto.integration.mode", () -> "V4_INTEGRATION_TEST");
+        registry.add("aiditto.integration.environment", () -> "ci");
         registry.add("aiditto.relationship-profile.processing-enabled", () -> "true");
     }
 
@@ -68,7 +73,7 @@ class AccountLifecycleIT extends ApiIT {
         assertThat(call("DELETE", "/api/account", null, ready.token).status()).isEqualTo(204);
         assertThat(profileRows(ready.userId)).isZero();
         assertThat(lifecycle.fullyErased(ready.userId)).isFalse();
-        assertThat(taskStatus(ready.userId)).isEqualTo("PENDING");
+        assertThat(taskStatus(ready.userId)).isEqualTo("NOT_RUN");
         assertThat(jdbc.queryForObject("SELECT status FROM \"user\" WHERE id = ?", String.class, ready.userId)).isEqualTo("deleting");
         assertThat(call("PUT", "/api/onboarding/answers/occupation", Map.of("value", "迟到的答案"), ready.token).status()).isEqualTo(401);
     }
@@ -95,11 +100,12 @@ class AccountLifecycleIT extends ApiIT {
                 .isEqualTo(ErrorCode.ACCOUNT_INACTIVE);
         assertThatThrownBy(() -> learning.confirm(context(ready, true, true), command(ready, true)))
                 .isInstanceOf(FeedbackRejection.class);
-        lifecycle.recordExternal(ready.userId, AccountLifecycleCoordinator.QDRANT, true, null);
-        assertThat(lifecycle.fullyErased(ready.userId)).isTrue();
+        assertThat(lifecycle.fullyErased(ready.userId)).isFalse();
+        assertThat(taskStatus(ready.userId)).isEqualTo("NOT_RUN");
         assertThat(profileRows(ready.userId)).isZero();
-        assertThat(lifecycle.recordExternal(ready.userId, AccountLifecycleCoordinator.QDRANT, false, "retry")).isFalse();
-        assertThat(taskStatus(ready.userId)).isEqualTo("DONE");
+        assertThat(lifecycle.recordExternalFailure(ready.userId, AccountLifecycleCoordinator.QDRANT, "retry")).isTrue();
+        assertThat(lifecycle.fullyErased(ready.userId)).isFalse();
+        assertThat(taskStatus(ready.userId)).isEqualTo("FAILED");
     }
 
     @Test
@@ -107,9 +113,14 @@ class AccountLifecycleIT extends ApiIT {
         Ready ready = ready("外部失败");
         profiles.save(ready.userId, 1, ready.generation, profiles.projectAuthoritative(ready.userId));
         accounts.requestDelete(ready.userId);
-        assertThat(lifecycle.recordExternal(ready.userId, AccountLifecycleCoordinator.QDRANT, false, "qdrant timeout")).isTrue();
+        assertThat(lifecycle.recordExternalFailure(ready.userId, AccountLifecycleCoordinator.QDRANT,
+                "timeout for 13800000001 token=secret")).isTrue();
         assertThat(lifecycle.fullyErased(ready.userId)).isFalse();
         assertThat(taskStatus(ready.userId)).isEqualTo("FAILED");
+        String reason = jdbc.queryForObject(
+                "SELECT last_error FROM account_erasure_task WHERE user_id = ? AND store_name = 'QDRANT'",
+                String.class, ready.userId);
+        assertThat(reason).doesNotContain("13800000001").doesNotContain("secret");
         accounts.requestDelete(ready.userId);
         assertThat(taskStatus(ready.userId)).isEqualTo("FAILED");
         assertThat(profileRows(ready.userId)).isZero();
@@ -200,6 +211,134 @@ class AccountLifecycleIT extends ApiIT {
                 WHERE user_id = ? AND is_current AND retracted_at IS NULL AND superseded_at IS NULL
                 """, Integer.class, ready.userId)).isZero();
         assertThat(stored.userId()).isEqualTo(ready.userId);
+    }
+
+    @Test
+    void deleteRacesLearningConfirm() throws Exception {
+        Ready ready = ready("锁确认");
+        profiles.save(ready.userId, 1, ready.generation, profiles.projectAuthoritative(ready.userId));
+        race(() -> accounts.requestDelete(ready.userId), () -> {
+            try {
+                learning.confirm(context(ready, true, true), command(ready, true));
+            } catch (FeedbackRejection | DomainException ignored) {
+                // The loser sees the closed account or a missing source.
+            }
+        });
+        assertClosed(ready.userId);
+        assertThatThrownBy(() -> learning.confirm(context(ready, true, true), command(ready, true)))
+                .isInstanceOf(FeedbackRejection.class);
+        assertThat(profileRows(ready.userId)).isZero();
+    }
+
+    @Test
+    void deleteRacesFeedbackAppend() throws Exception {
+        Ready ready = ready("锁反馈");
+        profiles.save(ready.userId, 1, ready.generation, profiles.projectAuthoritative(ready.userId));
+        race(() -> accounts.requestDelete(ready.userId), () -> {
+            try {
+                feedback.append(context(ready, true, true), accepted(ready), T0);
+            } catch (FeedbackRejection ignored) {
+                // Deletion won the user lock.
+            }
+        });
+        assertClosed(ready.userId);
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM relationship_feedback_event WHERE actor_user_id = ?",
+                Integer.class, ready.userId)).isZero();
+    }
+
+    @Test
+    void deleteRacesGroupObservation() throws Exception {
+        Ready ready = ready("锁群体");
+        profiles.save(ready.userId, 1, ready.generation, profiles.projectAuthoritative(ready.userId));
+        jdbc.update("""
+                INSERT INTO matching_observation (
+                    observation_id, match_id, matching_run_id, dataset_version,
+                    user_a, user_b, profile_version_a, profile_version_b, payload, withdrawn, created_at
+                ) VALUES ('obs.lock', ?, 'run.lock', 'set.lock', ?, ?, 1, 1, 'REDACTED', FALSE, ?)
+                """, ready.userId, Math.min(ready.userId, ready.otherId), Math.max(ready.userId, ready.otherId),
+                Timestamp.from(T0));
+        race(() -> accounts.requestDelete(ready.userId), () -> observations.withdrawActor(ready.userId, T0));
+        assertClosed(ready.userId);
+        assertThat(jdbc.queryForObject(
+                "SELECT withdrawn FROM matching_observation WHERE observation_id = 'obs.lock'",
+                Boolean.class)).isTrue();
+        assertThat(profileRows(ready.userId)).isZero();
+    }
+
+    @Test
+    void bothUsersDeleteTogether() throws Exception {
+        Ready first = ready("甲锁");
+        Ready second = ready("乙锁");
+        profiles.save(first.userId, 1, first.generation, profiles.projectAuthoritative(first.userId));
+        profiles.save(second.userId, 1, second.generation, profiles.projectAuthoritative(second.userId));
+        race(() -> accounts.requestDelete(first.userId), () -> accounts.requestDelete(second.userId));
+        assertClosed(first.userId);
+        assertClosed(second.userId);
+        assertThat(profileRows(first.userId)).isZero();
+        assertThat(profileRows(second.userId)).isZero();
+    }
+
+    @Test
+    void deleteRacesExtraction() throws Exception {
+        Ready ready = ready("锁提取");
+        profiles.save(ready.userId, 1, ready.generation, profiles.projectAuthoritative(ready.userId));
+        String hash = "e".repeat(64);
+        race(() -> accounts.requestDelete(ready.userId),
+                () -> tasks.tryStart(ready.userId, hash, "prompt-i01", ready.generation, 1));
+        assertClosed(ready.userId);
+        assertThat(tasks.complete(ready.userId, hash, "prompt-i01", ready.generation, "f".repeat(64), 1, 1)).isZero();
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM relationship_profile_extraction
+                WHERE user_id = ? AND status = 'running'
+                """, Integer.class, ready.userId)).isZero();
+        assertThat(profileRows(ready.userId)).isZero();
+    }
+
+    @Test
+    void consentRevokeRacesProfileUpdate() throws Exception {
+        Ready ready = ready("锁授权");
+        profiles.save(ready.userId, 1, ready.generation, profiles.projectAuthoritative(ready.userId));
+        race(() -> {
+            try {
+                profiles.save(ready.userId, 1, ready.generation, profiles.projectAuthoritative(ready.userId));
+            } catch (RuntimeException ignored) {
+                // Revoke can win the user row.
+            }
+        }, () -> profiles.revokeProcessing(ready.userId));
+        profiles.revokeProcessing(ready.userId);
+        assertThat(profiles.current(ready.userId)).isEmpty();
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM relationship_profile_version
+                WHERE user_id = ? AND is_current AND retracted_at IS NULL
+                """, Integer.class, ready.userId)).isZero();
+    }
+
+    private void race(Runnable left, Runnable right) throws Exception {
+        CyclicBarrier barrier = new CyclicBarrier(2);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> first = pool.submit(() -> {
+                barrier.await(15, TimeUnit.SECONDS);
+                left.run();
+                return null;
+            });
+            Future<?> second = pool.submit(() -> {
+                barrier.await(15, TimeUnit.SECONDS);
+                right.run();
+                return null;
+            });
+            first.get(20, TimeUnit.SECONDS);
+            second.get(20, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private void assertClosed(long userId) {
+        assertThat(jdbc.queryForObject("SELECT status FROM \"user\" WHERE id = ?", String.class, userId)).isEqualTo("deleting");
+        assertThat(lifecycle.fullyErased(userId)).isFalse();
+        assertThat(taskStatus(userId)).isEqualTo("NOT_RUN");
     }
 
     private Ready ready(String occupation) {

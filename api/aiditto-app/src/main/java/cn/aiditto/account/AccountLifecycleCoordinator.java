@@ -54,24 +54,49 @@ public class AccountLifecycleCoordinator {
                 WHERE user_id = ? AND status = 'pending' AND op = 'upsert'
                 """, userId);
         consents.revoke(userId);
+        Long generation = jdbc.query("""
+                SELECT generation_epoch FROM relationship_profile_lifecycle WHERE user_id = ?
+                """, (rs, n) -> rs.getLong(1), userId).stream().findFirst().orElse(0L);
         jdbc.update("""
-                INSERT INTO account_erasure_task (user_id, store_name, status, attempts, last_error, updated_at)
-                VALUES (?, ?, 'PENDING', 0, NULL, ?)
+                INSERT INTO account_erasure_task (
+                    user_id, store_name, status, attempts, last_error, updated_at, task_id, lifecycle_generation
+                ) VALUES (?, ?, 'NOT_RUN', 0, NULL, ?, ?, ?)
                 ON CONFLICT (user_id, store_name) DO NOTHING
-                """, userId, QDRANT, Timestamp.from(now));
+                """, userId, QDRANT, Timestamp.from(now), taskId(now), generation);
     }
 
-    /** A finished task stays finished. Success does not restore deleted profile rows. */
+    /**
+     * Records one failed external attempt. There is no caller flag that marks the store erased.
+     * The task stays short of {@code DONE} until an executor that actually deleted the store writes a receipt.
+     */
     @Transactional
-    public boolean recordExternal(long userId, String store, boolean succeeded, String error) {
-        String status = succeeded ? "DONE" : "FAILED";
-        String detail = error == null ? null : error.substring(0, Math.min(error.length(), 160));
+    public boolean recordExternalFailure(long userId, String store, String error) {
         int updated = jdbc.update("""
                 UPDATE account_erasure_task
-                SET status = ?, attempts = attempts + 1, last_error = ?, updated_at = ?
-                WHERE user_id = ? AND store_name = ? AND status <> 'DONE'
-                """, status, detail, Timestamp.from(Times.millis(clock.instant())), userId, store);
+                SET status = 'FAILED', attempts = attempts + 1, last_error = ?, updated_at = ?
+                WHERE user_id = ? AND store_name = ? AND status IN ('PENDING', 'NOT_RUN')
+                """, sanitize(error), Timestamp.from(Times.millis(clock.instant())), userId, store);
         return updated == 1;
+    }
+
+    static String sanitize(String error) {
+        if (error == null || error.isBlank()) return "external_erase_failed";
+        String cleaned = error.replaceAll("\\d{6,}", "#")
+                .replaceAll("(?i)(password|secret|token|api[_-]?key)\\s*[:=]\\s*\\S+", "$1=#");
+        cleaned = cleaned.replaceAll("[^\\p{Alnum} ._:-]", " ").trim();
+        if (cleaned.isBlank()) return "external_erase_failed";
+        return cleaned.length() > 160 ? cleaned.substring(0, 160) : cleaned;
+    }
+
+    private static String taskId(Instant now) {
+        long n = now.toEpochMilli();
+        String alphabet = "abcdefghijklmnop";
+        StringBuilder id = new StringBuilder("erase.qdrant.");
+        for (int i = 0; i < 8; i++) {
+            id.append(alphabet.charAt((int) (n % alphabet.length())));
+            n /= alphabet.length();
+        }
+        return id.toString();
     }
 
     public boolean fullyErased(long userId) {

@@ -17,6 +17,7 @@ import cn.aiditto.infra.web.Times;
 import cn.aiditto.photo.PhotoService;
 import cn.aiditto.place.PlaceService;
 import cn.aiditto.profile.ProfileProjection;
+import cn.aiditto.relationship.IsolatedProfileSync;
 import cn.aiditto.taste.ProfileWrittenEvent;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import org.springframework.context.ApplicationEventPublisher;
@@ -53,11 +54,13 @@ public class OnboardingService {
     private final Clock clock;
     private final UserLock userLock;
     private final cn.aiditto.match.PublishGuard publishGuard;
+    private final IsolatedProfileSync isolatedProfiles;
 
     public OnboardingService(AnswerStore store, QuestionCatalog catalog, AccountService accounts, UserMapper users,
                              EmailCodeService emails, PhotoService photos, PlaceService places,
                              ProfileProjection projection, ApplicationEventPublisher events, Clock clock,
-                             UserLock userLock, cn.aiditto.match.PublishGuard publishGuard) {
+                             UserLock userLock, cn.aiditto.match.PublishGuard publishGuard,
+                             IsolatedProfileSync isolatedProfiles) {
         this.store = store;
         this.catalog = catalog;
         this.accounts = accounts;
@@ -70,6 +73,7 @@ public class OnboardingService {
         this.clock = clock;
         this.userLock = userLock;
         this.publishGuard = publishGuard;
+        this.isolatedProfiles = isolatedProfiles;
     }
 
     /** {@code value == null} removes the answer (stale hobby branches, cleared optional fields). */
@@ -152,6 +156,7 @@ public class OnboardingService {
         if (User.ONBOARDING.equals(u.status)) up.set("status", User.ACTIVE);
         users.update(null, up);
         projection.write(userId, answers, photos.countActive(userId, "profile"));
+        isolatedProfiles.projectStored(userId);
         events.publishEvent(new ProfileWrittenEvent(userId, "complete"));
         publishGuard.releaseUser(userId, now);
     }
@@ -170,6 +175,7 @@ public class OnboardingService {
     private void afterWrite(User u, long userId) {
         if (!u.onboarded()) return;
         projection.write(userId, store.load(userId), photos.countActive(userId, "profile"));
+        isolatedProfiles.projectStored(userId);
         events.publishEvent(new ProfileWrittenEvent(userId, "answer_edit"));
         publishGuard.releaseUser(userId, clock.instant());
     }

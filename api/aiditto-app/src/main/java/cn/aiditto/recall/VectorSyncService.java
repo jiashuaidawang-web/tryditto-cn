@@ -96,7 +96,12 @@ public class VectorSyncService {
         long syncStart = System.currentTimeMillis();
         int batchCalls = 0, fallbackTexts = 0;
         for (int from = 0; from < rows.size(); from += usersPerGroup) {
-            List<Map<String, Object>> group = rows.subList(from, Math.min(from + usersPerGroup, rows.size()));
+            List<Map<String, Object>> group = new ArrayList<>();
+            for (Map<String, Object> row : rows.subList(from, Math.min(from + usersPerGroup, rows.size()))) {
+                if (openForVector(row)) group.add(row);
+                else quarantine(row);
+            }
+            if (group.isEmpty()) continue;
             List<String> texts = new ArrayList<>(group.size() * 2);
             for (Map<String, Object> row : group) {
                 texts.add(str(row.get("taste_text")));
@@ -142,6 +147,20 @@ public class VectorSyncService {
                         + "fallbackTexts={} costMs={}",
                 rows.size(), batchCalls, usersPerGroup, maxItems, fallbackTexts,
                 System.currentTimeMillis() - syncStart);
+        if (!batch.isEmpty()) {
+            List<RecallModel.Point> live = new ArrayList<>();
+            List<Map<String, Object>> liveRows = new ArrayList<>();
+            for (int i = 0; i < batch.size(); i++) {
+                if (openForVector(batchRows.get(i))) {
+                    live.add(batch.get(i));
+                    liveRows.add(batchRows.get(i));
+                } else {
+                    quarantine(batchRows.get(i));
+                }
+            }
+            batch = live;
+            batchRows = liveRows;
+        }
         if (!batch.isEmpty()) {
             try {
                 recall.upsert(batch);
@@ -244,7 +263,31 @@ public class VectorSyncService {
         return 20;
     }
 
+    private boolean openForVector(Map<String, Object> row) {
+        long userId = ((Number) row.get("user_id")).longValue();
+        List<String> status = jdbc.query("SELECT status FROM \"user\" WHERE id = ?",
+                (rs, n) -> rs.getString(1), userId);
+        return !status.isEmpty() && "active".equals(status.get(0));
+    }
+
+    /** A closed account does not get a new vector. The reason has no profile text. */
+    private void quarantine(Map<String, Object> row) {
+        long userId = ((Number) row.get("user_id")).longValue();
+        jdbc.update("""
+                UPDATE user_taste SET vector_sync_status = 'deleted'
+                WHERE user_id = ? AND is_active AND vector_sync_status = 'pending'
+                """, userId);
+        jdbc.update("""
+                UPDATE vector_sync SET status = 'cancelled', error_msg = 'account_not_active'
+                WHERE user_id = ? AND status = 'pending' AND op = 'upsert'
+                """, userId);
+    }
+
     private void markSynced(Map<String, Object> row) {
+        if (!openForVector(row)) {
+            quarantine(row);
+            return;
+        }
         long userId = ((Number) row.get("user_id")).longValue();
         int version = intVal(row.get("version"), 1);
         String pointId = String.valueOf(userId);

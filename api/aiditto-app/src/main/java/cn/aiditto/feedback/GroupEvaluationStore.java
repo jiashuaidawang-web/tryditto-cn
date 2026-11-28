@@ -10,6 +10,8 @@ import cn.aiditto.domain.feedback.v4.strategy.MatchScoreSnapshot;
 import cn.aiditto.domain.feedback.v4.strategy.MatchingObservation;
 import cn.aiditto.domain.feedback.v4.strategy.ObservationBuilder;
 import cn.aiditto.domain.feedback.v4.strategy.ObservationWindow;
+import cn.aiditto.account.User;
+import cn.aiditto.account.UserLifecycleLock;
 import cn.aiditto.domain.feedback.v4.strategy.StrategyLearningProposal;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -48,10 +50,12 @@ public class GroupEvaluationStore {
 
     private final JdbcTemplate jdbc;
     private final RelationshipFeedbackStore feedback;
+    private final UserLifecycleLock locks;
 
-    public GroupEvaluationStore(JdbcTemplate jdbc, RelationshipFeedbackStore feedback) {
+    public GroupEvaluationStore(JdbcTemplate jdbc, RelationshipFeedbackStore feedback, UserLifecycleLock locks) {
         this.jdbc = jdbc;
         this.feedback = feedback;
+        this.locks = locks;
     }
 
     @Transactional
@@ -69,6 +73,9 @@ public class GroupEvaluationStore {
                 || observation.profileVersionB() != context.profileVersionB()) {
             throw new FeedbackRejection("SNAPSHOT");
         }
+        locks.pairThenMatch(context.userA(), context.userB(), context.matchId());
+        rejectClosed(context.userA());
+        rejectClosed(context.userB());
         try {
             jdbc.update("""
                     INSERT INTO matching_observation (
@@ -94,6 +101,9 @@ public class GroupEvaluationStore {
     public MatchingObservation recordBuilt(MatchFeedbackContext context, String datasetVersion, String policyVersion,
                                            MatchScoreSnapshot scores, ObservationWindow window, String observationId,
                                            Instant observedAt, Instant now, List<String> sourceEventIds) {
+        locks.pairThenMatch(context.userA(), context.userB(), context.matchId());
+        rejectClosed(context.userA());
+        rejectClosed(context.userB());
         FeedbackLedger ledger = feedback.load(context);
         MatchingObservation observation = ObservationBuilder.fromLedger(context, ledger, scores, window, observationId,
                 observedAt, now, sourceEventIds);
@@ -173,12 +183,18 @@ public class GroupEvaluationStore {
     /** Drops one user's observations from the legal set and redacts the stored trace. */
     @Transactional
     public int withdrawActor(long userId, Instant when) {
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) userId);
+        locks.userThenFeedback(userId);
         return jdbc.update("""
                 UPDATE matching_observation
                 SET withdrawn = TRUE, payload = 'REDACTED'
                 WHERE withdrawn = FALSE AND (user_a = ? OR user_b = ?)
                 """, userId, userId);
+    }
+
+    private void rejectClosed(long userId) {
+        String status = jdbc.queryForObject("SELECT status FROM \"user\" WHERE id = ?", String.class, userId);
+        if (status == null) throw new FeedbackRejection("NOT_FOUND");
+        if (User.DELETING.equals(status) || "purged".equals(status)) throw new FeedbackRejection("ACCOUNT_INACTIVE");
     }
 
     public List<String> legalPayloads(String datasetVersion) {

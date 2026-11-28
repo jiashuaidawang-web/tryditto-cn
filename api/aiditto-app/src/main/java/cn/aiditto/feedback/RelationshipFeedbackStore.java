@@ -7,6 +7,7 @@ import cn.aiditto.domain.feedback.v4.FeedbackLedger;
 import cn.aiditto.domain.feedback.v4.FeedbackEventType;
 import cn.aiditto.domain.feedback.v4.FeedbackRejection;
 import cn.aiditto.domain.feedback.v4.MatchFeedbackContext;
+import cn.aiditto.account.UserLifecycleLock;
 import cn.aiditto.domain.feedback.v4.RelationshipFeedbackEvent;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -27,10 +28,12 @@ import java.util.List;
 public class RelationshipFeedbackStore {
     private final JdbcTemplate jdbc;
     private final GroupEvaluationStore observations;
+    private final UserLifecycleLock locks;
 
-    public RelationshipFeedbackStore(JdbcTemplate jdbc, @Lazy GroupEvaluationStore observations) {
+    public RelationshipFeedbackStore(JdbcTemplate jdbc, @Lazy GroupEvaluationStore observations, UserLifecycleLock locks) {
         this.jdbc = jdbc;
         this.observations = observations;
+        this.locks = locks;
     }
 
     /**
@@ -107,7 +110,7 @@ public class RelationshipFeedbackStore {
 
     @Transactional
     public int revokeDerived(long userId, Instant revokedAt) {
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) userId);
+        locks.userThenFeedback(userId);
         return revokeApplied(userId, revokedAt);
     }
 
@@ -137,7 +140,7 @@ public class RelationshipFeedbackStore {
 
     @Transactional
     public void eraseActor(long userId, Instant erasedAt) {
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) userId);
+        locks.userThenFeedback(userId);
         Timestamp when = Timestamp.from(erasedAt);
         jdbc.update("""
                 INSERT INTO relationship_feedback_erasure (user_id, erased_at)
@@ -166,11 +169,7 @@ public class RelationshipFeedbackStore {
     }
 
     private void lockUsersThenMatch(MatchFeedbackContext context) {
-        long first = Math.min(context.userA(), context.userB());
-        long second = Math.max(context.userA(), context.userB());
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) first);
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) second);
-        jdbc.queryForList("SELECT pg_advisory_xact_lock(12, ?::int)", (int) context.matchId());
+        locks.pairThenMatch(context.userA(), context.userB(), context.matchId());
     }
 
     private boolean erased(MatchFeedbackContext context) {

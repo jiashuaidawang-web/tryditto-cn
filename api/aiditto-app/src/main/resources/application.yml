@@ -72,10 +72,12 @@ aiditto:
     autoload: ${SYNTHETIC_AUTOLOAD:true}
   integration:
     # LEGACY_ONLY keeps the current product path. V4_SHADOW and V4_PILOT fail startup.
+    # V4_INTEGRATION_TEST and V4_SHADOW_TEST also require environment local, ci, or isolated.
     mode: ${INTEGRATION_MODE:LEGACY_ONLY}
+    environment: ${INTEGRATION_ENVIRONMENT:}
   relationship-profile:
     # Off until an isolated test opts in. Production profiles stay off.
-    processing-enabled: false
+    processing-enabled: ${PROFILE_PROCESSING_ENABLED:false}
   match-lab:
     # Internal research console. Hidden navigation is not the control. Direct calls are rejected while this is false.
     enabled: ${MATCH_LAB_ENABLED:false}
