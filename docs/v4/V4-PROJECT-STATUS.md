@@ -52,7 +52,7 @@ F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试
 
 I01 已快进到 `master_agent_v4` 的 `c101a04bbc5b75c5ca255297e92a7271ebdc8dce`。实现从 `9229f14ba58b4416438c11ec0898221018c673da` 到锁顺序提交 `8f3ee57e34ff0018f17e96a80d0fdcd39e87ad7e`。`46145461882` 里群体观察误拒绝了不存在的合成用户，入驻脚本也按 button 去点 radio。随后的修复是 `c48cb54a548d07936946ff728ed11f905a341dbc`、`fa04a1f302b2afa6c8e20b9c30181b9fe28a713b`、`d93795526ca741173156298bfda2b1e03b6419b4` 和 `c101a04bbc5b75c5ca255297e92a7271ebdc8dce`。绿的五作业是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46150970883 。用户端浏览器作业这次 success。外部擦除执行器仍是 NOT_RUN。
 
-I02 在 `feature/v4-shadow-matching`，从上面的 `master_agent_v4` 拉出。它只在 `V4_SHADOW_TEST` 连接隔离合成用户和冻结的 E、B5、G2。本地领域测试 620 项，失败 0。其中新增的资源预算测试 3 项。22 个已映射特征与 4 个 M02 对齐目标的重叠是 0，特征覆盖质量 NO-GO。PostgreSQL 影子集成随这次推送进入 CI，结果以该作业为准。Blossom 仍不能取消线程。生产启用保持 NO-GO。
+I02 实现提交是 `a894bc8787989648ce361fc46ccacfbb1e76619c`，分支 `feature/v4-shadow-matching`，从上面的 `master_agent_v4` 拉出，不自动合并。它只在 `V4_SHADOW_TEST` 连接隔离合成用户和冻结的 E、B5、G2。本地领域测试 620 项，失败 0。其中新增的资源预算测试 3 项。22 个已映射特征与 4 个 M02 对齐目标的重叠是 0，特征覆盖质量 NO-GO。PostgreSQL 影子集成随这次推送进入 CI，结果以该作业为准。Blossom 仍不能取消线程。生产启用保持 NO-GO。
 
 ## 未解决的生产风险
 
