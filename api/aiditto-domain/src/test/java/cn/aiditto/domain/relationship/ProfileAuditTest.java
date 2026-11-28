@@ -44,6 +44,9 @@ class ProfileAuditTest {
         assertThat(ProfileVersionPolicy.decide(true, true, 1, 1, 4, 4, 4, true,
                 "a".repeat(64), "b".repeat(64), ProfileVersionPolicy.WriteMode.MODEL_REVISION).kind())
                 .isEqualTo(ProfileVersionPolicy.Kind.ACCEPT_REVISION);
+        assertThat(ProfileVersionPolicy.decide(true, true, 1, 1, 4, 4, 4, true,
+                "a".repeat(64), "b".repeat(64), ProfileVersionPolicy.WriteMode.LEARNING_REVISION).kind())
+                .isEqualTo(ProfileVersionPolicy.Kind.ACCEPT_REVISION);
         assertThat(ProfileVersionPolicy.decide(true, true, 1, 1, 4, 5, 9, true,
                 "a".repeat(64), "b".repeat(64), ProfileVersionPolicy.WriteMode.DETERMINISTIC).kind())
                 .isEqualTo(ProfileVersionPolicy.Kind.REJECT_UNVERIFIED_SOURCE);

@@ -267,6 +267,12 @@ jobs:
                   "eraseRacesConfirm",
                   "confirmRollsBackWithTheConsumption",
                   "replayReadsTheStoredProfile",
+                  "questionnaireEvidenceSurvivesOnePreferenceUpdate",
+                  "reprojectionKeepsTheConfirmedPreference",
+                  "revokedGenerationDoesNotUseTheCommandFlags",
+                  "concurrentProfileWritesLeaveOneCurrentSnapshot",
+                  "storedProposalCannotBeExtendedOrRebound",
+                  "retractingTheSourceRemovesDerivedEvidence",
               ],
           }
           surefire_required = {

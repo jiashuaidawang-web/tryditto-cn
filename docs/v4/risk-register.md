@@ -456,3 +456,17 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 - `AccountService.requestDelete` 仍不调用反馈删除或画像删除。
 
 分支 `feature/v4-profile-learning` 提交 `e24aae1f7f7b23a10aaec2a4f035fb0f7ed786bc`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46061670392 ，四个作业 success。本地领域测试 585 项，失败 0。
+
+## V4-F02-FINAL（2026-11-28）
+
+收口的是画像保留、统一写入、提案绑定、派生证据撤回和重复报告准入。学习确认改走 `RelationshipProfileService`。问卷源版本和快照版本分开。V20 没有改，来源列在 V21。
+
+仍开放：
+
+- 重复次数 3 次、窗口 30 天仍是未验证参数，没有写进评分权重。
+- `AccountService.requestDelete` 仍不调用 `eraseActor` 和 `RelationshipProfileService.erase`。约定写在 `RelationshipFeedbackStore.FUTURE_ACCOUNT_DELETION`。
+- `GROUP_EVALUATION` 仍会抛出 `F03_NOT_IMPLEMENTED`。
+- 生产画像处理和真实反馈学习没有启用。真实学习质量和真实关系质量是 NOT_RUN。
+- 生产启用和最终匹配算法质量是 NO-GO。
+
+本地领域测试 587 项，失败 0，异常 0，跳过 0。PostgreSQL 新增 6 个 `ProfileLearningIT` 方法，只在 CI 的 Postgres 16 上执行。F02-FINAL 的提交和 CI 地址在推送并看到四个作业 success 之后补记。

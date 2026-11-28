@@ -35,7 +35,7 @@ public class RelationshipFeedbackStore {
      * It is not called by AccountService in this round.
      */
     public static final String FUTURE_ACCOUNT_DELETION =
-            "AccountService.requestDelete locks the user, calls eraseActor, and commits. It does not run a learner.";
+            "AccountService.requestDelete locks the user, calls eraseActor, then RelationshipProfileService.erase, and commits. It does not run a learner or restore an old snapshot.";
 
     @Transactional
     public RelationshipFeedbackEvent append(MatchFeedbackContext context, FeedbackCommand command, Instant recordedAt) {
@@ -106,6 +106,16 @@ public class RelationshipFeedbackStore {
     public int revokeDerived(long userId, Instant revokedAt) {
         jdbc.queryForList("SELECT pg_advisory_xact_lock(11, ?::int)", (int) userId);
         return revokeApplied(userId, revokedAt);
+    }
+
+    /** Revokes one event's applied claims. It does not revoke every claim of the user. */
+    @Transactional
+    public int revokeEvent(String eventId, Instant revokedAt) {
+        return jdbc.update("""
+                UPDATE relationship_feedback_consumption
+                SET processing_status = 'REVOKED', consumed_at = ?
+                WHERE event_id = ? AND processing_status = 'APPLIED'
+                """, Timestamp.from(revokedAt), eventId);
     }
 
     public FeedbackLedger load(MatchFeedbackContext context) {

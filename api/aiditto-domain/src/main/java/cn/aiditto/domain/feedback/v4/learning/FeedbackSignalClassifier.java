@@ -1,6 +1,7 @@
 package cn.aiditto.domain.feedback.v4.learning;
 
 import cn.aiditto.domain.feedback.v4.FeedbackEventType;
+import cn.aiditto.domain.feedback.v4.FeedbackFacts;
 import cn.aiditto.domain.feedback.v4.FeedbackLedger;
 import cn.aiditto.domain.feedback.v4.FeedbackRejection;
 import cn.aiditto.domain.feedback.v4.RelationshipFeedbackEvent;
@@ -74,6 +75,8 @@ public final class FeedbackSignalClassifier {
     /**
      * Repeated self-reports can become an unconfirmed hypothesis.
      * The repeat count and the window are unverified parameters, not feature weights.
+     * This overload does not check a ledger. The frozen evaluation uses it.
+     * A contradicted feature is not a usable fact.
      */
     public static List<LearningSignal> observe(List<SelfDirectionReport> reports, long subject, Instant now) {
         Map<String, Set<String>> ids = new LinkedHashMap<>();
@@ -112,12 +115,57 @@ public final class FeedbackSignalClassifier {
             Category category = count >= ProfileLearningEngine.UNVERIFIED_REPEAT_COUNT
                     ? Category.PREFERENCE_HYPOTHESIS : Category.BEHAVIORAL_OBSERVATION;
             Scope scope = feature.startsWith("partner.") ? Scope.PARTNER_PREFERENCE : Scope.SELF_PROFILE;
-            EvidenceState state = contradicted.contains(feature) ? EvidenceState.USABLE : EvidenceState.USABLE;
+            EvidenceState state = contradicted.contains(feature) ? EvidenceState.NOT_USABLE : EvidenceState.USABLE;
             signals.add(new LearningSignal(feature + ":" + value, subject, category, Direction.NONE, SourceTrust.SELF,
                     feature + "=" + value, scope, Authorization.OPEN, when.plus(Duration.ofDays(ProfileLearningEngine.UNVERIFIED_WINDOW_DAYS)),
                     state));
         }
         return List.copyOf(signals);
+    }
+
+    /**
+     * The same count and window, after the report is tied to a stored event.
+     * A missing id, another user's event, a future time, a closed window, a retraction,
+     * or a withdrawn learning grant contributes nothing.
+     */
+    public static List<LearningSignal> observe(FeedbackLedger ledger, List<SelfDirectionReport> reports, long subject, Instant now) {
+        return observe(accepted(ledger, reports, subject, now), subject, now);
+    }
+
+    public static List<SelfDirectionReport> accepted(FeedbackLedger ledger, List<SelfDirectionReport> reports,
+                                                     long subject, Instant now) {
+        if (!ledger.context().participant(subject)) throw new FeedbackRejection("NOT_PARTICIPANT");
+        Set<String> superseded = new LinkedHashSet<>();
+        Map<String, RelationshipFeedbackEvent> byId = new LinkedHashMap<>();
+        for (RelationshipFeedbackEvent event : ledger.events()) {
+            byId.put(event.eventId(), event);
+            if (event.supersedesEventId() != null) superseded.add(event.supersedesEventId());
+        }
+        boolean learningClosed = ledger.learningBlocked()
+                || !ledger.context().learningConsent(subject)
+                || !ledger.context().feedbackConsent(subject)
+                || ledger.events().stream().anyMatch(event -> event.actorUserId() == subject
+                && event.eventType() == FeedbackEventType.FEEDBACK_PROCESSING_REVOKED);
+        if (learningClosed) return List.of();
+        FeedbackFacts.Direction ownDirection = subject == ledger.context().userA()
+                ? FeedbackFacts.Direction.A_TO_B : FeedbackFacts.Direction.B_TO_A;
+        Instant earliest = now.minus(Duration.ofDays(ProfileLearningEngine.UNVERIFIED_WINDOW_DAYS));
+        List<SelfDirectionReport> accepted = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        for (SelfDirectionReport report : reports) {
+            if (report.userId() != subject || !seen.add(report.eventId())) continue;
+            if (report.occurredAt().isAfter(now) || report.occurredAt().isBefore(earliest)) continue;
+            RelationshipFeedbackEvent event = byId.get(report.eventId());
+            if (event == null || event.actorUserId() != subject || event.matchId() != ledger.context().matchId()) continue;
+            if (event.direction() != ownDirection || superseded.contains(event.eventId())) continue;
+            if (event.occurredAt().isAfter(now) || event.occurredAt().isBefore(earliest)) continue;
+            if (event.eventType() == FeedbackEventType.FEEDBACK_RETRACTED
+                    || event.eventType() == FeedbackEventType.FEEDBACK_PROCESSING_REVOKED) {
+                continue;
+            }
+            accepted.add(report);
+        }
+        return List.copyOf(accepted);
     }
 
     private static Category ownCategory(RelationshipFeedbackEvent event) {

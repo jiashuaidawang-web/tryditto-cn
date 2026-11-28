@@ -15,6 +15,7 @@ import cn.aiditto.domain.relationship.RelationshipTypes.Importance;
 import cn.aiditto.domain.relationship.RelationshipTypes.Operator;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -141,6 +142,77 @@ class ProfileLearningEngineTest {
         assertThat(retracted.snapshot().self().features()).noneMatch(feature -> feature.featureCode().equals("self.communication"));
         assertThat(retracted.evidence()).anyMatch(item -> item.sourceRef().equals("confirm.quiet2")
                 && item.status() == EvidenceStatus.RETRACTED);
+    }
+
+    @Test
+    void threeReportsPlusOneOppositeAreNotAUsableFact() {
+        List<SelfDirectionReport> reports = List.of(
+                report("e1", "quieter", T0),
+                report("e2", "quieter", T0.plusSeconds(1)),
+                report("e3", "quieter", T0.plusSeconds(2)),
+                report("e4", "more_frequent", T0.plusSeconds(3)));
+        List<LearningSignal> signals = FeedbackSignalClassifier.observe(reports, 81001, T0.plusSeconds(4));
+        assertThat(signals).isNotEmpty().allMatch(signal -> signal.evidenceState() == LearningSignal.EvidenceState.NOT_USABLE);
+        assertThat(signals).noneMatch(LearningSignal::canPropose);
+        List<ProfileLearningProposal> proposals = engine.hypotheses(reports, 81001, 1, 1, T0.plusSeconds(4));
+        assertThat(proposals).isNotEmpty().allMatch(proposal -> proposal.evidenceStatus().equals("CONTRADICTED"));
+        assertThat(proposals).allMatch(proposal -> !ProfileLearningEngine.matchingMayRead(proposal));
+    }
+
+    @Test
+    void repeatedReportsNeedARealEventInsideTheWindow() {
+        FeedbackLedger two = published();
+        var first = two.append(person(FeedbackEventType.MATCH_ACCEPTED, 81001, "acc-a"), T0);
+        var second = two.append(person(FeedbackEventType.CONTINUE_INTEREST_EXPRESSED, 81001, "go-a"), T0.plusSeconds(1));
+        List<SelfDirectionReport> duplicate = List.of(
+                new SelfDirectionReport(first.eventId(), 81001, "self.communication", "quieter", T0),
+                new SelfDirectionReport(second.eventId(), 81001, "self.communication", "quieter", T0.plusSeconds(1)),
+                new SelfDirectionReport(first.eventId(), 81001, "self.communication", "quieter", T0.plusSeconds(2)));
+        assertThat(engine.hypotheses(two, duplicate, 81001, 1, 1, T0.plusSeconds(3))).isEmpty();
+        assertThat(FeedbackSignalClassifier.observe(two, duplicate, 81001, T0.plusSeconds(3)))
+                .allMatch(signal -> signal.category() == LearningSignal.Category.BEHAVIORAL_OBSERVATION);
+
+        FeedbackLedger missing = published();
+        missing.append(person(FeedbackEventType.MATCH_ACCEPTED, 81001, "acc-b"), T0);
+        List<SelfDirectionReport> absent = List.of(
+                new SelfDirectionReport("missing-event", 81001, "self.communication", "quieter", T0),
+                new SelfDirectionReport("missing-event-2", 81001, "self.communication", "quieter", T0.plusSeconds(1)),
+                new SelfDirectionReport("missing-event-3", 81001, "self.communication", "quieter", T0.plusSeconds(2)));
+        assertThat(FeedbackSignalClassifier.accepted(missing, absent, 81001, T0.plusSeconds(3))).isEmpty();
+
+        FeedbackLedger retracted = published();
+        var kept = retracted.append(person(FeedbackEventType.MATCH_ACCEPTED, 81001, "acc-c"), T0);
+        retracted.append(new FeedbackCommand(FeedbackEventType.FEEDBACK_RETRACTED, 81001, FeedbackFacts.SourceType.PARTICIPANT,
+                "undo-c", T0.plusSeconds(1), kept.eventId(), null, null), T0.plusSeconds(1));
+        assertThat(FeedbackSignalClassifier.accepted(retracted, List.of(
+                new SelfDirectionReport(kept.eventId(), 81001, "self.communication", "quieter", T0)), 81001, T0.plusSeconds(2)))
+                .isEmpty();
+
+        FeedbackLedger stale = published();
+        var old = stale.append(person(FeedbackEventType.MATCH_ACCEPTED, 81001, "acc-d"), T0);
+        Instant later = T0.plus(Duration.ofDays(31));
+        assertThat(FeedbackSignalClassifier.accepted(stale, List.of(
+                new SelfDirectionReport(old.eventId(), 81001, "self.communication", "quieter", T0)), 81001, later)).isEmpty();
+        assertThat(FeedbackSignalClassifier.accepted(stale, List.of(
+                new SelfDirectionReport(old.eventId(), 81001, "self.communication", "quieter", later.plusSeconds(1))),
+                81001, later)).isEmpty();
+
+        FeedbackLedger other = published();
+        var theirs = other.append(person(FeedbackEventType.MATCH_ACCEPTED, 81002, "acc-e"), T0);
+        assertThat(FeedbackSignalClassifier.accepted(other, List.of(
+                new SelfDirectionReport(theirs.eventId(), 81001, "self.communication", "quieter", T0)), 81001, T0.plusSeconds(1)))
+                .isEmpty();
+
+        MatchFeedbackContext closed = MatchFeedbackContext.experiment(71041, "run-f02", LocalDate.of(2026, 11, 23),
+                81001, 81002, true, 7, 9, "policy-1", "objective-g2-1", "strategy-e-1", true, true, false, true);
+        FeedbackLedger withheld = new FeedbackLedger(closed);
+        withheld.append(system(FeedbackEventType.MATCH_PUBLISHED, "pub-w"), T0.minusSeconds(1));
+        var hidden = withheld.append(person(FeedbackEventType.MATCH_ACCEPTED, 81001, "acc-w"), T0);
+        assertThat(FeedbackSignalClassifier.accepted(withheld, List.of(
+                new SelfDirectionReport(hidden.eventId(), 81001, "self.communication", "quieter", T0),
+                new SelfDirectionReport(hidden.eventId(), 81001, "self.communication", "quieter", T0.plusSeconds(1)),
+                new SelfDirectionReport(hidden.eventId(), 81001, "self.communication", "quieter", T0.plusSeconds(2))),
+                81001, T0.plusSeconds(3))).isEmpty();
     }
 
     @Test

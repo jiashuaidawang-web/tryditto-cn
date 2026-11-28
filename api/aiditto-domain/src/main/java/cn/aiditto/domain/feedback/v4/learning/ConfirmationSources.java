@@ -13,9 +13,15 @@ import java.util.Optional;
 /** Sources the server has stored. A caller-supplied type is not a fact. */
 public final class ConfirmationSources implements EvidenceSourceDirectory {
     private final Map<String, SourceFact> facts = new LinkedHashMap<>();
+    private EvidenceSourceDirectory fallback;
 
     public void put(SourceFact fact) {
         facts.put(key(fact.userId(), fact.sourceRef(), fact.sourceVersion()), fact);
+    }
+
+    /** Questionnaire rows stay in their own directory. This map does not re-type them. */
+    public void delegate(EvidenceSourceDirectory directory) {
+        this.fallback = directory;
     }
 
     public static SourceFact explicit(long userId, String sourceRef, boolean retracted) {
@@ -35,7 +41,9 @@ public final class ConfirmationSources implements EvidenceSourceDirectory {
 
     @Override
     public Optional<SourceFact> find(long userId, String sourceRef, String sourceVersion) {
-        return Optional.ofNullable(facts.get(key(userId, sourceRef, sourceVersion)));
+        SourceFact local = facts.get(key(userId, sourceRef, sourceVersion));
+        if (local != null) return Optional.of(local);
+        return fallback == null ? Optional.empty() : fallback.find(userId, sourceRef, sourceVersion);
     }
 
     private static String key(long userId, String sourceRef, String sourceVersion) {

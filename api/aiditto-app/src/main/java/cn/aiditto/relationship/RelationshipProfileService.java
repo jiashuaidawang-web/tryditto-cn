@@ -4,22 +4,28 @@ import cn.aiditto.account.User;
 import cn.aiditto.account.UserLock;
 import cn.aiditto.domain.common.DomainException;
 import cn.aiditto.domain.common.ErrorCode;
+import cn.aiditto.domain.feedback.v4.learning.ConfirmationSources;
 import cn.aiditto.domain.relationship.CompositeEvidenceDirectory;
+import cn.aiditto.domain.relationship.EvidenceSourceDirectory;
 import cn.aiditto.domain.relationship.ExtractedFeature;
 import cn.aiditto.domain.relationship.FeatureRegistry;
 import cn.aiditto.domain.relationship.IssuedEvidenceDirectory;
 import cn.aiditto.domain.relationship.ProfileContext;
 import cn.aiditto.domain.relationship.ProfileContextBuilder;
+import cn.aiditto.domain.relationship.ProfileEvidence;
 import cn.aiditto.domain.relationship.ProfileExtractionPrompts;
 import cn.aiditto.domain.relationship.ProfileExtractionValidator;
 import cn.aiditto.domain.relationship.ProfileMerger;
 import cn.aiditto.domain.relationship.ProfileVersion;
 import cn.aiditto.domain.relationship.ProfileVersionPolicy;
 import cn.aiditto.domain.relationship.ProfileVersionPolicy.WriteMode;
+import cn.aiditto.domain.relationship.RelationshipProfile;
 import cn.aiditto.domain.relationship.RelationshipProfileProjector;
 import cn.aiditto.domain.relationship.RelationshipProfileSnapshot;
 import cn.aiditto.domain.relationship.RelationshipTypes.EvidenceSource;
 import cn.aiditto.domain.relationship.SnapshotAdmission;
+import cn.aiditto.feedback.ProfileLearningStore;
+import org.springframework.context.annotation.Lazy;
 import cn.aiditto.infra.web.Times;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,8 +34,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Writes immutable relationship-profile versions. Matching does not call this.
@@ -38,22 +47,33 @@ import java.util.Optional;
  */
 @Service
 public class RelationshipProfileService {
+    /**
+     * Account deletion is not called from here.
+     * The live contract is {@code RelationshipFeedbackStore.FUTURE_ACCOUNT_DELETION}:
+     * lock the user, erase feedback, erase this snapshot, and do not run a learner.
+     */
+    public static final String FUTURE_ACCOUNT_DELETION =
+            "AccountService.requestDelete locks the user, calls eraseActor, then RelationshipProfileService.erase, and commits. It does not run a learner or restore an old snapshot.";
+
     private final JdbcTemplate jdbc;
     private final UserLock userLock;
     private final AnswerEvidenceDirectory answers;
     private final ProfileInputLoader inputs;
     private final ExtractionTaskStore tasks;
+    private final ProfileLearningStore learning;
     private final boolean processingEnabled;
     private final FeatureRegistry registry = FeatureRegistry.v1();
 
     public RelationshipProfileService(JdbcTemplate jdbc, UserLock userLock, AnswerEvidenceDirectory answers,
                                       ProfileInputLoader inputs, ExtractionTaskStore tasks,
+                                      @Lazy ProfileLearningStore learning,
                                       @Value("${aiditto.relationship-profile.processing-enabled:false}") boolean processingEnabled) {
         this.jdbc = jdbc;
         this.userLock = userLock;
         this.answers = answers;
         this.inputs = inputs;
         this.tasks = tasks;
+        this.learning = learning;
         this.processingEnabled = processingEnabled;
     }
 
@@ -152,13 +172,7 @@ public class RelationshipProfileService {
                 && gate.kind() != ProfileVersionPolicy.Kind.ACCEPT_REVISION) {
             return apply(userId, claimedSource, offered, gate);
         }
-        RelationshipProfileSnapshot server = null;
-        try {
-            server = SnapshotAdmission.admit(
-                    RelationshipProfileProjector.project(userId, answers.loadAnswers(userId), registry), registry, answers);
-        } catch (IllegalArgumentException e) {
-            throw DomainException.invalid("snapshot", e.getMessage());
-        }
+        RelationshipProfileSnapshot server = serverProjection(userId);
         if (!server.inputHash().equals(offered.inputHash())) {
             throw DomainException.invalid("inputHash", "提交的画像与服务端投影不一致");
         }
@@ -227,6 +241,7 @@ public class RelationshipProfileService {
         } catch (IllegalArgumentException e) {
             throw DomainException.invalid("snapshot", e.getMessage());
         }
+        admitted = mergeLearning(userId, admitted, new CompositeEvidenceDirectory(new IssuedEvidenceDirectory(fresh), answers));
         Current current = currentRow(userId);
         ProfileVersionPolicy.Decision decision = ProfileVersionPolicy.decide(
                 true, true, generation, permit.generation(), permit.watermark(),
@@ -264,6 +279,52 @@ public class RelationshipProfileService {
                     """, life.generation() + 1, Timestamp.from(now), userId);
         }
         retractLive(userId, now);
+    }
+
+    /**
+     * The questionnaire projection plus every stored learning confirmation.
+     * A later answer write uses this snapshot, so a confirmed preference stays in the evidence list.
+     */
+    @Transactional(readOnly = true)
+    public RelationshipProfileSnapshot projectAuthoritative(long userId) {
+        requireEnabled();
+        return serverProjection(userId);
+    }
+
+    public record LearningPermit(boolean accountActive, boolean processingGranted, long generation,
+                                 int sourceVersion, int snapshotVersion, String hash) {}
+
+    /** Row lock after the caller's advisory user lock. The command's generation is not read here. */
+    @Transactional
+    public LearningPermit lockLearning(long userId) {
+        requireEnabled();
+        lockActive(userId);
+        Lifecycle life = lifecycle(userId);
+        Integer source = profileVersion(userId);
+        Current current = currentRow(userId);
+        return new LearningPermit(true, life != null && "granted".equals(life.processing()),
+                life == null ? -1 : life.generation(), source == null ? -1 : source,
+                current == null ? 0 : current.version(), current == null ? "" : current.hash());
+    }
+
+    /**
+     * Writes one learning snapshot through the same version policy as questionnaire projection.
+     * {@code source_profile_version} stays the questionnaire version. The snapshot version is allocated here.
+     */
+    @Transactional
+    public ProfileVersion commitLearning(long userId, RelationshipProfileSnapshot admitted) {
+        requireEnabled();
+        lockActive(userId);
+        Lifecycle life = lifecycle(userId);
+        Integer source = profileVersion(userId);
+        Current current = currentRow(userId);
+        int actualSource = source == null ? -1 : source;
+        ProfileVersionPolicy.Decision decision = ProfileVersionPolicy.decide(
+                true, life != null && "granted".equals(life.processing()),
+                life == null ? -1 : life.generation(), life == null ? -1 : life.generation(),
+                life == null ? 0 : life.watermark(), actualSource, actualSource, current != null,
+                current == null ? null : current.hash(), admitted.inputHash(), WriteMode.LEARNING_REVISION);
+        return apply(userId, actualSource, admitted, decision);
     }
 
     /** Removes stored snapshots. Not called by account purge yet. The lifecycle row stays revoked. */
@@ -414,6 +475,36 @@ public class RelationshipProfileService {
                 life != null && "granted".equals(life.processing()),
                 life != null && "granted".equals(life.modelExport()),
                 life == null ? 0 : life.modelExportEpoch());
+    }
+
+    private RelationshipProfileSnapshot serverProjection(long userId) {
+        RelationshipProfileSnapshot projected;
+        try {
+            projected = SnapshotAdmission.admit(
+                    RelationshipProfileProjector.project(userId, answers.loadAnswers(userId), registry), registry, answers);
+        } catch (IllegalArgumentException e) {
+            throw DomainException.invalid("snapshot", e.getMessage());
+        }
+        return mergeLearning(userId, projected, answers);
+    }
+
+    private RelationshipProfileSnapshot mergeLearning(long userId, RelationshipProfileSnapshot projected,
+                                                      EvidenceSourceDirectory base) {
+        ConfirmationSources confirmations = new ConfirmationSources();
+        List<ProfileEvidence> extra = learning.storedEvidence(userId, confirmations);
+        if (extra.isEmpty()) return projected;
+        List<ProfileEvidence> all = new ArrayList<>(projected.evidence());
+        Set<String> ids = new LinkedHashSet<>();
+        for (ProfileEvidence item : all) ids.add(item.evidenceId());
+        for (ProfileEvidence item : extra) {
+            if (ids.add(item.evidenceId())) all.add(item);
+        }
+        try {
+            return SnapshotAdmission.admit(RelationshipProfile.of(userId, all, registry).snapshot(registry), registry,
+                    new CompositeEvidenceDirectory(base, confirmations));
+        } catch (IllegalArgumentException e) {
+            throw DomainException.invalid("snapshot", e.getMessage());
+        }
     }
 
     private void requireEnabled() {

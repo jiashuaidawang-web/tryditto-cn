@@ -9,7 +9,7 @@ package cn.aiditto.domain.relationship;
 public final class ProfileVersionPolicy {
     private ProfileVersionPolicy() {}
 
-    public enum WriteMode { DETERMINISTIC, MODEL_REVISION }
+    public enum WriteMode { DETERMINISTIC, MODEL_REVISION, LEARNING_REVISION }
 
     public enum Kind {
         KEEP_CURRENT,
@@ -37,7 +37,8 @@ public final class ProfileVersionPolicy {
         if (liveCurrent && claimedSource == watermark && mode == WriteMode.DETERMINISTIC) {
             return new Decision(Kind.REJECT_CONFLICT, watermark);
         }
-        if (liveCurrent && claimedSource == watermark && mode == WriteMode.MODEL_REVISION) {
+        if (liveCurrent && claimedSource == watermark
+                && (mode == WriteMode.MODEL_REVISION || mode == WriteMode.LEARNING_REVISION)) {
             return new Decision(Kind.ACCEPT_REVISION, watermark);
         }
         return new Decision(Kind.INSERT, claimedSource);

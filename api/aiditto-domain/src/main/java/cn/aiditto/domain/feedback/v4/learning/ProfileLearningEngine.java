@@ -54,7 +54,20 @@ public final class ProfileLearningEngine {
 
     public List<ProfileLearningProposal> hypotheses(List<SelfDirectionReport> reports, long subject, int profileVersion,
                                                     long generation, Instant now) {
-        List<LearningSignal> signals = FeedbackSignalClassifier.observe(reports, subject, now);
+        return proposalsFrom(FeedbackSignalClassifier.observe(reports, subject, now), reports, subject,
+                profileVersion, generation, now);
+    }
+
+    /** Counts only reports that name a real event owned by the subject inside the window. */
+    public List<ProfileLearningProposal> hypotheses(FeedbackLedger ledger, List<SelfDirectionReport> reports, long subject,
+                                                    int profileVersion, long generation, Instant now) {
+        List<SelfDirectionReport> accepted = FeedbackSignalClassifier.accepted(ledger, reports, subject, now);
+        return proposalsFrom(FeedbackSignalClassifier.observe(accepted, subject, now), accepted, subject,
+                profileVersion, generation, now);
+    }
+
+    private List<ProfileLearningProposal> proposalsFrom(List<LearningSignal> signals, List<SelfDirectionReport> reports,
+                                                        long subject, int profileVersion, long generation, Instant now) {
         List<ProfileLearningProposal> proposals = new ArrayList<>();
         for (LearningSignal signal : signals) {
             if (signal.category() != Category.PREFERENCE_HYPOTHESIS) continue;
@@ -67,7 +80,8 @@ public final class ProfileLearningEngine {
                     ids.add(report.eventId());
                 }
             }
-            boolean contradicted = signals.stream().anyMatch(other -> other.category() == Category.PREFERENCE_HYPOTHESIS
+            boolean contradicted = signal.evidenceState() != LearningSignal.EvidenceState.USABLE
+                    || signals.stream().anyMatch(other -> other.learnableTarget() != null
                     && other.learnableTarget().startsWith(feature + "=")
                     && !other.learnableTarget().equals(signal.learnableTarget()));
             Section section = feature.startsWith("partner.") ? Section.PREFERENCE : Section.SELF;
@@ -140,7 +154,11 @@ public final class ProfileLearningEngine {
                                String currentHash, boolean accountActive, boolean erased, boolean sourceRetracted,
                                ConfirmationSources sources) {
         if (command.userId() != proposal.userId()) throw new FeedbackRejection("CROSS_USER");
-        if (!command.commandId().equals(proposal.proposalId().substring("prop.".length()))) {
+        if (proposal.proposalId().startsWith("prop.")
+                && !command.commandId().equals(proposal.proposalId().substring("prop.".length()))) {
+            throw new FeedbackRejection("PROPOSAL_MISMATCH");
+        }
+        if (!proposal.proposalId().startsWith("prop.") && !proposal.proposalId().startsWith("hyp.")) {
             throw new FeedbackRejection("PROPOSAL_MISMATCH");
         }
         if (erased) throw new FeedbackRejection("ERASED");
