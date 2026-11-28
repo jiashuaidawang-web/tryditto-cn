@@ -18,7 +18,7 @@
 - `AccountLifecycleIT`：注销与外部任务、重复删除、迟到任务、外部失败、五项授权撤回、其他用户、撤回和保存并发。
 - `LegacyProductModeIT`：默认注销不写擦除任务，V3 学习开关仍开启。
 
-相对此前核实的 101 个 PostgreSQL 集成测试，这 13 个方法是新增。CI 成功后以该作业的实际总数为准。
+相对此前核实的 101 个 PostgreSQL 集成测试，这 13 个方法是新增，并且写进了 CI 的必跑名单。提交 `9229f14ba58b4416438c11ec0898221018c673da` 的五作业 CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46141335428 全部 success。第一次集成作业 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46140874430 失败，原因是确认编号带上了过长的用户编号，快照拒绝这种来源标记。
 
 CI 的 Surefire 切片原来是 18 个。`ProductIntegrationSettingsTest` 的 2 个方法已放进同一名单。
 

@@ -570,4 +570,4 @@ Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-l
 - 删除事务先锁用户行，学习确认先锁咨询锁。并发时可能互相等待。
 - 真实用户画像质量 NOT_RUN。真实关系质量 NOT_RUN。生产启用 NO-GO。最终匹配算法质量 NO-GO。
 
-细节见 `V4-I01-audit.md` 和 `V4-I01-account-lifecycle.md`。I01 不合并。
+细节见 `V4-I01-audit.md` 和 `V4-I01-account-lifecycle.md`。实现提交 `9229f14ba58b4416438c11ec0898221018c673da`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46141335428 ，五个作业 success。I01 不合并。
