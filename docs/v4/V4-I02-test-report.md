@@ -1,6 +1,6 @@
 # V4-I02 测试报告
 
-本机没有 PostgreSQL，也没有 Docker。领域测试在本地执行。PostgreSQL 集成、真实 Qdrant 和用户端浏览器由 CI 执行，结果以 CI 为准，不在这里预写通过。
+本机没有 PostgreSQL，也没有 Docker。领域测试在本地执行。PostgreSQL 集成、真实 Qdrant 和用户端浏览器由 CI 执行。下面的通过记录对应已经结束的作业，不提前写成通过。
 
 ## 本地已执行
 
@@ -22,7 +22,13 @@
 
 1 项通过。`LEGACY_ONLY` 在读取用户池之前拒绝影子运行。
 
-## CI 将执行
+## CI
+
+尖端 `8e427a5a0dcf517b1d35731156791868158dafa3` 的五作业是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46154283275 。domain-tests、integration-tests、qdrant-isolation、match-lab-e2e、test-reports 都是 success。PostgreSQL 作业执行了 `ProductMatchingPoolIT`、`ShadowMatchingIT`、`ShadowSnapshotIT` 和 `ShadowIsolationIT`。本机没有数据库，这些集成结果以该作业为准。
+
+第一次集成失败是 https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46151963322 。单向意向用例和同一类里更早的用户混在一个城市里，滞后画像又被隔离同步写成了当前画像。随后的修正把单向用例放到已种子的上海地点，并在问卷更新之后再把业务版本向前推一版。
+
+## CI 清单
 
 集成作业新增：
 
@@ -34,4 +40,4 @@
 
 原有领域测试、PostgreSQL 集成、Qdrant 和 Match Lab Playwright 仍在清单里。影子测试使用真实 `V4GlobalMatchingEngine` 和 `MatchingSolver`，没有用假结果替换求解器。
 
-浏览器仍是 I01 的 `web/e2e/product-onboarding.spec.ts`。选项控件是 radio 和 checkbox，定位按钮按可见的 aria-label 点击。
+浏览器仍是 I01 的 `web/e2e/product-onboarding.spec.ts`。入驻会填写文本、身高和可选的说话方式页，再从那一页的「回首页」回到首页。这次 `match-lab-e2e` 是 success。
