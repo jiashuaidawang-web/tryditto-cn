@@ -51,7 +51,7 @@ F03 尖端上已经核实：593 项领域测试，93 项 PostgreSQL 集成测试
 
 L03-FINAL 已快进到 `master_agent_v4`。离线引擎里程碑的提交是 `767d65fbb3d67d17f6c3c7608e01b00fc918b115`。
 
-I01 实现提交是 `9229f14ba58b4416438c11ec0898221018c673da`。I01-FINAL 收口锁顺序、隔离环境闸门，并停止用调用方标志宣称外部擦除完成。分支仍是 `feature/v4-product-profile-integration`。合并和 CI 地址写在本文件后续更新里。生产启用保持 NO-GO。
+I01 实现提交是 `9229f14ba58b4416438c11ec0898221018c673da`。I01-FINAL 是 `8f3ee57e34ff0018f17e96a80d0fdcd39e87ad7e`，收口锁顺序、隔离环境闸门，并停止用调用方标志宣称外部擦除完成。分支是 `feature/v4-product-profile-integration`。CI 地址在推送后补记。生产启用保持 NO-GO。
 
 ## 未解决的生产风险
 
