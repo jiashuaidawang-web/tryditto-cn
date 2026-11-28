@@ -22,7 +22,7 @@ TryDitto 国内版是 AI Relationship Intelligence Engine 的离线研发线。�
 | M04 全局匹配 | 小规模求解通过。端到端合成匹配质量和大规模性能 NO-GO。 |
 | F01 / F02 反馈与学习 | 离线工程通过。真实反馈学习未启用。 |
 | F03 群体评估 | 离线工程通过。F03-FINAL 收口观察来源、标签口径和校准。真实校准 NOT_RUN。 |
-| Match Lab L01 | 五个页面和沙箱 API 在 `feature/v4-match-lab`。默认关闭。浏览器端到端 NOT_RUN。不合并。 |
+| Match Lab L01 | `1534812797aee4e8cb8490ac625b5ae51b1707a2`。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46122030761 ，四个作业 success。浏览器端到端 NOT_RUN。不合并。 |
 
 ## 冻结策略
 

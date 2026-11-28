@@ -509,4 +509,4 @@ M03 工程质量 GO。领域测试、集成测试、Qdrant 隔离和测试报告
 
 Match Lab 是内部研究控制台的第一阶段。默认关闭，`/api/match-lab/**` 需要管理员。沙箱画像留在内存，评分和召回调用现有领域引擎，推理只回放 `rule-echo-fixture`。C1、C2 关闭。没有真实模型，没有生产发布。
 
-本地领域测试 603 项，失败 0。前端生产构建通过。PostgreSQL 集成和浏览器端到端在这台机器上是 NOT_RUN。生产启用和最终匹配算法质量继续 NO-GO。真实关系质量继续 NOT_RUN。
+本地领域测试 603 项，失败 0。前端生产构建通过。本机没有 PostgreSQL，集成测试本地 NOT_RUN。CI https://github.com/jiashuaidawang-web/tryditto-cn/actions/runs/46122030761 ，提交 `1534812797aee4e8cb8490ac625b5ae51b1707a2`，四个作业 success。浏览器端到端仍是 NOT_RUN。生产启用和最终匹配算法质量继续 NO-GO。真实关系质量继续 NOT_RUN。
