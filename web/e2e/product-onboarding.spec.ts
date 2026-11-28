@@ -194,11 +194,15 @@ async function clickChoice(step: ReturnType<Page['locator']>, role: 'radio' | 'c
 
 async function leaveOptionalVoice(page: Page) {
   const stop = page.getByRole('button', { name: '先不答了' });
-  await stop.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
-  if (await stop.isVisible().catch(() => false)) await stop.click({ timeout: fast });
-  if (/\/home/.test(page.url())) return;
+  if (await stop.waitFor({ state: 'visible', timeout: 20_000 }).then(() => true).catch(() => false)) {
+    await stop.click({ timeout: fast });
+  }
   const home = page.getByRole('button', { name: '回首页' });
-  if (await home.isVisible().catch(() => false)) await home.click({ timeout: fast });
+  await expect.poll(async () => {
+    if (/\/home/.test(page.url())) return 'home';
+    return (await home.isVisible().catch(() => false)) ? 'button' : '';
+  }, { timeout: 20_000 }).not.toBe('');
+  if (!/\/home/.test(page.url())) await home.click({ timeout: fast });
   await expect(page).toHaveURL(/\/home/, { timeout: 20_000 });
 }
 
